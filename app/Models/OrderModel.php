@@ -15,11 +15,15 @@ class OrderModel extends Model
 
     protected $allowedFields = [
         'order_number',
+        'customer_id',
         'customer_name',
         'restaurant_id',
         'driver_id',
         'status',
         'total_amount',
+        'delivery_address',
+        'items',
+        'notes',
     ];
 
     protected $returnType = 'array';

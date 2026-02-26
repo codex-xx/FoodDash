@@ -36,6 +36,7 @@ class Filters extends BaseFilters
         'performance'   => PerformanceMetrics::class,
         'auth'          => \App\Filters\AuthFilter::class,
         'admin'         => \App\Filters\AdminFilter::class,
+        'api'           => \App\Filters\ApiFilter::class,
     ];
 
     /**
@@ -114,6 +115,13 @@ class Filters extends BaseFilters
         ]],
         'admin' => ['before' => [
             'dashboard/admin*',
+        ]],
+        'api' => ['before' => [
+            'api/profile*',
+            'api/orders*',
+            'api/driver/location',
+            'api/fcm-token',
+            'api/logout',
         ]],
     ];
 }

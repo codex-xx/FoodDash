@@ -16,9 +16,19 @@ class DriverModel extends Model
     protected $allowedFields = [
         'user_id',
         'name',
+        'email',
+        'password',
         'phone',
+        'vehicle_type',
+        'vehicle_number',
+        'license_number',
+        'profile_image',
+        'current_latitude',
+        'current_longitude',
         'status',
         'is_active',
+        'api_token',
+        'fcm_token',
     ];
 
     protected $returnType = 'array';

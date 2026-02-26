@@ -56,3 +56,52 @@ $routes->post('admin/drivers/(:num)/approve', 'AdminManagement::approveDriver/$1
 $routes->post('admin/drivers/(:num)/reject', 'AdminManagement::rejectDriver/$1');
 
 $routes->get('api/admin/revenue-summary', 'AdminManagement::getRevenueSummary');
+
+// ============================================
+// MOBILE API ENDPOINTS
+// ============================================
+
+// CORS Preflight
+$routes->options('api/(:any)', static function () {
+    return service('response')
+        ->setHeader('Access-Control-Allow-Origin', '*')
+        ->setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Requested-With')
+        ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+        ->setStatusCode(200);
+});
+
+// Auth (Public - No token required)
+// Simple routes for Android (default to customer)
+$routes->post('api/register', 'Api\AuthController::customerRegister');
+$routes->post('api/login', 'Api\AuthController::customerLogin');
+
+// Full routes with user type
+$routes->post('api/customer/register', 'Api\AuthController::customerRegister');
+$routes->post('api/customer/login', 'Api\AuthController::customerLogin');
+$routes->post('api/driver/register', 'Api\AuthController::driverRegister');
+$routes->post('api/driver/login', 'Api\AuthController::driverLogin');
+$routes->post('api/logout', 'Api\AuthController::logout');
+
+// Menu & Restaurants (Public)
+$routes->get('api/restaurants', 'Api\MenuController::restaurants');
+$routes->get('api/restaurants/(:num)', 'Api\MenuController::restaurant/$1');
+$routes->get('api/menu', 'Api\MenuController::index');
+$routes->get('api/menu/search', 'Api\MenuController::search');
+$routes->get('api/menu/(:num)', 'Api\MenuController::show/$1');
+
+// Profile (Authenticated)
+$routes->get('api/profile', 'Api\ProfileController::index');
+$routes->put('api/profile', 'Api\ProfileController::update');
+$routes->post('api/profile', 'Api\ProfileController::update');
+$routes->post('api/fcm-token', 'Api\ProfileController::updateFcmToken');
+$routes->post('api/driver/location', 'Api\ProfileController::updateLocation');
+
+// Orders (Authenticated)
+$routes->get('api/orders', 'Api\OrderController::index');
+$routes->post('api/orders', 'Api\OrderController::create');
+$routes->get('api/orders/available', 'Api\OrderController::available');
+$routes->get('api/orders/(:num)', 'Api\OrderController::show/$1');
+$routes->put('api/orders/(:num)/status', 'Api\OrderController::updateStatus/$1');
+$routes->post('api/orders/(:num)/status', 'Api\OrderController::updateStatus/$1');
+$routes->post('api/orders/(:num)/accept', 'Api\OrderController::accept/$1');
+$routes->post('api/orders/(:num)/cancel', 'Api\OrderController::cancel/$1');

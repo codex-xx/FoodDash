@@ -1,0 +1,8 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /FoodDash/
+
+    # Redirect all requests to public folder
+    RewriteCond %{REQUEST_URI} !^/FoodDash/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
