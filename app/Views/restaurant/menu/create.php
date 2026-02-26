@@ -12,7 +12,7 @@
 
     <div class="card shadow-sm">
       <div class="card-body">
-        <form id="menuForm">
+        <form id="menuForm" enctype="multipart/form-data">
           <div class="mb-3">
             <label class="form-label">Item Name *</label>
             <input type="text" class="form-control" name="name" required>
@@ -24,8 +24,18 @@
           </div>
 
           <div class="mb-3">
+            <label class="form-label">Category</label>
+            <input type="text" class="form-control" name="category">
+          </div>
+
+          <div class="mb-3">
             <label class="form-label">Price *</label>
             <input type="number" class="form-control" name="price" step="0.01" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Image</label>
+            <input type="file" class="form-control" name="image" accept="image/*">
           </div>
 
           <div class="mb-3 form-check">
@@ -59,7 +69,11 @@
         alert(json.message || 'Item created');
         window.location.href = '<?= site_url('menu') ?>';
       } else {
-        alert('Error: ' + (json.error || 'Unknown error'));
+        let err = json.error || 'Unknown error';
+        if (typeof err === 'object') {
+          err = Object.values(err).flat().join('\n');
+        }
+        alert('Error: ' + err);
       }
     })
     .catch(err => alert('Error: ' + err));

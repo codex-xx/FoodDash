@@ -34,7 +34,13 @@
               <tbody>
                 <?php foreach ($items as $item): ?>
                   <tr>
-                    <td><strong><?= $item['name'] ?></strong></td>
+                    <td>
+                      <?php if (!empty($item['image'])): ?>
+                        <img src="<?= base_url($item['image']) ?>" alt="" style="width:50px;height:50px;object-fit:cover;margin-right:8px;vertical-align:middle">
+                      <?php endif; ?>
+                      <strong><?= $item['name'] ?></strong><br>
+                      <small class="text-muted"><?= esc($item['category']) ?></small>
+                    </td>
                     <td>₱<?= number_format($item['price'], 2) ?></td>
                     <td><?= substr($item['description'] ?? '', 0, 50) ?>...</td>
                     <td>

@@ -55,13 +55,25 @@ class Auth extends BaseController
         }
 
         // Successful login: create session
-        session()->set([
-            'isLoggedIn'  => true,
-            'user_id'     => $user['id'],
-            'email'       => $user['email'],
-            'role'        => $user['role'],
+        $sessionData = [
+            'isLoggedIn'    => true,
+            'user_id'       => $user['id'],
+            'email'         => $user['email'],
+            'role'          => $user['role'],
             'last_activity' => time(),
-        ]);
+        ];
+
+        // if the user is a restaurant owner, look up the related restaurant record
+        if ($user['role'] === 'restaurant') {
+            $restaurantModel = new \App\Models\RestaurantModel();
+            $restaurant = $restaurantModel->where('user_id', $user['id'])->first();
+            if ($restaurant) {
+                $sessionData['restaurant_id']   = $restaurant['id'];
+                $sessionData['restaurant_name'] = $restaurant['name'];
+            }
+        }
+
+        session()->set($sessionData);
 
         // Role-based redirect
         if ($user['role'] === 'admin') {

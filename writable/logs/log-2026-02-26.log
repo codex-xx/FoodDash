@@ -1,0 +1,305 @@
+ERROR - 2026-02-26 15:11:37 --> Duplicate column name 'vehicle_type'
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 300.
+ 1 SYSTEMPATH\Database\MySQLi\Connection.php(300): mysqli->query('ALTER TABLE `drivers`
+	ADD `email` VARCHAR(255) NULL AFTER `user_id`,
+	ADD `password` VARCHAR(255) NULL AFTER `email`,
+	ADD `api_token` VARCHAR(255) NULL AFTER `is_active`,
+	ADD `fcm_token` VARCHAR(255) NULL AFTER `api_token`,
+	ADD `vehicle_type` VARCHAR(50) NULL AFTER `phone`,
+	ADD `vehicle_number` VARCHAR(50) NULL AFTER `vehicle_type`,
+	ADD `license_number` VARCHAR(50) NULL AFTER `vehicle_number`,
+	ADD `profile_image` VARCHAR(255) NULL AFTER `license_number`,
+	ADD `current_latitude` DECIMAL(10,8) NULL AFTER `profile_image`,
+	ADD `current_longitude` DECIMAL(11,8) NULL AFTER `current_latitude`', 0)
+ 2 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('ALTER TABLE `drivers`
+	ADD `email` VARCHAR(255) NULL AFTER `user_id`,
+	ADD `password` VARCHAR(255) NULL AFTER `email`,
+	ADD `api_token` VARCHAR(255) NULL AFTER `is_active`,
+	ADD `fcm_token` VARCHAR(255) NULL AFTER `api_token`,
+	ADD `vehicle_type` VARCHAR(50) NULL AFTER `phone`,
+	ADD `vehicle_number` VARCHAR(50) NULL AFTER `vehicle_type`,
+	ADD `license_number` VARCHAR(50) NULL AFTER `vehicle_number`,
+	ADD `profile_image` VARCHAR(255) NULL AFTER `license_number`,
+	ADD `current_latitude` DECIMAL(10,8) NULL AFTER `profile_image`,
+	ADD `current_longitude` DECIMAL(11,8) NULL AFTER `current_latitude`')
+ 3 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('ALTER TABLE `drivers`
+	ADD `email` VARCHAR(255) NULL AFTER `user_id`,
+	ADD `password` VARCHAR(255) NULL AFTER `email`,
+	ADD `api_token` VARCHAR(255) NULL AFTER `is_active`,
+	ADD `fcm_token` VARCHAR(255) NULL AFTER `api_token`,
+	ADD `vehicle_type` VARCHAR(50) NULL AFTER `phone`,
+	ADD `vehicle_number` VARCHAR(50) NULL AFTER `vehicle_type`,
+	ADD `license_number` VARCHAR(50) NULL AFTER `vehicle_number`,
+	ADD `profile_image` VARCHAR(255) NULL AFTER `license_number`,
+	ADD `current_latitude` DECIMAL(10,8) NULL AFTER `profile_image`,
+	ADD `current_longitude` DECIMAL(11,8) NULL AFTER `current_latitude`')
+ 4 SYSTEMPATH\Database\Forge.php(772): CodeIgniter\Database\BaseConnection->query('ALTER TABLE `drivers`
+	ADD `email` VARCHAR(255) NULL AFTER `user_id`,
+	ADD `password` VARCHAR(255) NULL AFTER `email`,
+	ADD `api_token` VARCHAR(255) NULL AFTER `is_active`,
+	ADD `fcm_token` VARCHAR(255) NULL AFTER `api_token`,
+	ADD `vehicle_type` VARCHAR(50) NULL AFTER `phone`,
+	ADD `vehicle_number` VARCHAR(50) NULL AFTER `vehicle_type`,
+	ADD `license_number` VARCHAR(50) NULL AFTER `vehicle_number`,
+	ADD `profile_image` VARCHAR(255) NULL AFTER `license_number`,
+	ADD `current_latitude` DECIMAL(10,8) NULL AFTER `profile_image`,
+	ADD `current_longitude` DECIMAL(11,8) NULL AFTER `current_latitude`')
+ 5 APPPATH\Database\Migrations\20260225100001_add_api_token_to_drivers.php(11): CodeIgniter\Database\Forge->addColumn('drivers', [...])
+ 6 SYSTEMPATH\Database\MigrationRunner.php(1014): App\Database\Migrations\AddApiTokenToDrivers->up()
+ 7 SYSTEMPATH\Database\MigrationRunner.php(202): CodeIgniter\Database\MigrationRunner->migrate('up', Object(stdClass))
+ 8 SYSTEMPATH\Commands\Database\Migrate.php(89): CodeIgniter\Database\MigrationRunner->latest(null)
+ 9 SYSTEMPATH\CLI\SignalTrait.php(245): CodeIgniter\Commands\Database\Migrate::CodeIgniter\Commands\Database\{closure}()
+10 SYSTEMPATH\Commands\Database\Migrate.php(88): CodeIgniter\Commands\Database\Migrate->withSignalsBlocked(Object(Closure))
+11 SYSTEMPATH\CLI\Commands.php(74): CodeIgniter\Commands\Database\Migrate->run([])
+12 SYSTEMPATH\CLI\Console.php(47): CodeIgniter\CLI\Commands->run('migrate', [])
+13 SYSTEMPATH\Boot.php(442): CodeIgniter\CLI\Console->run()
+14 SYSTEMPATH\Boot.php(166): CodeIgniter\Boot::runCommand(Object(CodeIgniter\CLI\Console))
+15 ROOTPATH\spark(87): CodeIgniter\Boot::bootSpark(Object(Config\Paths))
+ERROR - 2026-02-26 15:28:04 --> Duplicate entry 'admin@example.com' for key 'email'
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 300.
+ 1 SYSTEMPATH\Database\MySQLi\Connection.php(300): mysqli->query('INSERT INTO `users` (`email`, `password`, `role`, `is_active`) VALUES (\'admin@example.com\', \'$2y$10$HSeQV3iPRX5zDVZuVHJEDOK4Hdt0mwMklVMIWQd3cq.grNaYdFnAS\', \'admin\', 1)', 0)
+ 2 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('INSERT INTO `users` (`email`, `password`, `role`, `is_active`) VALUES (\'admin@example.com\', \'$2y$10$HSeQV3iPRX5zDVZuVHJEDOK4Hdt0mwMklVMIWQd3cq.grNaYdFnAS\', \'admin\', 1)')
+ 3 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('INSERT INTO `users` (`email`, `password`, `role`, `is_active`) VALUES (\'admin@example.com\', \'$2y$10$HSeQV3iPRX5zDVZuVHJEDOK4Hdt0mwMklVMIWQd3cq.grNaYdFnAS\', \'admin\', 1)')
+ 4 SYSTEMPATH\Database\BaseBuilder.php(2345): CodeIgniter\Database\BaseConnection->query('INSERT INTO `users` (`email`, `password`, `role`, `is_active`) VALUES (:email:, :password:, :role:, :is_active:)', [...], false)
+ 5 APPPATH\Database\Seeds\UserSeeder.php(40): CodeIgniter\Database\BaseBuilder->insert([...])
+ 6 SYSTEMPATH\Database\Seeder.php(155): App\Database\Seeds\UserSeeder->run()
+ 7 SYSTEMPATH\Commands\Database\Seed.php(79): CodeIgniter\Database\Seeder->call('App\\Database\\Seeds\\UserSeeder')
+ 8 SYSTEMPATH\CLI\Commands.php(74): CodeIgniter\Commands\Database\Seed->run([])
+ 9 SYSTEMPATH\CLI\Console.php(47): CodeIgniter\CLI\Commands->run('db:seed', [...])
+10 SYSTEMPATH\Boot.php(442): CodeIgniter\CLI\Console->run()
+11 SYSTEMPATH\Boot.php(166): CodeIgniter\Boot::runCommand(Object(CodeIgniter\CLI\Console))
+12 ROOTPATH\spark(87): CodeIgniter\Boot::bootSpark(Object(Config\Paths))
+ERROR - 2026-02-26 15:30:14 --> Unknown column 'category' in 'field list'
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 300.
+ 1 SYSTEMPATH\Database\MySQLi\Connection.php(300): mysqli->query('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:14\', \'2026-02-26 15:30:14\')', 0)
+ 2 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:14\', \'2026-02-26 15:30:14\')')
+ 3 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:14\', \'2026-02-26 15:30:14\')')
+ 4 SYSTEMPATH\Database\BaseBuilder.php(2345): CodeIgniter\Database\BaseConnection->query('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (:restaurant_id:, :name:, :description:, :price:, :category:, :is_available:, :created_at:, :updated_at:)', [...], false)
+ 5 SYSTEMPATH\Model.php(356): CodeIgniter\Database\BaseBuilder->insert()
+ 6 SYSTEMPATH\BaseModel.php(898): CodeIgniter\Model->doInsert([...])
+ 7 SYSTEMPATH\Model.php(665): CodeIgniter\BaseModel->insert([...], true)
+ 8 APPPATH\Controllers\MenuItems.php(79): CodeIgniter\Model->insert([...])
+ 9 SYSTEMPATH\CodeIgniter.php(951): App\Controllers\MenuItems->store()
+10 SYSTEMPATH\CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\MenuItems))
+11 SYSTEMPATH\CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+12 SYSTEMPATH\Boot.php(417): CodeIgniter\CodeIgniter->run()
+13 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+14 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2026-02-26 15:30:14 --> CodeIgniter\Database\Exceptions\DatabaseException: Unknown column 'category' in 'field list'
+[Method: POST, Route: menu/store]
+in SYSTEMPATH\Database\BaseConnection.php on line 724.
+ 1 SYSTEMPATH\Database\BaseBuilder.php(2345): CodeIgniter\Database\BaseConnection->query('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (:restaurant_id:, :name:, :description:, :price:, :category:, :is_available:, :created_at:, :updated_at:)', [...], false)
+ 2 SYSTEMPATH\Model.php(356): CodeIgniter\Database\BaseBuilder->insert()
+ 3 SYSTEMPATH\BaseModel.php(898): CodeIgniter\Model->doInsert([...])
+ 4 SYSTEMPATH\Model.php(665): CodeIgniter\BaseModel->insert([...], true)
+ 5 APPPATH\Controllers\MenuItems.php(79): CodeIgniter\Model->insert([...])
+ 6 SYSTEMPATH\CodeIgniter.php(951): App\Controllers\MenuItems->store()
+ 7 SYSTEMPATH\CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\MenuItems))
+ 8 SYSTEMPATH\CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 9 SYSTEMPATH\Boot.php(417): CodeIgniter\CodeIgniter->run()
+10 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+11 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2026-02-26 15:30:14 --> [Caused by] CodeIgniter\Database\Exceptions\DatabaseException: Unknown column 'category' in 'field list'
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 310.
+ 1 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:14\', \'2026-02-26 15:30:14\')')
+ 2 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:14\', \'2026-02-26 15:30:14\')')
+ 3 SYSTEMPATH\Database\BaseBuilder.php(2345): CodeIgniter\Database\BaseConnection->query('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (:restaurant_id:, :name:, :description:, :price:, :category:, :is_available:, :created_at:, :updated_at:)', [...], false)
+ 4 SYSTEMPATH\Model.php(356): CodeIgniter\Database\BaseBuilder->insert()
+ 5 SYSTEMPATH\BaseModel.php(898): CodeIgniter\Model->doInsert([...])
+ 6 SYSTEMPATH\Model.php(665): CodeIgniter\BaseModel->insert([...], true)
+ 7 APPPATH\Controllers\MenuItems.php(79): CodeIgniter\Model->insert([...])
+ 8 SYSTEMPATH\CodeIgniter.php(951): App\Controllers\MenuItems->store()
+ 9 SYSTEMPATH\CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\MenuItems))
+10 SYSTEMPATH\CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+11 SYSTEMPATH\Boot.php(417): CodeIgniter\CodeIgniter->run()
+12 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+13 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2026-02-26 15:30:14 --> [Caused by] mysqli_sql_exception: Unknown column 'category' in 'field list'
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 300.
+ 1 SYSTEMPATH\Database\MySQLi\Connection.php(300): mysqli->query('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:14\', \'2026-02-26 15:30:14\')', 0)
+ 2 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:14\', \'2026-02-26 15:30:14\')')
+ 3 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:14\', \'2026-02-26 15:30:14\')')
+ 4 SYSTEMPATH\Database\BaseBuilder.php(2345): CodeIgniter\Database\BaseConnection->query('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (:restaurant_id:, :name:, :description:, :price:, :category:, :is_available:, :created_at:, :updated_at:)', [...], false)
+ 5 SYSTEMPATH\Model.php(356): CodeIgniter\Database\BaseBuilder->insert()
+ 6 SYSTEMPATH\BaseModel.php(898): CodeIgniter\Model->doInsert([...])
+ 7 SYSTEMPATH\Model.php(665): CodeIgniter\BaseModel->insert([...], true)
+ 8 APPPATH\Controllers\MenuItems.php(79): CodeIgniter\Model->insert([...])
+ 9 SYSTEMPATH\CodeIgniter.php(951): App\Controllers\MenuItems->store()
+10 SYSTEMPATH\CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\MenuItems))
+11 SYSTEMPATH\CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+12 SYSTEMPATH\Boot.php(417): CodeIgniter\CodeIgniter->run()
+13 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+14 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+ERROR - 2026-02-26 15:30:17 --> Unknown column 'category' in 'field list'
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 300.
+ 1 SYSTEMPATH\Database\MySQLi\Connection.php(300): mysqli->query('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:17\', \'2026-02-26 15:30:17\')', 0)
+ 2 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:17\', \'2026-02-26 15:30:17\')')
+ 3 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:17\', \'2026-02-26 15:30:17\')')
+ 4 SYSTEMPATH\Database\BaseBuilder.php(2345): CodeIgniter\Database\BaseConnection->query('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (:restaurant_id:, :name:, :description:, :price:, :category:, :is_available:, :created_at:, :updated_at:)', [...], false)
+ 5 SYSTEMPATH\Model.php(356): CodeIgniter\Database\BaseBuilder->insert()
+ 6 SYSTEMPATH\BaseModel.php(898): CodeIgniter\Model->doInsert([...])
+ 7 SYSTEMPATH\Model.php(665): CodeIgniter\BaseModel->insert([...], true)
+ 8 APPPATH\Controllers\MenuItems.php(79): CodeIgniter\Model->insert([...])
+ 9 SYSTEMPATH\CodeIgniter.php(951): App\Controllers\MenuItems->store()
+10 SYSTEMPATH\CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\MenuItems))
+11 SYSTEMPATH\CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+12 SYSTEMPATH\Boot.php(417): CodeIgniter\CodeIgniter->run()
+13 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+14 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2026-02-26 15:30:17 --> CodeIgniter\Database\Exceptions\DatabaseException: Unknown column 'category' in 'field list'
+[Method: POST, Route: menu/store]
+in SYSTEMPATH\Database\BaseConnection.php on line 724.
+ 1 SYSTEMPATH\Database\BaseBuilder.php(2345): CodeIgniter\Database\BaseConnection->query('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (:restaurant_id:, :name:, :description:, :price:, :category:, :is_available:, :created_at:, :updated_at:)', [...], false)
+ 2 SYSTEMPATH\Model.php(356): CodeIgniter\Database\BaseBuilder->insert()
+ 3 SYSTEMPATH\BaseModel.php(898): CodeIgniter\Model->doInsert([...])
+ 4 SYSTEMPATH\Model.php(665): CodeIgniter\BaseModel->insert([...], true)
+ 5 APPPATH\Controllers\MenuItems.php(79): CodeIgniter\Model->insert([...])
+ 6 SYSTEMPATH\CodeIgniter.php(951): App\Controllers\MenuItems->store()
+ 7 SYSTEMPATH\CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\MenuItems))
+ 8 SYSTEMPATH\CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 9 SYSTEMPATH\Boot.php(417): CodeIgniter\CodeIgniter->run()
+10 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+11 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2026-02-26 15:30:17 --> [Caused by] CodeIgniter\Database\Exceptions\DatabaseException: Unknown column 'category' in 'field list'
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 310.
+ 1 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:17\', \'2026-02-26 15:30:17\')')
+ 2 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:17\', \'2026-02-26 15:30:17\')')
+ 3 SYSTEMPATH\Database\BaseBuilder.php(2345): CodeIgniter\Database\BaseConnection->query('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (:restaurant_id:, :name:, :description:, :price:, :category:, :is_available:, :created_at:, :updated_at:)', [...], false)
+ 4 SYSTEMPATH\Model.php(356): CodeIgniter\Database\BaseBuilder->insert()
+ 5 SYSTEMPATH\BaseModel.php(898): CodeIgniter\Model->doInsert([...])
+ 6 SYSTEMPATH\Model.php(665): CodeIgniter\BaseModel->insert([...], true)
+ 7 APPPATH\Controllers\MenuItems.php(79): CodeIgniter\Model->insert([...])
+ 8 SYSTEMPATH\CodeIgniter.php(951): App\Controllers\MenuItems->store()
+ 9 SYSTEMPATH\CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\MenuItems))
+10 SYSTEMPATH\CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+11 SYSTEMPATH\Boot.php(417): CodeIgniter\CodeIgniter->run()
+12 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+13 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2026-02-26 15:30:17 --> [Caused by] mysqli_sql_exception: Unknown column 'category' in 'field list'
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 300.
+ 1 SYSTEMPATH\Database\MySQLi\Connection.php(300): mysqli->query('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:17\', \'2026-02-26 15:30:17\')', 0)
+ 2 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:17\', \'2026-02-26 15:30:17\')')
+ 3 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:17\', \'2026-02-26 15:30:17\')')
+ 4 SYSTEMPATH\Database\BaseBuilder.php(2345): CodeIgniter\Database\BaseConnection->query('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (:restaurant_id:, :name:, :description:, :price:, :category:, :is_available:, :created_at:, :updated_at:)', [...], false)
+ 5 SYSTEMPATH\Model.php(356): CodeIgniter\Database\BaseBuilder->insert()
+ 6 SYSTEMPATH\BaseModel.php(898): CodeIgniter\Model->doInsert([...])
+ 7 SYSTEMPATH\Model.php(665): CodeIgniter\BaseModel->insert([...], true)
+ 8 APPPATH\Controllers\MenuItems.php(79): CodeIgniter\Model->insert([...])
+ 9 SYSTEMPATH\CodeIgniter.php(951): App\Controllers\MenuItems->store()
+10 SYSTEMPATH\CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\MenuItems))
+11 SYSTEMPATH\CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+12 SYSTEMPATH\Boot.php(417): CodeIgniter\CodeIgniter->run()
+13 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+14 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+ERROR - 2026-02-26 15:30:36 --> Unknown column 'category' in 'field list'
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 300.
+ 1 SYSTEMPATH\Database\MySQLi\Connection.php(300): mysqli->query('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:36\', \'2026-02-26 15:30:36\')', 0)
+ 2 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:36\', \'2026-02-26 15:30:36\')')
+ 3 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:36\', \'2026-02-26 15:30:36\')')
+ 4 SYSTEMPATH\Database\BaseBuilder.php(2345): CodeIgniter\Database\BaseConnection->query('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (:restaurant_id:, :name:, :description:, :price:, :category:, :is_available:, :created_at:, :updated_at:)', [...], false)
+ 5 SYSTEMPATH\Model.php(356): CodeIgniter\Database\BaseBuilder->insert()
+ 6 SYSTEMPATH\BaseModel.php(898): CodeIgniter\Model->doInsert([...])
+ 7 SYSTEMPATH\Model.php(665): CodeIgniter\BaseModel->insert([...], true)
+ 8 APPPATH\Controllers\MenuItems.php(79): CodeIgniter\Model->insert([...])
+ 9 SYSTEMPATH\CodeIgniter.php(951): App\Controllers\MenuItems->store()
+10 SYSTEMPATH\CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\MenuItems))
+11 SYSTEMPATH\CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+12 SYSTEMPATH\Boot.php(417): CodeIgniter\CodeIgniter->run()
+13 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+14 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2026-02-26 15:30:36 --> CodeIgniter\Database\Exceptions\DatabaseException: Unknown column 'category' in 'field list'
+[Method: POST, Route: menu/store]
+in SYSTEMPATH\Database\BaseConnection.php on line 724.
+ 1 SYSTEMPATH\Database\BaseBuilder.php(2345): CodeIgniter\Database\BaseConnection->query('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (:restaurant_id:, :name:, :description:, :price:, :category:, :is_available:, :created_at:, :updated_at:)', [...], false)
+ 2 SYSTEMPATH\Model.php(356): CodeIgniter\Database\BaseBuilder->insert()
+ 3 SYSTEMPATH\BaseModel.php(898): CodeIgniter\Model->doInsert([...])
+ 4 SYSTEMPATH\Model.php(665): CodeIgniter\BaseModel->insert([...], true)
+ 5 APPPATH\Controllers\MenuItems.php(79): CodeIgniter\Model->insert([...])
+ 6 SYSTEMPATH\CodeIgniter.php(951): App\Controllers\MenuItems->store()
+ 7 SYSTEMPATH\CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\MenuItems))
+ 8 SYSTEMPATH\CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 9 SYSTEMPATH\Boot.php(417): CodeIgniter\CodeIgniter->run()
+10 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+11 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2026-02-26 15:30:36 --> [Caused by] CodeIgniter\Database\Exceptions\DatabaseException: Unknown column 'category' in 'field list'
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 310.
+ 1 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:36\', \'2026-02-26 15:30:36\')')
+ 2 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:36\', \'2026-02-26 15:30:36\')')
+ 3 SYSTEMPATH\Database\BaseBuilder.php(2345): CodeIgniter\Database\BaseConnection->query('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (:restaurant_id:, :name:, :description:, :price:, :category:, :is_available:, :created_at:, :updated_at:)', [...], false)
+ 4 SYSTEMPATH\Model.php(356): CodeIgniter\Database\BaseBuilder->insert()
+ 5 SYSTEMPATH\BaseModel.php(898): CodeIgniter\Model->doInsert([...])
+ 6 SYSTEMPATH\Model.php(665): CodeIgniter\BaseModel->insert([...], true)
+ 7 APPPATH\Controllers\MenuItems.php(79): CodeIgniter\Model->insert([...])
+ 8 SYSTEMPATH\CodeIgniter.php(951): App\Controllers\MenuItems->store()
+ 9 SYSTEMPATH\CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\MenuItems))
+10 SYSTEMPATH\CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+11 SYSTEMPATH\Boot.php(417): CodeIgniter\CodeIgniter->run()
+12 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+13 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2026-02-26 15:30:36 --> [Caused by] mysqli_sql_exception: Unknown column 'category' in 'field list'
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 300.
+ 1 SYSTEMPATH\Database\MySQLi\Connection.php(300): mysqli->query('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:36\', \'2026-02-26 15:30:36\')', 0)
+ 2 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:36\', \'2026-02-26 15:30:36\')')
+ 3 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (NULL, \'Chicks\', \'Lol\', \'123\', \'Breakfast\', 1, \'2026-02-26 15:30:36\', \'2026-02-26 15:30:36\')')
+ 4 SYSTEMPATH\Database\BaseBuilder.php(2345): CodeIgniter\Database\BaseConnection->query('INSERT INTO `menu_items` (`restaurant_id`, `name`, `description`, `price`, `category`, `is_available`, `created_at`, `updated_at`) VALUES (:restaurant_id:, :name:, :description:, :price:, :category:, :is_available:, :created_at:, :updated_at:)', [...], false)
+ 5 SYSTEMPATH\Model.php(356): CodeIgniter\Database\BaseBuilder->insert()
+ 6 SYSTEMPATH\BaseModel.php(898): CodeIgniter\Model->doInsert([...])
+ 7 SYSTEMPATH\Model.php(665): CodeIgniter\BaseModel->insert([...], true)
+ 8 APPPATH\Controllers\MenuItems.php(79): CodeIgniter\Model->insert([...])
+ 9 SYSTEMPATH\CodeIgniter.php(951): App\Controllers\MenuItems->store()
+10 SYSTEMPATH\CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\MenuItems))
+11 SYSTEMPATH\CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+12 SYSTEMPATH\Boot.php(417): CodeIgniter\CodeIgniter->run()
+13 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+14 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+ERROR - 2026-02-26 15:37:27 --> Duplicate entry 'owner1@example.com' for key 'email'
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 300.
+ 1 SYSTEMPATH\Database\MySQLi\Connection.php(300): mysqli->query('INSERT INTO `users` (`email`, `password`, `role`, `is_active`, `created_at`, `updated_at`) VALUES (\'owner1@example.com\', \'$2y$10$HkPqrWtfNSFw5RPpwuV2Hu4e2TaBw5Hu5C9Id4Z8dKhP.t6H4ptxK\', \'restaurant\', 1, \'2026-02-26 15:37:27\', \'2026-02-26 15:37:27\')', 0)
+ 2 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('INSERT INTO `users` (`email`, `password`, `role`, `is_active`, `created_at`, `updated_at`) VALUES (\'owner1@example.com\', \'$2y$10$HkPqrWtfNSFw5RPpwuV2Hu4e2TaBw5Hu5C9Id4Z8dKhP.t6H4ptxK\', \'restaurant\', 1, \'2026-02-26 15:37:27\', \'2026-02-26 15:37:27\')')
+ 3 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('INSERT INTO `users` (`email`, `password`, `role`, `is_active`, `created_at`, `updated_at`) VALUES (\'owner1@example.com\', \'$2y$10$HkPqrWtfNSFw5RPpwuV2Hu4e2TaBw5Hu5C9Id4Z8dKhP.t6H4ptxK\', \'restaurant\', 1, \'2026-02-26 15:37:27\', \'2026-02-26 15:37:27\')')
+ 4 SYSTEMPATH\Database\BaseBuilder.php(2345): CodeIgniter\Database\BaseConnection->query('INSERT INTO `users` (`email`, `password`, `role`, `is_active`, `created_at`, `updated_at`) VALUES (:email:, :password:, :role:, :is_active:, :created_at:, :updated_at:)', [...], false)
+ 5 SYSTEMPATH\Model.php(356): CodeIgniter\Database\BaseBuilder->insert()
+ 6 SYSTEMPATH\BaseModel.php(898): CodeIgniter\Model->doInsert([...])
+ 7 SYSTEMPATH\Model.php(665): CodeIgniter\BaseModel->insert([...], true)
+ 8 APPPATH\Database\Seeds\RestaurantOwnersSeeder.php(33): CodeIgniter\Model->insert([...])
+ 9 SYSTEMPATH\Database\Seeder.php(155): App\Database\Seeds\RestaurantOwnersSeeder->run()
+10 SYSTEMPATH\Commands\Database\Seed.php(79): CodeIgniter\Database\Seeder->call('App\\Database\\Seeds\\RestaurantOwnersSeeder')
+11 SYSTEMPATH\CLI\Commands.php(74): CodeIgniter\Commands\Database\Seed->run([])
+12 SYSTEMPATH\CLI\Console.php(47): CodeIgniter\CLI\Commands->run('db:seed', [...])
+13 SYSTEMPATH\Boot.php(442): CodeIgniter\CLI\Console->run()
+14 SYSTEMPATH\Boot.php(166): CodeIgniter\Boot::runCommand(Object(CodeIgniter\CLI\Console))
+15 ROOTPATH\spark(87): CodeIgniter\Boot::bootSpark(Object(Config\Paths))
+ERROR - 2026-02-26 15:40:56 --> Unknown column 'address' in 'field list'
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 300.
+ 1 SYSTEMPATH\Database\MySQLi\Connection.php(300): mysqli->query('INSERT INTO `restaurants` (`user_id`, `name`, `address`, `status`, `is_active`, `created_at`, `updated_at`) VALUES (\'7\', \'Pizza Palace\', \'Address for Pizza Palace\', \'approved\', 1, \'2026-02-26 15:40:56\', \'2026-02-26 15:40:56\')', 0)
+ 2 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('INSERT INTO `restaurants` (`user_id`, `name`, `address`, `status`, `is_active`, `created_at`, `updated_at`) VALUES (\'7\', \'Pizza Palace\', \'Address for Pizza Palace\', \'approved\', 1, \'2026-02-26 15:40:56\', \'2026-02-26 15:40:56\')')
+ 3 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('INSERT INTO `restaurants` (`user_id`, `name`, `address`, `status`, `is_active`, `created_at`, `updated_at`) VALUES (\'7\', \'Pizza Palace\', \'Address for Pizza Palace\', \'approved\', 1, \'2026-02-26 15:40:56\', \'2026-02-26 15:40:56\')')
+ 4 SYSTEMPATH\Database\BaseBuilder.php(2345): CodeIgniter\Database\BaseConnection->query('INSERT INTO `restaurants` (`user_id`, `name`, `address`, `status`, `is_active`, `created_at`, `updated_at`) VALUES (:user_id:, :name:, :address:, :status:, :is_active:, :created_at:, :updated_at:)', [...], false)
+ 5 SYSTEMPATH\Model.php(356): CodeIgniter\Database\BaseBuilder->insert()
+ 6 SYSTEMPATH\BaseModel.php(898): CodeIgniter\Model->doInsert([...])
+ 7 SYSTEMPATH\Model.php(665): CodeIgniter\BaseModel->insert([...], true)
+ 8 APPPATH\Database\Seeds\RestaurantOwnersSeeder.php(28): CodeIgniter\Model->insert([...])
+ 9 SYSTEMPATH\Database\Seeder.php(155): App\Database\Seeds\RestaurantOwnersSeeder->run()
+10 SYSTEMPATH\Commands\Database\Seed.php(79): CodeIgniter\Database\Seeder->call('App\\Database\\Seeds\\RestaurantOwnersSeeder')
+11 SYSTEMPATH\CLI\Commands.php(74): CodeIgniter\Commands\Database\Seed->run([])
+12 SYSTEMPATH\CLI\Console.php(47): CodeIgniter\CLI\Commands->run('db:seed', [...])
+13 SYSTEMPATH\Boot.php(442): CodeIgniter\CLI\Console->run()
+14 SYSTEMPATH\Boot.php(166): CodeIgniter\Boot::runCommand(Object(CodeIgniter\CLI\Console))
+15 ROOTPATH\spark(87): CodeIgniter\Boot::bootSpark(Object(Config\Paths))
+ERROR - 2026-02-26 16:35:31 --> Unknown column 'is_active' in 'field list'
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 300.
+ 1 SYSTEMPATH\Database\MySQLi\Connection.php(300): mysqli->query('INSERT INTO `restaurants` (`user_id`, `name`, `status`, `is_active`, `created_at`, `updated_at`) VALUES (\'7\', \'Pizza Palace\', \'approved\', 1, \'2026-02-26 16:35:31\', \'2026-02-26 16:35:31\')', 0)
+ 2 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('INSERT INTO `restaurants` (`user_id`, `name`, `status`, `is_active`, `created_at`, `updated_at`) VALUES (\'7\', \'Pizza Palace\', \'approved\', 1, \'2026-02-26 16:35:31\', \'2026-02-26 16:35:31\')')
+ 3 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('INSERT INTO `restaurants` (`user_id`, `name`, `status`, `is_active`, `created_at`, `updated_at`) VALUES (\'7\', \'Pizza Palace\', \'approved\', 1, \'2026-02-26 16:35:31\', \'2026-02-26 16:35:31\')')
+ 4 SYSTEMPATH\Database\BaseBuilder.php(2345): CodeIgniter\Database\BaseConnection->query('INSERT INTO `restaurants` (`user_id`, `name`, `status`, `is_active`, `created_at`, `updated_at`) VALUES (:user_id:, :name:, :status:, :is_active:, :created_at:, :updated_at:)', [...], false)
+ 5 SYSTEMPATH\Model.php(356): CodeIgniter\Database\BaseBuilder->insert()
+ 6 SYSTEMPATH\BaseModel.php(898): CodeIgniter\Model->doInsert([...])
+ 7 SYSTEMPATH\Model.php(665): CodeIgniter\BaseModel->insert([...], true)
+ 8 APPPATH\Database\Seeds\RestaurantOwnersSeeder.php(28): CodeIgniter\Model->insert([...])
+ 9 SYSTEMPATH\Database\Seeder.php(155): App\Database\Seeds\RestaurantOwnersSeeder->run()
+10 SYSTEMPATH\Commands\Database\Seed.php(79): CodeIgniter\Database\Seeder->call('App\\Database\\Seeds\\RestaurantOwnersSeeder')
+11 SYSTEMPATH\CLI\Commands.php(74): CodeIgniter\Commands\Database\Seed->run([])
+12 SYSTEMPATH\CLI\Console.php(47): CodeIgniter\CLI\Commands->run('db:seed', [...])
+13 SYSTEMPATH\Boot.php(442): CodeIgniter\CLI\Console->run()
+14 SYSTEMPATH\Boot.php(166): CodeIgniter\Boot::runCommand(Object(CodeIgniter\CLI\Console))
+15 ROOTPATH\spark(87): CodeIgniter\Boot::bootSpark(Object(Config\Paths))

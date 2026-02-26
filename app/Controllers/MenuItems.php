@@ -54,13 +54,43 @@ class MenuItems extends BaseController
 
         $restaurantId = $session->get('restaurant_id');
 
+        if (! $restaurantId) {
+            // probably the user session was not linked to a restaurant yet
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'Restaurant information missing. Please logout and login again or contact support.']);
+        }
+
+        // validate input
+        $rules = [
+            'name'  => 'required|min_length[2]|max_length[255]',
+            'price' => 'required|decimal',
+            'category' => 'permit_empty|max_length[100]',
+        ];
+
+        if (! $this->validate($rules)) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => $this->validator->getErrors()]);
+        }
+
         $data = [
             'restaurant_id' => $restaurantId,
             'name' => $this->request->getPost('name'),
             'description' => $this->request->getPost('description'),
             'price' => $this->request->getPost('price'),
+            'category' => $this->request->getPost('category'),
             'is_available' => $this->request->getPost('is_available') ? 1 : 0,
         ];
+
+        // handle image upload
+        $image = $this->request->getFile('image');
+        if ($image && $image->isValid() && ! $image->hasMoved()) {
+            // make sure upload directory exists
+            if (! is_dir(FCPATH . 'uploads/menu')) {
+                mkdir(FCPATH . 'uploads/menu', 0755, true);
+            }
+            $newName = $image->getRandomName();
+            // move into public folder so the webserver can serve it
+            $image->move(FCPATH . 'uploads/menu', $newName);
+            $data['image'] = 'uploads/menu/' . $newName;
+        }
 
         if ($this->menuItemModel->insert($data)) {
             return $this->response->setJSON(['success' => true, 'message' => 'Menu item created']);
@@ -106,8 +136,20 @@ class MenuItems extends BaseController
             'name' => $this->request->getPost('name'),
             'description' => $this->request->getPost('description'),
             'price' => $this->request->getPost('price'),
+            'category' => $this->request->getPost('category'),
             'is_available' => $this->request->getPost('is_available') ? 1 : 0,
         ];
+
+        // image upload (optional)
+        $image = $this->request->getFile('image');
+        if ($image && $image->isValid() && ! $image->hasMoved()) {
+            if (! is_dir(FCPATH . 'uploads/menu')) {
+                mkdir(FCPATH . 'uploads/menu', 0755, true);
+            }
+            $newName = $image->getRandomName();
+            $image->move(FCPATH . 'uploads/menu', $newName);
+            $data['image'] = 'uploads/menu/' . $newName;
+        }
 
         if ($this->menuItemModel->update($id, $data)) {
             return $this->response->setJSON(['success' => true, 'message' => 'Menu item updated']);

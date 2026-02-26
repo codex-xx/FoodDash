@@ -8,6 +8,7 @@
     <div>
       <h3 class="m-0">Restaurant Dashboard</h3>
       <small class="text-muted">Manage menu, orders, and track your daily performance</small>
+      <p class="mt-1">Welcome, <strong><?= esc(session()->get('restaurant_name')) ?></strong></p>
     </div>
     <button class="btn btn-sm btn-primary" id="refreshBtn">Refresh Data</button>
   </div>

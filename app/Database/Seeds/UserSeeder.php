@@ -21,6 +21,19 @@ class UserSeeder extends Seeder
                 'role' => 'restaurant',
                 'is_active' => 1,
             ],
+            // additional restaurant owners used by the system
+            [
+                'email' => 'owner1@example.com',
+                'password' => password_hash('secret123', PASSWORD_DEFAULT),
+                'role' => 'restaurant',
+                'is_active' => 1,
+            ],
+            [
+                'email' => 'owner2@example.com',
+                'password' => password_hash('secret123', PASSWORD_DEFAULT),
+                'role' => 'restaurant',
+                'is_active' => 1,
+            ],
         ];
 
         foreach ($data as $row) {
