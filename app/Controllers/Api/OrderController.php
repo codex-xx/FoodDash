@@ -115,34 +115,26 @@ class OrderController extends ResourceController
             ], 403);
         }
 
-        $rules = [
-            'restaurant_id' => 'required|numeric',
-            'items'         => 'required',
-            'total_amount'  => 'required|numeric',
-            'delivery_address' => 'permit_empty',
-        ];
-
-        if (!$this->validate($rules)) {
-            return $this->respond([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors'  => $this->validator->getErrors()
-            ], 400);
+        // Get the JSON payload sent from the app
+        $json = $this->request->getJSON();
+        if (!$json) {
+            return $this->respond(['success' => false, 'message' => 'Invalid JSON data received'], 400);
         }
-
+        
         // Generate order number
         $orderNumber = 'ORD-' . strtoupper(uniqid());
 
+        // Build the data array from the received JSON object
         $data = [
             'order_number'     => $orderNumber,
             'customer_id'      => $customer['id'],
             'customer_name'    => $customer['name'],
-            'restaurant_id'    => $this->request->getPost('restaurant_id'),
-            'total_amount'     => $this->request->getPost('total_amount'),
-            'delivery_address' => $this->request->getPost('delivery_address') ?? $customer['address'],
-            'items'            => json_encode($this->request->getPost('items')),
+            'restaurant_id'    => $json->restaurant_id,
+            'total_amount'     => $json->total_amount,
+            'delivery_address' => $json->delivery_address ?? $customer['address'],
+            'items'            => json_encode($json->items),
             'status'           => 'pending',
-            'notes'            => $this->request->getPost('notes'),
+            'notes'            => $json->notes ?? null,
         ];
 
         $orderId = $this->orderModel->insert($data);
@@ -150,7 +142,7 @@ class OrderController extends ResourceController
         if (!$orderId) {
             return $this->respond([
                 'success' => false,
-                'message' => 'Failed to create order'
+                'message' => 'Failed to create order in database'
             ], 500);
         }
 
