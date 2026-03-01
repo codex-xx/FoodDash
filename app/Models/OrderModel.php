@@ -24,6 +24,7 @@ class OrderModel extends Model
         'delivery_address',
         'items',
         'notes',
+        'estimated_preparation_time',
     ];
 
     protected $returnType = 'array';

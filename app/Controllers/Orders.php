@@ -27,10 +27,22 @@ class Orders extends BaseController
         }
 
         $restaurantId = $session->get('restaurant_id');
-        $orders = $this->orderModel
-            ->where('restaurant_id', $restaurantId)
-            ->orderBy('created_at', 'DESC')
-            ->findAll();
+        
+        // Get date filters from query string
+        $startDate = $this->request->getGet('start_date');
+        $endDate = $this->request->getGet('end_date');
+        
+        $builder = $this->orderModel->where('restaurant_id', $restaurantId);
+        
+        // Apply date filtering if provided
+        if (!empty($startDate)) {
+            $builder->where('created_at >=', $startDate . ' 00:00:00');
+        }
+        if (!empty($endDate)) {
+            $builder->where('created_at <=', $endDate . ' 23:59:59');
+        }
+        
+        $orders = $builder->orderBy('created_at', 'DESC')->findAll();
 
         return view('restaurant/orders/index', ['orders' => $orders]);
     }
@@ -51,15 +63,29 @@ class Orders extends BaseController
         }
 
         $status = $this->request->getPost('status');
-        $allowed = ['pending', 'confirmed', 'preparing', 'ready_for_pickup', 'completed', 'cancelled'];
-
-        if (!in_array($status, $allowed)) {
-            return $this->response->setStatusCode(400)->setJSON(['error' => 'Invalid status']);
+        $estimatedTime = $this->request->getPost('estimated_preparation_time');
+        
+        $updateData = [];
+        
+        // Handle status update
+        if ($status !== null) {
+            $allowed = ['pending', 'confirmed', 'preparing', 'ready_for_pickup', 'completed', 'cancelled'];
+            if (!in_array($status, $allowed)) {
+                return $this->response->setStatusCode(400)->setJSON(['error' => 'Invalid status']);
+            }
+            $updateData['status'] = $status;
+        }
+        
+        // Handle estimated preparation time update
+        if ($estimatedTime !== null) {
+            $updateData['estimated_preparation_time'] = (int)$estimatedTime;
         }
 
-        $this->orderModel->update($id, ['status' => $status]);
+        if (!empty($updateData)) {
+            $this->orderModel->update($id, $updateData);
+        }
 
-        return $this->response->setJSON(['success' => true, 'status' => $status]);
+        return $this->response->setJSON(['success' => true, 'status' => $status ?? $order['status']]);
     }
 
     /**

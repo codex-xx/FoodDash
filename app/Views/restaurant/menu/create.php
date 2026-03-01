@@ -25,7 +25,12 @@
 
           <div class="mb-3">
             <label class="form-label">Category</label>
-            <input type="text" class="form-control" name="category">
+            <select class="form-select" name="category">
+              <option value="">Select Category</option>
+              <option value="Drinks">Drinks</option>
+              <option value="Meals">Meals</option>
+              <option value="Desserts">Desserts</option>
+            </select>
           </div>
 
           <div class="mb-3">
