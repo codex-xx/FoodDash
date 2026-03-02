@@ -19,12 +19,12 @@ use PHPMailer\PHPMailer\Exception;
 class EmailService
 {
     protected $mailer;
-    protected $fromEmail = 'vesterlaurel@gmail.com';
+    protected $fromEmail = 'benzmenguito123@gmail.com';
     protected $fromName = 'FoodDash';
     protected $smtpHost = 'smtp.gmail.com';
     protected $smtpPort = 587;
-    protected $smtpUsername = 'vesterlaurel@gmail.com';
-    protected $smtpPassword = 'ksjsjdufyckomaed';
+    protected $smtpUsername = 'benzmenguito123@gmail.com';
+    protected $smtpPassword = 'jdlf djeh pggj aavu';
 
     public function __construct()
     {
@@ -251,5 +251,248 @@ HTML;
     public function getError(): string
     {
         return $this->mailer->ErrorInfo;
+    }
+
+    /**
+     * Send application received confirmation email (for driver or restaurant)
+     * 
+     * @param string $toEmail Recipient email
+     * @param string $toName Recipient name
+     * @param string $partnerType 'driver' or 'restaurant'
+     * @return bool
+     */
+    public function sendApplicationReceived(string $toEmail, string $toName, string $partnerType): bool
+    {
+        try {
+            $this->mailer->clearAddresses();
+            $this->mailer->addAddress($toEmail, $toName);
+            
+            $this->mailer->Subject = 'FoodDash - Application Received';
+            
+            $partnerTypeLabel = ($partnerType === 'driver') ? 'Driver' : 'Restaurant';
+            
+            $this->mailer->Body = $this->getApplicationReceivedEmailTemplate($toName, $partnerTypeLabel);
+            $this->mailer->AltBody = "Hello {$toName},\n\nThank you for applying to become a FoodDash {$partnerTypeLabel}. We have received your application and our team will review it within 2-3 business days.\n\nWe will send you another email once your application has been reviewed.\n\nBest regards,\nFoodDash Team";
+
+            $this->mailer->send();
+            log_message('info', 'Application received email sent to: ' . $toEmail);
+            return true;
+
+        } catch (Exception $e) {
+            log_message('error', 'Failed to send application received email to ' . $toEmail . ': ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Send application approved email
+     * 
+     * @param string $toEmail Recipient email
+     * @param string $toName Recipient name
+     * @param string $partnerType 'driver' or 'restaurant'
+     * @return bool
+     */
+    public function sendApplicationApproved(string $toEmail, string $toName, string $partnerType): bool
+    {
+        try {
+            $this->mailer->clearAddresses();
+            $this->mailer->addAddress($toEmail, $toName);
+            
+            $this->mailer->Subject = 'FoodDash - Application Approved!';
+            
+            $partnerTypeLabel = ($partnerType === 'driver') ? 'Driver' : 'Restaurant';
+            
+            $this->mailer->Body = $this->getApplicationApprovedEmailTemplate($toName, $partnerTypeLabel);
+            $this->mailer->AltBody = "Congratulations {$toName}!\n\nYour application to become a FoodDash {$partnerTypeLabel} has been approved!\n\nYou can now log in to your account and start using our platform.\n\nIf you have any questions, please contact our support team.\n\nBest regards,\nFoodDash Team";
+
+            $this->mailer->send();
+            log_message('info', 'Application approved email sent to: ' . $toEmail);
+            return true;
+
+        } catch (Exception $e) {
+            log_message('error', 'Failed to send application approved email to ' . $toEmail . ': ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Send application rejected email
+     * 
+     * @param string $toEmail Recipient email
+     * @param string $toName Recipient name
+     * @param string $partnerType 'driver' or 'restaurant'
+     * @param string|null $reason Rejection reason
+     * @return bool
+     */
+    public function sendApplicationRejected(string $toEmail, string $toName, string $partnerType, ?string $reason = null): bool
+    {
+        try {
+            $this->mailer->clearAddresses();
+            $this->mailer->addAddress($toEmail, $toName);
+            
+            $this->mailer->Subject = 'FoodDash - Application Update';
+            
+            $partnerTypeLabel = ($partnerType === 'driver') ? 'Driver' : 'Restaurant';
+            
+            $this->mailer->Body = $this->getApplicationRejectedEmailTemplate($toName, $partnerTypeLabel, $reason);
+            $this->mailer->AltBody = "Hello {$toName},\n\nThank you for your interest in becoming a FoodDash {$partnerTypeLabel}.\n\nAfter careful review, we regret to inform you that your application was not approved at this time." . 
+                ($reason ? "\n\nReason: " . $reason : "") . "\n\nIf you have any questions, please contact our support team.\n\nBest regards,\nFoodDash Team";
+
+            $this->mailer->send();
+            log_message('info', 'Application rejected email sent to: ' . $toEmail);
+            return true;
+
+        } catch (Exception $e) {
+            log_message('error', 'Failed to send application rejected email to ' . $toEmail . ': ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Get HTML template for application received email
+     */
+    protected function getApplicationReceivedEmailTemplate(string $name, string $partnerType): string
+    {
+        return <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background: linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">🍕 FoodDash</h1>
+        <p style="color: white; margin: 10px 0 0 0; opacity: 0.9;">Application Received</p>
+    </div>
+    
+    <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #eee; border-top: none;">
+        <h2 style="color: #333; margin-top: 0;">Hello, {$name}!</h2>
+        
+        <p>Thank you for applying to become a FoodDash {$partnerType}!</p>
+        
+        <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; color: #856404;">
+                ⏳ <strong>Application Status: Under Review</strong><br>
+                <span style="font-size: 14px;">We have received your application and our team will review it within 2-3 business days.</span>
+            </p>
+        </div>
+        
+        <p>We will send you another email once your application has been reviewed. In the meantime, please make sure your contact information is up to date.</p>
+        
+        <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
+        
+        <p style="color: #999; font-size: 12px; text-align: center; margin: 0;">
+            This is an automated message from FoodDash. Please do not reply to this email.
+        </p>
+    </div>
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * Get HTML template for application approved email
+     */
+    protected function getApplicationApprovedEmailTemplate(string $name, string $partnerType): string
+    {
+        return <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">🎉 Congratulations!</h1>
+        <p style="color: white; margin: 10px 0 0 0; opacity: 0.9;">Your Application Has Been Approved</p>
+    </div>
+    
+    <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #eee; border-top: none;">
+        <h2 style="color: #333; margin-top: 0;">Hello, {$name}!</h2>
+        
+        <p>Great news! Your application to become a FoodDash {$partnerType} has been <strong style="color: #28a745;">approved</strong>!</p>
+        
+        <div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; color: #155724;">
+                ✅ <strong>You can now log in to your account</strong><br>
+                <span style="font-size: 14px;">Start using our platform and grow your business with FoodDash!</span>
+            </p>
+        </div>
+        
+        <p>You can now:</p>
+        <ul style="color: #333;">
+            <li>Log in to your dashboard</li>
+            <li>Complete your profile</li>
+            <li>Start accepting orders</li>
+        </ul>
+        
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="#" style="background: #FF6B35; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Log In Now</a>
+        </div>
+        
+        <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
+        
+        <p style="color: #999; font-size: 12px; text-align: center; margin: 0;">
+            This is an automated message from FoodDash. Please do not reply to this email.
+        </p>
+    </div>
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * Get HTML template for application rejected email
+     */
+    protected function getApplicationRejectedEmailTemplate(string $name, string $partnerType, ?string $reason = null): string
+    {
+        $reasonSection = $reason ? "
+        <div style='background: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; border-radius: 8px; margin: 20px 0;'>
+            <p style='margin: 0; color: #721c24;'>
+                <strong>Reason:</strong><br>
+                {$reason}
+            </p>
+        </div>
+        " : "";
+
+        return <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">🍕 FoodDash</h1>
+        <p style="color: white; margin: 10px 0 0 0; opacity: 0.9;">Application Update</p>
+    </div>
+    
+    <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #eee; border-top: none;">
+        <h2 style="color: #333; margin-top: 0;">Hello, {$name}!</h2>
+        
+        <p>Thank you for your interest in becoming a FoodDash {$partnerType}.</p>
+        
+        <div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; color: #721c24; text-align: center;">
+                <strong>After careful review, we regret to inform you that your application was not approved at this time.</strong>
+            </p>
+        </div>
+        
+        {$reasonSection}
+        
+        <p>We encourage you to review our requirements and apply again in the future if you become eligible. If you have any questions, please contact our support team.</p>
+        
+        <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
+        
+        <p style="color: #999; font-size: 12px; text-align: center; margin: 0;">
+            This is an automated message from FoodDash. Please do not reply to this email.
+        </p>
+    </div>
+</body>
+</html>
+HTML;
     }
 }

@@ -107,6 +107,17 @@ class AdminManagement extends BaseController
         $this->restaurantModel->update($id, ['status' => 'approved']);
         if ($restaurant['user_id']) {
             $this->userModel->update($restaurant['user_id'], ['is_active' => 1]);
+            
+            // Send approval email
+            $user = $this->userModel->find($restaurant['user_id']);
+            if ($user && $user['email']) {
+                try {
+                    $emailService = new \App\Libraries\EmailService();
+                    $emailService->sendApplicationApproved($user['email'], $restaurant['name'], 'restaurant');
+                } catch (\Exception $e) {
+                    log_message('error', 'Failed to send restaurant approval email: ' . $e->getMessage());
+                }
+            }
         }
 
         return $this->response->setJSON(['success' => true, 'message' => 'Restaurant approved']);
@@ -130,6 +141,17 @@ class AdminManagement extends BaseController
         $this->restaurantModel->update($id, ['status' => 'rejected']);
         if ($restaurant['user_id']) {
             $this->userModel->update($restaurant['user_id'], ['is_active' => 0]);
+            
+            // Send rejection email
+            $user = $this->userModel->find($restaurant['user_id']);
+            if ($user && $user['email']) {
+                try {
+                    $emailService = new \App\Libraries\EmailService();
+                    $emailService->sendApplicationRejected($user['email'], $restaurant['name'], 'restaurant');
+                } catch (\Exception $e) {
+                    log_message('error', 'Failed to send restaurant rejection email: ' . $e->getMessage());
+                }
+            }
         }
 
         return $this->response->setJSON(['success' => true, 'message' => 'Restaurant rejected']);
@@ -168,6 +190,17 @@ class AdminManagement extends BaseController
         $this->driverModel->update($id, ['status' => 'approved']);
         if ($driver['user_id']) {
             $this->userModel->update($driver['user_id'], ['is_active' => 1]);
+            
+            // Send approval email
+            $user = $this->userModel->find($driver['user_id']);
+            if ($user && $user['email']) {
+                try {
+                    $emailService = new \App\Libraries\EmailService();
+                    $emailService->sendApplicationApproved($user['email'], $driver['name'], 'driver');
+                } catch (\Exception $e) {
+                    log_message('error', 'Failed to send driver approval email: ' . $e->getMessage());
+                }
+            }
         }
 
         return $this->response->setJSON(['success' => true, 'message' => 'Driver approved']);
@@ -191,6 +224,17 @@ class AdminManagement extends BaseController
         $this->driverModel->update($id, ['status' => 'rejected']);
         if ($driver['user_id']) {
             $this->userModel->update($driver['user_id'], ['is_active' => 0]);
+            
+            // Send rejection email
+            $user = $this->userModel->find($driver['user_id']);
+            if ($user && $user['email']) {
+                try {
+                    $emailService = new \App\Libraries\EmailService();
+                    $emailService->sendApplicationRejected($user['email'], $driver['name'], 'driver');
+                } catch (\Exception $e) {
+                    log_message('error', 'Failed to send driver rejection email: ' . $e->getMessage());
+                }
+            }
         }
 
         return $this->response->setJSON(['success' => true, 'message' => 'Driver rejected']);

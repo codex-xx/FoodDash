@@ -161,6 +161,7 @@ class Auth extends BaseController
         return view('auth/reset', ['token' => $token]);
     }
 
+   
     // Process password reset
     public function resetPassword($token = null)
     {
@@ -270,6 +271,18 @@ class Auth extends BaseController
                 return redirect()->back()->withInput()->with('driver_error', 'Failed to submit application. Please try again.');
             }
 
+            // Send confirmation email
+            try {
+                $emailService = new \App\Libraries\EmailService();
+                $emailService->sendApplicationReceived(
+                    $this->request->getPost('driver_email'),
+                    $this->request->getPost('driver_name'),
+                    'driver'
+                );
+            } catch (\Exception $e) {
+                log_message('error', 'Failed to send application confirmation email: ' . $e->getMessage());
+            }
+
             return redirect()->back()->with('driver_success', 'Thank you for applying to become a FoodDash driver! Our team will review your application and contact you within 2-3 business days.');
 
         } elseif ($partnerType === 'restaurant') {
@@ -326,6 +339,18 @@ class Auth extends BaseController
                 // Rollback user creation
                 $this->userModel->delete($userId);
                 return redirect()->back()->withInput()->with('restaurant_error', 'Failed to submit registration. Please try again.');
+            }
+
+            // Send confirmation email
+            try {
+                $emailService = new \App\Libraries\EmailService();
+                $emailService->sendApplicationReceived(
+                    $this->request->getPost('owner_email'),
+                    $this->request->getPost('restaurant_name'),
+                    'restaurant'
+                );
+            } catch (\Exception $e) {
+                log_message('error', 'Failed to send application confirmation email: ' . $e->getMessage());
             }
 
             return redirect()->back()->with('restaurant_success', 'Thank you for registering your restaurant with FoodDash! Our team will review your application and contact you within 2-3 business days.');
