@@ -61,6 +61,18 @@ $routes->get('api/admin/revenue-summary', 'AdminManagement::getRevenueSummary');
 // MOBILE API ENDPOINTS
 // ============================================
 
+// Simple test endpoint (GET) - Use to test connectivity
+$routes->get('api/test', static function () {
+    return service('response')
+        ->setHeader('Access-Control-Allow-Origin', '*')
+        ->setHeader('Content-Type', 'application/json')
+        ->setBody(json_encode([
+            'success' => true,
+            'message' => 'API is working!',
+            'timestamp' => date('Y-m-d H:i:s')
+        ]));
+});
+
 // CORS Preflight
 $routes->options('api/(:any)', static function () {
     return service('response')
@@ -74,6 +86,12 @@ $routes->options('api/(:any)', static function () {
 // Simple routes for Android (default to customer)
 $routes->post('api/register', 'Api\AuthController::customerRegister');
 $routes->post('api/login', 'Api\AuthController::customerLogin');
+
+// Password Reset (Public - For Android App)
+$routes->post('api/forgot-password', 'Api\AuthController::forgotPassword');
+$routes->post('api/verify-reset-code', 'Api\AuthController::verifyResetCode');
+$routes->post('api/verify-code', 'Api\AuthController::verifyResetCode');  // Alias for Android
+$routes->post('api/reset-password', 'Api\AuthController::resetPassword');
 
 // Full routes with user type
 $routes->post('api/customer/register', 'Api\AuthController::customerRegister');

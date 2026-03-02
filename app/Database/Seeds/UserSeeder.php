@@ -23,7 +23,7 @@ class UserSeeder extends Seeder
             ],
             // additional restaurant owners used by the system
             [
-                'email' => 'owner1@example.com',
+                'email' => 'vesterlaurel@gmail.com',
                 'password' => password_hash('secret123', PASSWORD_DEFAULT),
                 'role' => 'restaurant',
                 'is_active' => 1,
@@ -37,7 +37,13 @@ class UserSeeder extends Seeder
         ];
 
         foreach ($data as $row) {
-            $this->db->table('users')->insert($row);
+            // Check if user exists, update if so, otherwise insert
+            $existing = $this->db->table('users')->where('email', $row['email'])->get()->getRow();
+            if ($existing) {
+                $this->db->table('users')->where('email', $row['email'])->update($row);
+            } else {
+                $this->db->table('users')->insert($row);
+            }
         }
     }
 }

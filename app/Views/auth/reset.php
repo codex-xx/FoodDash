@@ -15,7 +15,20 @@
                     <h4 class="card-title mb-4 text-center">Reset Password</h4>
 
                     <?php if (session()->getFlashdata('error')): ?>
-                        <div class="alert alert-danger"><?php echo esc(session()->getFlashdata('error')); ?></div>
+                        <div class="alert alert-danger">
+                            <?php 
+                            $error = session()->getFlashdata('error');
+                            if (is_array($error)) {
+                                echo '<ul class="mb-0">';
+                                foreach ($error as $e) {
+                                    echo '<li>' . esc($e) . '</li>';
+                                }
+                                echo '</ul>';
+                            } else {
+                                echo esc($error);
+                            }
+                            ?>
+                        </div>
                     <?php endif; ?>
 
                     <form action="<?php echo site_url('reset/' . esc($token)); ?>" method="post">

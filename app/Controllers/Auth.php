@@ -121,15 +121,22 @@ class Auth extends BaseController
 
         $resetLink = site_url("reset/" . $token);
 
-        // Try to send email if Mail is configured, otherwise show link in flash for dev/testing
+        // Send email using PHPMailer
         try {
-            $emailService = service('email');
-            $emailService->setTo($user['email']);
-            $emailService->setSubject('Password reset for FoodDash');
-            $emailService->setMessage("Use the following link to reset your password: {$resetLink}");
-            $emailService->send();
-            $message = 'Password reset link sent to your email.';
+            $emailService = new \App\Libraries\EmailService();
+            $sent = $emailService->sendPasswordResetLink(
+                $user['email'],
+                $user['name'] ?? 'User',
+                $resetLink
+            );
+            
+            if ($sent) {
+                $message = 'Password reset link sent to your email.';
+            } else {
+                $message = 'Failed to send email. Use this link (development): ' . $resetLink;
+            }
         } catch (\Exception $e) {
+            log_message('error', 'Email send error: ' . $e->getMessage());
             $message = 'Password reset created. Use this link (development): ' . $resetLink;
         }
 

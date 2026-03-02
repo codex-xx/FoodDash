@@ -22,6 +22,9 @@ class CustomerModel extends Model
         'profile_image',
         'api_token',
         'fcm_token',
+        'reset_token',
+        'reset_expires',
+        'reset_code',
         'is_active',
     ];
 

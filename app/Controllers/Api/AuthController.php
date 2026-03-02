@@ -372,4 +372,218 @@ class AuthController extends ResourceController
             'message' => 'Invalid token'
         ], 401);
     }
+
+    /**
+     * Forgot Password - Send reset code via email
+     * POST /api/forgot-password
+     */
+    public function forgotPassword()
+    {
+        try {
+            $rules = [
+                'email' => 'required|valid_email',
+            ];
+
+            if (!$this->validate($rules)) {
+                return $this->respond([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors'  => $this->validator->getErrors()
+                ], 400);
+            }
+
+            $email = $this->getInput('email');
+
+            $customerModel = new CustomerModel();
+            $customer = $customerModel->where('email', $email)->first();
+
+            if (!$customer) {
+                // Don't reveal if email exists for security
+                return $this->respond([
+                    'success' => true,
+                    'message' => 'If an account with that email exists, a reset code has been sent.'
+                ]);
+            }
+
+            // Generate 6-digit reset code
+            $resetCode = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $resetToken = bin2hex(random_bytes(32));
+            $expires = date('Y-m-d H:i:s', strtotime('+15 minutes'));
+
+            // Update customer with reset info
+            $customerModel->update($customer['id'], [
+                'reset_code'    => $resetCode,
+                'reset_token'   => $resetToken,
+                'reset_expires' => $expires,
+            ]);
+
+            // Send email using PHPMailer
+            $emailService = new \App\Libraries\EmailService();
+            $sent = $emailService->sendPasswordResetCode(
+                $customer['email'],
+                $customer['name'],
+                $resetCode
+            );
+
+            if (!$sent) {
+                log_message('error', 'Failed to send reset email to: ' . $email);
+                return $this->respond([
+                    'success' => false,
+                    'message' => 'Failed to send reset email. Please try again later.'
+                ], 500);
+            }
+
+            return $this->respond([
+                'success' => true,
+                'message' => 'Password reset code sent to your email.',
+                'data'    => [
+                    'reset_token' => $resetToken // Used to verify the code
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            log_message('error', 'Forgot password error: ' . $e->getMessage());
+            return $this->respond([
+                'success' => false,
+                'message' => 'An error occurred. Please try again later.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Verify Reset Code
+     * POST /api/verify-reset-code or /api/verify-code
+     */
+    public function verifyResetCode()
+    {
+        try {
+            $email = $this->getInput('email');
+            $code = $this->getInput('code') ?? $this->getInput('otp') ?? $this->getInput('verification_code');
+
+            log_message('info', 'Verify code request - Email: ' . $email . ', Code: ' . $code);
+
+            // Manual validation
+            if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return $this->respond([
+                    'success' => false,
+                    'message' => 'Valid email is required'
+                ], 400);
+            }
+
+            if (empty($code) || strlen($code) != 6) {
+                return $this->respond([
+                    'success' => false,
+                    'message' => 'Enter 6-digit code'
+                ], 400);
+            }
+
+            $customerModel = new CustomerModel();
+            $customer = $customerModel->where('email', $email)
+                ->where('reset_code', $code)
+                ->where('reset_expires >=', date('Y-m-d H:i:s'))
+                ->first();
+
+            if (!$customer) {
+                log_message('info', 'Verify code failed - Invalid code for email: ' . $email);
+                return $this->respond([
+                    'success' => false,
+                    'message' => 'Invalid or expired reset code.'
+                ], 400);
+            }
+
+            log_message('info', 'Code verified successfully for: ' . $email);
+
+            return $this->respond([
+                'success' => true,
+                'message' => 'Code verified successfully.',
+                'data'    => [
+                    'reset_token' => $customer['reset_token'],
+                    'email' => $email
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            log_message('error', 'Verify reset code error: ' . $e->getMessage());
+            return $this->respond([
+                'success' => false,
+                'message' => 'An error occurred. Please try again later.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Reset Password with new password
+     * POST /api/reset-password
+     */
+    public function resetPassword()
+    {
+        try {
+            // Get password from multiple possible field names
+            $password = $this->getInput('password') 
+                ?? $this->getInput('new_password') 
+                ?? $this->getInput('newPassword');
+
+            $email = $this->getInput('email');
+            $resetToken = $this->getInput('reset_token') ?? $this->getInput('resetToken');
+
+            // Log what we received for debugging
+            log_message('info', 'Reset password request - Email: ' . $email . ', Token: ' . ($resetToken ? 'present' : 'missing') . ', Password length: ' . strlen($password ?? ''));
+
+            // Manual validation
+            $errors = [];
+            if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $errors['email'] = 'Valid email is required';
+            }
+            if (empty($resetToken)) {
+                $errors['reset_token'] = 'Reset token is required';
+            }
+            if (empty($password) || strlen($password) < 6) {
+                $errors['password'] = 'Password must be at least 6 characters';
+            }
+
+            if (!empty($errors)) {
+                return $this->respond([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors'  => $errors
+                ], 400);
+            }
+
+            $customerModel = new CustomerModel();
+            $customer = $customerModel->where('email', $email)
+                ->where('reset_token', $resetToken)
+                ->where('reset_expires >=', date('Y-m-d H:i:s'))
+                ->first();
+
+            if (!$customer) {
+                log_message('info', 'Reset password failed - No matching customer for email: ' . $email);
+                return $this->respond([
+                    'success' => false,
+                    'message' => 'Invalid or expired reset token.'
+                ], 400);
+            }
+
+            // Update password and clear reset fields
+            $customerModel->update($customer['id'], [
+                'password'      => $password, // Will be hashed by model
+                'reset_token'   => null,
+                'reset_expires' => null,
+                'reset_code'    => null,
+            ]);
+
+            log_message('info', 'Password reset successful for: ' . $email);
+
+            return $this->respond([
+                'success' => true,
+                'message' => 'Password reset successfully. You can now login with your new password.'
+            ]);
+            
+        } catch (\Exception $e) {
+            log_message('error', 'Reset password error: ' . $e->getMessage());
+            return $this->respond([
+                'success' => false,
+                'message' => 'An error occurred. Please try again later.'
+            ], 500);
+        }
+    }
 }
