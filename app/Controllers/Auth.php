@@ -195,4 +195,142 @@ class Auth extends BaseController
 
         return redirect()->to('/login')->with('success', 'Password has been reset. You may now login.');
     }
+
+    // Show Help Centre page
+    public function help()
+    {
+        return view('auth/help');
+    }
+
+    // Show Be Our Partner page
+    public function partner()
+    {
+        return view('auth/partner');
+    }
+
+    // Handle partner registration (driver or restaurant)
+    public function submitPartnerRegistration()
+    {
+        $partnerType = $this->request->getPost('partner_type');
+        
+        if ($partnerType === 'driver') {
+            // Validate driver application
+            $rules = [
+                'driver_name'    => 'required|min_length[3]',
+                'driver_email'   => 'required|valid_email',
+                'driver_phone'   => 'required|min_length[10]',
+                'vehicle_type'   => 'required',
+                'driver_terms'   => 'required',
+            ];
+
+            if (! $this->validate($rules)) {
+                return redirect()->back()->withInput()->with('driver_error', $this->validator->getErrors());
+            }
+
+            // Check if email already exists
+            $existingUser = $this->userModel->where('email', $this->request->getPost('driver_email'))->first();
+            if ($existingUser) {
+                return redirect()->back()->withInput()->with('driver_error', 'Email already registered');
+            }
+
+            // Generate a random password (they can reset it later)
+            $tempPassword = bin2hex(random_bytes(8));
+            $hashedPassword = password_hash($tempPassword, PASSWORD_DEFAULT);
+
+            // Create user account
+            $userId = $this->userModel->insert([
+                'email'      => $this->request->getPost('driver_email'),
+                'password'   => $hashedPassword,
+                'role'       => 'driver',
+                'is_active'  => 0, // Not active until approved
+            ]);
+
+            if (!$userId) {
+                return redirect()->back()->withInput()->with('driver_error', 'Failed to create account. Please try again.');
+            }
+
+            // Create driver record
+            $driverModel = new \App\Models\DriverModel();
+            $driverData = [
+                'user_id'      => $userId,
+                'name'         => $this->request->getPost('driver_name'),
+                'email'        => $this->request->getPost('driver_email'),
+                'phone'        => $this->request->getPost('driver_phone'),
+                'vehicle_type' => $this->request->getPost('vehicle_type'),
+                'vehicle_number' => $this->request->getPost('license_plate'),
+                'status'       => 'pending',
+                'is_active'    => 0,
+            ];
+
+            $driverResult = $driverModel->insert($driverData);
+
+            if (!$driverResult) {
+                // Rollback user creation
+                $this->userModel->delete($userId);
+                return redirect()->back()->withInput()->with('driver_error', 'Failed to submit application. Please try again.');
+            }
+
+            return redirect()->back()->with('driver_success', 'Thank you for applying to become a FoodDash driver! Our team will review your application and contact you within 2-3 business days.');
+
+        } elseif ($partnerType === 'restaurant') {
+            // Validate restaurant registration
+            $rules = [
+                'restaurant_name'   => 'required|min_length[3]',
+                'restaurant_phone' => 'required|min_length[10]',
+                'restaurant_address' => 'required',
+                'owner_name'        => 'required|min_length[3]',
+                'owner_email'       => 'required|valid_email',
+                'owner_phone'       => 'required|min_length[10]',
+                'restaurant_terms'  => 'required',
+            ];
+
+            if (! $this->validate($rules)) {
+                return redirect()->back()->withInput()->with('restaurant_error', $this->validator->getErrors());
+            }
+
+            // Check if email already exists
+            $existingUser = $this->userModel->where('email', $this->request->getPost('owner_email'))->first();
+            if ($existingUser) {
+                return redirect()->back()->withInput()->with('restaurant_error', 'Email already registered');
+            }
+
+            // Generate a random password (they can reset it later)
+            $tempPassword = bin2hex(random_bytes(8));
+            $hashedPassword = password_hash($tempPassword, PASSWORD_DEFAULT);
+
+            // Create user account
+            $userId = $this->userModel->insert([
+                'email'      => $this->request->getPost('owner_email'),
+                'password'   => $hashedPassword,
+                'role'       => 'restaurant',
+                'is_active'  => 0, // Not active until approved
+            ]);
+
+            if (!$userId) {
+                return redirect()->back()->withInput()->with('restaurant_error', 'Failed to create account. Please try again.');
+            }
+
+            // Create restaurant record
+            $restaurantModel = new \App\Models\RestaurantModel();
+            $restaurantData = [
+                'user_id'    => $userId,
+                'name'       => $this->request->getPost('restaurant_name'),
+                'address'    => $this->request->getPost('restaurant_address'),
+                'status'     => 'pending',
+                'is_active'  => 0,
+            ];
+
+            $restaurantResult = $restaurantModel->insert($restaurantData);
+
+            if (!$restaurantResult) {
+                // Rollback user creation
+                $this->userModel->delete($userId);
+                return redirect()->back()->withInput()->with('restaurant_error', 'Failed to submit registration. Please try again.');
+            }
+
+            return redirect()->back()->with('restaurant_success', 'Thank you for registering your restaurant with FoodDash! Our team will review your application and contact you within 2-3 business days.');
+        }
+
+        return redirect()->to('/partner');
+    }
 }

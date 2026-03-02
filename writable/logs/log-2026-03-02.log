@@ -40,3 +40,66 @@ in APPPATH\Views\auth\reset.php on line 18.
  9 SYSTEMPATH\Boot.php(417): CodeIgniter\CodeIgniter->run()
 10 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
 11 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+ERROR - 2026-03-02 12:57:34 --> Table 'fooddash_db.menu_items' doesn't exist
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 300.
+ 1 SYSTEMPATH\Database\MySQLi\Connection.php(300): mysqli->query('ALTER TABLE `menu_items`
+	ADD `discount_price` DECIMAL(10,2) NULL AFTER `price`', 0)
+ 2 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('ALTER TABLE `menu_items`
+	ADD `discount_price` DECIMAL(10,2) NULL AFTER `price`')
+ 3 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('ALTER TABLE `menu_items`
+	ADD `discount_price` DECIMAL(10,2) NULL AFTER `price`')
+ 4 SYSTEMPATH\Database\Forge.php(772): CodeIgniter\Database\BaseConnection->query('ALTER TABLE `menu_items`
+	ADD `discount_price` DECIMAL(10,2) NULL AFTER `price`')
+ 5 APPPATH\Database\Migrations\2024-01-01-000001_AddDiscountPriceToMenuItems.php(19): CodeIgniter\Database\Forge->addColumn('menu_items', [...])
+ 6 SYSTEMPATH\Database\MigrationRunner.php(1014): App\Database\Migrations\AddDiscountPriceToMenuItems->up()
+ 7 SYSTEMPATH\Database\MigrationRunner.php(202): CodeIgniter\Database\MigrationRunner->migrate('up', Object(stdClass))
+ 8 SYSTEMPATH\Commands\Database\Migrate.php(89): CodeIgniter\Database\MigrationRunner->latest(null)
+ 9 SYSTEMPATH\CLI\SignalTrait.php(245): CodeIgniter\Commands\Database\Migrate::CodeIgniter\Commands\Database\{closure}()
+10 SYSTEMPATH\Commands\Database\Migrate.php(88): CodeIgniter\Commands\Database\Migrate->withSignalsBlocked(Object(Closure))
+11 SYSTEMPATH\CLI\Commands.php(74): CodeIgniter\Commands\Database\Migrate->run([])
+12 SYSTEMPATH\CLI\Console.php(47): CodeIgniter\CLI\Commands->run('migrate', [])
+13 SYSTEMPATH\Boot.php(442): CodeIgniter\CLI\Console->run()
+14 SYSTEMPATH\Boot.php(166): CodeIgniter\Boot::runCommand(Object(CodeIgniter\CLI\Console))
+15 ROOTPATH\spark(87): CodeIgniter\Boot::bootSpark(Object(Config\Paths))
+ERROR - 2026-03-02 12:58:30 --> Table 'fooddash_db.menu_items' doesn't exist
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 300.
+ 1 SYSTEMPATH\Database\MySQLi\Connection.php(300): mysqli->query('ALTER TABLE `menu_items`
+	ADD `discount_price` DECIMAL(10,2) NULL AFTER `price`', 0)
+ 2 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('ALTER TABLE `menu_items`
+	ADD `discount_price` DECIMAL(10,2) NULL AFTER `price`')
+ 3 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('ALTER TABLE `menu_items`
+	ADD `discount_price` DECIMAL(10,2) NULL AFTER `price`')
+ 4 SYSTEMPATH\Database\Forge.php(772): CodeIgniter\Database\BaseConnection->query('ALTER TABLE `menu_items`
+	ADD `discount_price` DECIMAL(10,2) NULL AFTER `price`')
+ 5 APPPATH\Database\Migrations\2024-01-01-000001_AddDiscountPriceToMenuItems.php(19): CodeIgniter\Database\Forge->addColumn('menu_items', [...])
+ 6 SYSTEMPATH\Database\MigrationRunner.php(1014): App\Database\Migrations\AddDiscountPriceToMenuItems->up()
+ 7 SYSTEMPATH\Database\MigrationRunner.php(202): CodeIgniter\Database\MigrationRunner->migrate('up', Object(stdClass))
+ 8 SYSTEMPATH\Commands\Database\Migrate.php(89): CodeIgniter\Database\MigrationRunner->latest(null)
+ 9 SYSTEMPATH\CLI\SignalTrait.php(245): CodeIgniter\Commands\Database\Migrate::CodeIgniter\Commands\Database\{closure}()
+10 SYSTEMPATH\Commands\Database\Migrate.php(88): CodeIgniter\Commands\Database\Migrate->withSignalsBlocked(Object(Closure))
+11 SYSTEMPATH\CLI\Commands.php(74): CodeIgniter\Commands\Database\Migrate->run([])
+12 SYSTEMPATH\CLI\Console.php(47): CodeIgniter\CLI\Commands->run('migrate', [])
+13 SYSTEMPATH\Boot.php(442): CodeIgniter\CLI\Console->run()
+14 SYSTEMPATH\Boot.php(166): CodeIgniter\Boot::runCommand(Object(CodeIgniter\CLI\Console))
+15 ROOTPATH\spark(87): CodeIgniter\Boot::bootSpark(Object(Config\Paths))
+ERROR - 2026-03-02 12:59:33 --> Table 'fooddash_db.menu_items' doesn't exist
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 300.
+ 1 SYSTEMPATH\Database\MySQLi\Connection.php(300): mysqli->query('ALTER TABLE `menu_items`
+	ADD `discount_price` DECIMAL(10,2) NULL AFTER `price`', 0)
+ 2 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('ALTER TABLE `menu_items`
+	ADD `discount_price` DECIMAL(10,2) NULL AFTER `price`')
+ 3 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('ALTER TABLE `menu_items`
+	ADD `discount_price` DECIMAL(10,2) NULL AFTER `price`')
+ 4 SYSTEMPATH\Database\Forge.php(772): CodeIgniter\Database\BaseConnection->query('ALTER TABLE `menu_items`
+	ADD `discount_price` DECIMAL(10,2) NULL AFTER `price`')
+ 5 APPPATH\Database\Migrations\2024-01-01-000001_AddDiscountPriceToMenuItems.php(19): CodeIgniter\Database\Forge->addColumn('menu_items', [...])
+ 6 SYSTEMPATH\Database\MigrationRunner.php(1014): App\Database\Migrations\AddDiscountPriceToMenuItems->up()
+ 7 SYSTEMPATH\Database\MigrationRunner.php(202): CodeIgniter\Database\MigrationRunner->migrate('up', Object(stdClass))
+ 8 SYSTEMPATH\Commands\Database\Migrate.php(89): CodeIgniter\Database\MigrationRunner->latest(null)
+ 9 SYSTEMPATH\CLI\SignalTrait.php(245): CodeIgniter\Commands\Database\Migrate::CodeIgniter\Commands\Database\{closure}()
+10 SYSTEMPATH\Commands\Database\Migrate.php(88): CodeIgniter\Commands\Database\Migrate->withSignalsBlocked(Object(Closure))
+11 SYSTEMPATH\CLI\Commands.php(74): CodeIgniter\Commands\Database\Migrate->run([])
+12 SYSTEMPATH\CLI\Console.php(47): CodeIgniter\CLI\Commands->run('migrate', [])
+13 SYSTEMPATH\Boot.php(442): CodeIgniter\CLI\Console->run()
+14 SYSTEMPATH\Boot.php(166): CodeIgniter\Boot::runCommand(Object(CodeIgniter\CLI\Console))
+15 ROOTPATH\spark(87): CodeIgniter\Boot::bootSpark(Object(Config\Paths))

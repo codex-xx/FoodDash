@@ -84,6 +84,17 @@
 
 <body class="login-page">
 <div class="container">
+    <!-- Help Centre and Be Our Partner Links -->
+    <div class="row justify-content-center mb-4">
+        <div class="col-md-5 d-flex justify-content-between">
+            <a href="<?php echo site_url('help'); ?>" class="btn btn-outline-secondary btn-sm">
+                ❓ Help Centre
+            </a>
+            <a href="<?php echo site_url('partner'); ?>" class="btn btn-outline-primary btn-sm">
+                🤝 Be Our Partner
+            </a>
+        </div>
+    </div>
     <div class="row justify-content-center">
         <div class="col-md-5">
             <div class="card shadow-sm login-card">

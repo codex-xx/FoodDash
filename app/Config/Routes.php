@@ -18,6 +18,11 @@ $routes->post('forgot', 'Auth::sendReset');
 $routes->get('reset/(:any)', 'Auth::reset/$1');
 $routes->post('reset/(:any)', 'Auth::resetPassword/$1');
 
+// Help Centre and Partner pages
+$routes->get('help', 'Auth::help');
+$routes->get('partner', 'Auth::partner');
+$routes->post('partner/register', 'Auth::submitPartnerRegistration');
+
 // Dashboards (protected by filter)
 $routes->get('dashboard/admin', 'Dashboard::admin');
 $routes->get('dashboard/restaurant', 'Dashboard::restaurant');
