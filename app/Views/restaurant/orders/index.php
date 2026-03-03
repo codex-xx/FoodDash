@@ -16,7 +16,7 @@
 <div class="card shadow-sm mb-4">
   <div class="card-body">
     <h5 class="card-title mb-3"><i class="bi bi-calendar-range"></i> Order History - Filter by Date</h5>
-    <form method="get" action="<?= site_url('orders/restaurant') ?>" class="row g-3 align-items-end">
+    <form method="get" action="<?= site_url('orders') ?>" class="row g-3 align-items-end">
       <div class="col-md-4">
         <label for="start_date" class="form-label">From Date</label>
         <input type="date" class="form-control" id="start_date" name="start_date" value="<?= request()->getGet('start_date') ?? '' ?>">
@@ -29,7 +29,7 @@
         <button type="submit" class="btn btn-primary w-100">
           <i class="bi bi-filter"></i> Filter Orders
         </button>
-        <a href="<?= site_url('orders/restaurant') ?>" class="btn btn-outline-secondary w-100 mt-2">
+        <a href="<?= site_url('orders') ?>" class="btn btn-outline-secondary w-100 mt-2">
           Clear Filters
         </a>
       </div>
@@ -260,3 +260,4 @@
   }
 </script>
 <?= $this->endSection() ?>
+

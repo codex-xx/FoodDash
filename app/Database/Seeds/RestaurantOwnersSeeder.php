@@ -15,7 +15,8 @@ class RestaurantOwnersSeeder extends Seeder
 
         // link existing restaurant owner users to restaurants
         $emails = [
-            'owner1@example.com' => 'Pizza Palace',
+            'restaurant@example.com' => 'Sample Restaurant',
+            'vesterlaurel@gmail.com' => 'Laurel\'s Kitchen',
             'owner2@example.com' => 'Burger Barn',
         ];
 
@@ -31,19 +32,6 @@ class RestaurantOwnersSeeder extends Seeder
                         'status'  => 'approved',
                     ]);
                 }
-            }
-        }
-
-        // also link the generic 'restaurant@example.com' user if it exists and has no restaurant
-        $user = $userModel->where('email', 'restaurant@example.com')->first();
-        if ($user) {
-            $existing = $restaurantModel->where('user_id', $user['id'])->first();
-            if (! $existing) {
-                $restaurantModel->insert([
-                    'user_id' => $user['id'],
-                    'name'    => 'Sample Restaurant',
-                    'status'  => 'approved',
-                ]);
             }
         }
     }
