@@ -17,6 +17,8 @@ class RestaurantModel extends Model
         'user_id',
         'name',
         'address',
+        'logo',
+        'opening_hours',
         'status',
         'is_active',
     ];

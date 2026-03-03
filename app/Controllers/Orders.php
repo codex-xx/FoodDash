@@ -111,6 +111,40 @@ class Orders extends BaseController
     }
 
     /**
+     * Restaurant view order history (completed & cancelled orders)
+     */
+    public function orderHistory()
+    {
+        $session = session();
+        if (!$session->get('isLoggedIn') || $session->get('role') !== 'restaurant') {
+            return redirect()->to('/login')->with('error', 'Unauthorized');
+        }
+
+        $restaurantId = $session->get('restaurant_id');
+        
+        // Get date filters from query string
+        $startDate = $this->request->getGet('start_date');
+        $endDate = $this->request->getGet('end_date');
+        
+        $builder = $this->orderModel->where('restaurant_id', $restaurantId);
+        
+        // Only show completed and cancelled orders
+        $builder->whereIn('status', ['completed', 'cancelled']);
+        
+        // Apply date filtering if provided
+        if (!empty($startDate)) {
+            $builder->where('created_at >=', $startDate . ' 00:00:00');
+        }
+        if (!empty($endDate)) {
+            $builder->where('created_at <=', $endDate . ' 23:59:59');
+        }
+        
+        $orders = $builder->orderBy('created_at', 'DESC')->findAll();
+
+        return view('restaurant/orders/history', ['orders' => $orders]);
+    }
+
+    /**
      * Get daily sales summary for restaurant
      */
     public function getDailySales()

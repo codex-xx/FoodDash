@@ -938,3 +938,76 @@ in SYSTEMPATH\View\View.php on line 442.
  9 SYSTEMPATH\Boot.php(417): CodeIgniter\CodeIgniter->run()
 10 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
 11 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+ERROR - 2026-03-03 06:40:28 --> Unknown column 'estimated_preparation_time' in 'field list'
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 300.
+ 1 SYSTEMPATH\Database\MySQLi\Connection.php(300): mysqli->query('UPDATE `orders` SET `estimated_preparation_time` = 15, `updated_at` = \'2026-03-03 06:40:28\'
+WHERE `orders`.`id` IN (\'4\')', 0)
+ 2 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('UPDATE `orders` SET `estimated_preparation_time` = 15, `updated_at` = \'2026-03-03 06:40:28\'
+WHERE `orders`.`id` IN (\'4\')')
+ 3 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('UPDATE `orders` SET `estimated_preparation_time` = 15, `updated_at` = \'2026-03-03 06:40:28\'
+WHERE `orders`.`id` IN (\'4\')')
+ 4 SYSTEMPATH\Database\BaseBuilder.php(2521): CodeIgniter\Database\BaseConnection->query('UPDATE `orders` SET `estimated_preparation_time` = :estimated_preparation_time:, `updated_at` = :updated_at:
+WHERE `orders`.`id` IN :orders.id:', [...], false)
+ 5 SYSTEMPATH\Model.php(407): CodeIgniter\Database\BaseBuilder->update()
+ 6 SYSTEMPATH\BaseModel.php(1073): CodeIgniter\Model->doUpdate([...], [...])
+ 7 SYSTEMPATH\Model.php(706): CodeIgniter\BaseModel->update([...], [...])
+ 8 APPPATH\Controllers\Orders.php(85): CodeIgniter\Model->update('4', [...])
+ 9 SYSTEMPATH\CodeIgniter.php(951): App\Controllers\Orders->updateRestaurantOrderStatus('4')
+10 SYSTEMPATH\CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Orders))
+11 SYSTEMPATH\CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+12 SYSTEMPATH\Boot.php(417): CodeIgniter\CodeIgniter->run()
+13 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+14 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2026-03-03 06:40:28 --> CodeIgniter\Database\Exceptions\DatabaseException: Unknown column 'estimated_preparation_time' in 'field list'
+[Method: POST, Route: orders/4/status]
+in SYSTEMPATH\Database\BaseConnection.php on line 724.
+ 1 SYSTEMPATH\Database\BaseBuilder.php(2521): CodeIgniter\Database\BaseConnection->query('UPDATE `orders` SET `estimated_preparation_time` = :estimated_preparation_time:, `updated_at` = :updated_at:
+WHERE `orders`.`id` IN :orders.id:', [...], false)
+ 2 SYSTEMPATH\Model.php(407): CodeIgniter\Database\BaseBuilder->update()
+ 3 SYSTEMPATH\BaseModel.php(1073): CodeIgniter\Model->doUpdate([...], [...])
+ 4 SYSTEMPATH\Model.php(706): CodeIgniter\BaseModel->update([...], [...])
+ 5 APPPATH\Controllers\Orders.php(85): CodeIgniter\Model->update('4', [...])
+ 6 SYSTEMPATH\CodeIgniter.php(951): App\Controllers\Orders->updateRestaurantOrderStatus('4')
+ 7 SYSTEMPATH\CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Orders))
+ 8 SYSTEMPATH\CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 9 SYSTEMPATH\Boot.php(417): CodeIgniter\CodeIgniter->run()
+10 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+11 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2026-03-03 06:40:28 --> [Caused by] CodeIgniter\Database\Exceptions\DatabaseException: Unknown column 'estimated_preparation_time' in 'field list'
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 310.
+ 1 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('UPDATE `orders` SET `estimated_preparation_time` = 15, `updated_at` = \'2026-03-03 06:40:28\'
+WHERE `orders`.`id` IN (\'4\')')
+ 2 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('UPDATE `orders` SET `estimated_preparation_time` = 15, `updated_at` = \'2026-03-03 06:40:28\'
+WHERE `orders`.`id` IN (\'4\')')
+ 3 SYSTEMPATH\Database\BaseBuilder.php(2521): CodeIgniter\Database\BaseConnection->query('UPDATE `orders` SET `estimated_preparation_time` = :estimated_preparation_time:, `updated_at` = :updated_at:
+WHERE `orders`.`id` IN :orders.id:', [...], false)
+ 4 SYSTEMPATH\Model.php(407): CodeIgniter\Database\BaseBuilder->update()
+ 5 SYSTEMPATH\BaseModel.php(1073): CodeIgniter\Model->doUpdate([...], [...])
+ 6 SYSTEMPATH\Model.php(706): CodeIgniter\BaseModel->update([...], [...])
+ 7 APPPATH\Controllers\Orders.php(85): CodeIgniter\Model->update('4', [...])
+ 8 SYSTEMPATH\CodeIgniter.php(951): App\Controllers\Orders->updateRestaurantOrderStatus('4')
+ 9 SYSTEMPATH\CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Orders))
+10 SYSTEMPATH\CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+11 SYSTEMPATH\Boot.php(417): CodeIgniter\CodeIgniter->run()
+12 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+13 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2026-03-03 06:40:28 --> [Caused by] mysqli_sql_exception: Unknown column 'estimated_preparation_time' in 'field list'
+in SYSTEMPATH\Database\MySQLi\Connection.php on line 300.
+ 1 SYSTEMPATH\Database\MySQLi\Connection.php(300): mysqli->query('UPDATE `orders` SET `estimated_preparation_time` = 15, `updated_at` = \'2026-03-03 06:40:28\'
+WHERE `orders`.`id` IN (\'4\')', 0)
+ 2 SYSTEMPATH\Database\BaseConnection.php(769): CodeIgniter\Database\MySQLi\Connection->execute('UPDATE `orders` SET `estimated_preparation_time` = 15, `updated_at` = \'2026-03-03 06:40:28\'
+WHERE `orders`.`id` IN (\'4\')')
+ 3 SYSTEMPATH\Database\BaseConnection.php(686): CodeIgniter\Database\BaseConnection->simpleQuery('UPDATE `orders` SET `estimated_preparation_time` = 15, `updated_at` = \'2026-03-03 06:40:28\'
+WHERE `orders`.`id` IN (\'4\')')
+ 4 SYSTEMPATH\Database\BaseBuilder.php(2521): CodeIgniter\Database\BaseConnection->query('UPDATE `orders` SET `estimated_preparation_time` = :estimated_preparation_time:, `updated_at` = :updated_at:
+WHERE `orders`.`id` IN :orders.id:', [...], false)
+ 5 SYSTEMPATH\Model.php(407): CodeIgniter\Database\BaseBuilder->update()
+ 6 SYSTEMPATH\BaseModel.php(1073): CodeIgniter\Model->doUpdate([...], [...])
+ 7 SYSTEMPATH\Model.php(706): CodeIgniter\BaseModel->update([...], [...])
+ 8 APPPATH\Controllers\Orders.php(85): CodeIgniter\Model->update('4', [...])
+ 9 SYSTEMPATH\CodeIgniter.php(951): App\Controllers\Orders->updateRestaurantOrderStatus('4')
+10 SYSTEMPATH\CodeIgniter.php(497): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Orders))
+11 SYSTEMPATH\CodeIgniter.php(340): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+12 SYSTEMPATH\Boot.php(417): CodeIgniter\CodeIgniter->run()
+13 SYSTEMPATH\Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+14 FCPATH\index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))

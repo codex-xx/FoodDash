@@ -43,9 +43,14 @@ $routes->post('menu/(:num)/toggle', 'MenuItems::toggleAvailability/$1');
 
 // Orders
 $routes->get('orders', 'Orders::restaurantOrders');
+$routes->get('orders/history', 'Orders::orderHistory');
 $routes->post('orders/(:num)/status', 'Orders::updateRestaurantOrderStatus/$1');
 $routes->post('orders/(:num)/assign-driver', 'Orders::assignDriver/$1');
 $routes->get('api/orders/daily-sales', 'Orders::getDailySales');
+
+// Store Settings
+$routes->get('settings', 'StoreSettings::index');
+$routes->post('settings/update', 'StoreSettings::update');
 
 // Admin Management
 $routes->get('admin/users', 'AdminManagement::users');

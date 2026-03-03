@@ -247,8 +247,18 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="<?= site_url('orders') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'orders')) ? 'active' : '' ?>">
+                    <a href="<?= site_url('orders') ?>" class="nav-link fd-nav-link <?= (uri_string() === 'orders') ? 'active' : '' ?>">
                         Orders
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= site_url('orders/history') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'orders/history')) ? 'active' : '' ?>">
+                        Order History
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= site_url('settings') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'settings')) ? 'active' : '' ?>">
+                        Store Settings
                     </a>
                 </li>
             </ul>
