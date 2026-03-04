@@ -204,16 +204,15 @@ class AdminManagement extends BaseController
         ]);
         if ($driver['user_id']) {
             $this->userModel->update($driver['user_id'], ['is_active' => 1]);
-            
-            // Send approval email
-            $user = $this->userModel->find($driver['user_id']);
-            if ($user && $user['email']) {
-                try {
-                    $emailService = new \App\Libraries\EmailService();
-                    $emailService->sendApplicationApproved($user['email'], $driver['name'], 'driver');
-                } catch (\Exception $e) {
-                    log_message('error', 'Failed to send driver approval email: ' . $e->getMessage());
-                }
+        }
+        
+        // Send approval email directly to driver's email address
+        if ($driver['email']) {
+            try {
+                $emailService = new \App\Libraries\EmailService();
+                $emailService->sendApplicationApproved($driver['email'], $driver['name'], 'driver');
+            } catch (\Exception $e) {
+                log_message('error', 'Failed to send driver approval email: ' . $e->getMessage());
             }
         }
 
@@ -241,16 +240,15 @@ class AdminManagement extends BaseController
         ]);
         if ($driver['user_id']) {
             $this->userModel->update($driver['user_id'], ['is_active' => 0]);
-            
-            // Send rejection email
-            $user = $this->userModel->find($driver['user_id']);
-            if ($user && $user['email']) {
-                try {
-                    $emailService = new \App\Libraries\EmailService();
-                    $emailService->sendApplicationRejected($user['email'], $driver['name'], 'driver');
-                } catch (\Exception $e) {
-                    log_message('error', 'Failed to send driver rejection email: ' . $e->getMessage());
-                }
+        }
+        
+        // Send rejection email directly to driver's email address
+        if ($driver['email']) {
+            try {
+                $emailService = new \App\Libraries\EmailService();
+                $emailService->sendApplicationRejected($driver['email'], $driver['name'], 'driver');
+            } catch (\Exception $e) {
+                log_message('error', 'Failed to send driver rejection email: ' . $e->getMessage());
             }
         }
 

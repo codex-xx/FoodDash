@@ -133,3 +133,6 @@ $routes->put('api/orders/(:num)/status', 'Api\OrderController::updateStatus/$1')
 $routes->post('api/orders/(:num)/status', 'Api\OrderController::updateStatus/$1');
 $routes->post('api/orders/(:num)/accept', 'Api\OrderController::accept/$1');
 $routes->post('api/orders/(:num)/cancel', 'Api\OrderController::cancel/$1');
+// Email Notification (Mobile)
+$routes->post('api/send-notification-email', 'Api\EmailNotificationController::sendNotification');
+$routes->get('api/test-email', 'Api\EmailNotificationController::testEmail');

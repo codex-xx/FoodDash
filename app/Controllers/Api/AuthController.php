@@ -391,6 +391,14 @@ class AuthController extends ResourceController
             $driver = $driverModel->find($driverId);
             unset($driver['password']);
 
+            // Send application received confirmation email
+            try {
+                $emailService = new \App\Libraries\EmailService();
+                $emailService->sendApplicationReceived($driver['email'], $driver['name'], 'driver');
+            } catch (\Exception $e) {
+                log_message('error', 'Failed to send driver application confirmation email: ' . $e->getMessage());
+            }
+
             return $this->respond([
                 'success' => true,
                 'message' => 'Registration successful. Please wait for admin approval.',
