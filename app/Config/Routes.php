@@ -93,9 +93,9 @@ $routes->options('api/(:any)', static function () {
 });
 
 // Auth (Public - No token required)
-// Simple routes for Android (default to customer)
-$routes->post('api/register', 'Api\AuthController::customerRegister');
-$routes->post('api/login', 'Api\AuthController::customerLogin');
+// Simple routes for Android (role-aware)
+$routes->post('api/register', 'Api\AuthController::register');
+$routes->post('api/login', 'Api\AuthController::login');
 
 // Password Reset (Public - For Android App)
 $routes->post('api/forgot-password', 'Api\AuthController::forgotPassword');

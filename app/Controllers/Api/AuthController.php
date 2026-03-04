@@ -24,10 +24,14 @@ class AuthController extends ResourceController
      */
     protected function getInput(string $key)
     {
-        // Try JSON first
-        $json = $this->request->getJSON(true);
-        if ($json && isset($json[$key])) {
-            return $json[$key];
+        // Try JSON first (safely)
+        try {
+            $json = $this->request->getJSON(true);
+            if (is_array($json) && array_key_exists($key, $json)) {
+                return $json[$key];
+            }
+        } catch (\Throwable $e) {
+            // Not JSON payload or malformed JSON - continue with POST/getVar.
         }
         
         // Try POST
@@ -38,6 +42,156 @@ class AuthController extends ResourceController
         
         // Try getVar (works for both)
         return $this->request->getVar($key);
+    }
+
+    /**
+     * Normalize incoming user type values.
+     */
+    protected function normalizeUserType($userType): ?string
+    {
+        if ($userType === null) {
+            return null;
+        }
+
+        if (!is_scalar($userType)) {
+            return null;
+        }
+
+        $normalized = strtolower(trim((string) $userType));
+
+        if (in_array($normalized, ['customer', 'user', 'client'], true)) {
+            return 'customer';
+        }
+
+        if (in_array($normalized, ['driver', 'rider', 'delivery'], true)) {
+            return 'driver';
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve role for register endpoint.
+     */
+    protected function resolveRegisterUserType(): ?string
+    {
+        $rawType = $this->getInput('user_type')
+            ?? $this->getInput('role')
+            ?? $this->getInput('type');
+
+        $requestedType = $this->normalizeUserType(
+            $rawType
+        );
+
+        if ($rawType !== null && trim((string) $rawType) !== '' && $requestedType === null) {
+            return null;
+        }
+
+        if ($requestedType !== null) {
+            return $requestedType;
+        }
+
+        $hasDriverFields =
+            !empty($this->getInput('vehicle_type'))
+            || !empty($this->getInput('vehicle_number'))
+            || !empty($this->getInput('license_number'));
+
+        return $hasDriverFields ? 'driver' : 'customer';
+    }
+
+    /**
+     * Resolve role for login endpoint.
+     */
+    protected function resolveLoginUserType(): ?string
+    {
+        $rawType = $this->getInput('user_type')
+            ?? $this->getInput('role')
+            ?? $this->getInput('type');
+
+        $requestedType = $this->normalizeUserType(
+            $rawType
+        );
+
+        if ($rawType !== null && trim((string) $rawType) !== '' && $requestedType === null) {
+            return null;
+        }
+
+        if ($requestedType !== null) {
+            return $requestedType;
+        }
+
+        $email = $this->getInput('email');
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return 'customer';
+        }
+
+        $customerExists = (new CustomerModel())
+            ->select('id')
+            ->where('email', $email)
+            ->first() !== null;
+
+        $driverExists = (new DriverModel())
+            ->select('id')
+            ->where('email', $email)
+            ->first() !== null;
+
+        if ($driverExists && !$customerExists) {
+            return 'driver';
+        }
+
+        if ($customerExists && !$driverExists) {
+            return 'customer';
+        }
+
+        if ($customerExists && $driverExists) {
+            return null;
+        }
+
+        return 'customer';
+    }
+
+    /**
+     * Role-aware Registration (customer or driver)
+     * POST /api/register
+     */
+    public function register()
+    {
+        $userType = $this->resolveRegisterUserType();
+
+        if ($userType === null) {
+            return $this->respond([
+                'success' => false,
+                'message' => 'Invalid user_type. Use customer or driver.'
+            ], 400);
+        }
+
+        if ($userType === 'driver') {
+            return $this->driverRegister();
+        }
+
+        return $this->customerRegister();
+    }
+
+    /**
+     * Role-aware Login (customer or driver)
+     * POST /api/login
+     */
+    public function login()
+    {
+        $userType = $this->resolveLoginUserType();
+
+        if ($userType === null) {
+            return $this->respond([
+                'success' => false,
+                'message' => 'Please pass a valid user_type (customer or driver). If this email exists in both tables, user_type is required.'
+            ], 400);
+        }
+
+        if ($userType === 'driver') {
+            return $this->driverLogin();
+        }
+
+        return $this->customerLogin();
     }
 
     /**
@@ -90,8 +244,9 @@ class AuthController extends ResourceController
                 'success' => true,
                 'message' => 'Registration successful',
                 'data'    => [
-                    'user'  => $customer,
-                    'token' => $apiToken
+                    'user'      => $customer,
+                    'token'     => $apiToken,
+                    'user_type' => 'customer'
                 ]
             ], 201);
             
@@ -168,8 +323,9 @@ class AuthController extends ResourceController
                 'success' => true,
                 'message' => 'Login successful',
                 'data'    => [
-                    'user'  => $customer,
-                    'token' => $apiToken
+                    'user'      => $customer,
+                    'token'     => $apiToken,
+                    'user_type' => 'customer'
                 ]
             ]);
             
@@ -193,7 +349,7 @@ class AuthController extends ResourceController
                 'name'           => 'required|min_length[2]|max_length[255]',
                 'email'          => 'required|valid_email|is_unique[drivers.email]',
                 'password'       => 'required|min_length[6]',
-                'phone'          => 'required|max_length[20]',
+                'phone'          => 'permit_empty|max_length[20]',
                 'vehicle_type'   => 'permit_empty|max_length[50]',
                 'vehicle_number' => 'permit_empty|max_length[50]',
                 'license_number' => 'permit_empty|max_length[50]',
@@ -214,7 +370,7 @@ class AuthController extends ResourceController
                 'name'           => $this->getInput('name'),
                 'email'          => $this->getInput('email'),
                 'password'       => password_hash($this->getInput('password'), PASSWORD_DEFAULT),
-                'phone'          => $this->getInput('phone'),
+                'phone'          => $this->getInput('phone') ?? '',
                 'vehicle_type'   => $this->getInput('vehicle_type') ?? '',
                 'vehicle_number' => $this->getInput('vehicle_number') ?? '',
                 'license_number' => $this->getInput('license_number') ?? '',
@@ -239,8 +395,9 @@ class AuthController extends ResourceController
                 'success' => true,
                 'message' => 'Registration successful. Please wait for admin approval.',
                 'data'    => [
-                    'user'  => $driver,
-                    'token' => $apiToken
+                    'user'      => $driver,
+                    'token'     => $apiToken,
+                    'user_type' => 'driver'
                 ]
             ], 201);
             
@@ -317,8 +474,9 @@ class AuthController extends ResourceController
                 'success' => true,
                 'message' => 'Login successful',
                 'data'    => [
-                    'user'  => $driver,
-                    'token' => $apiToken
+                    'user'      => $driver,
+                    'token'     => $apiToken,
+                    'user_type' => 'driver'
                 ]
             ]);
             
