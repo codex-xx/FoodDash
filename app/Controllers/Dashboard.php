@@ -64,7 +64,14 @@ class Dashboard extends BaseController
         $activeDrivers = $driverModel->where('is_active', 1)->countAllResults();
         $totalRestaurants = $restaurantModel->countAllResults();
         $pendingRestaurants = $restaurantModel->where('status', 'pending')->countAllResults();
-        $pendingDrivers = $driverModel->where('status', 'pending')->countAllResults();
+        $pendingDrivers = (new DriverModel())
+            ->where('status', 'pending')
+            ->countAllResults();
+        $pendingDriverList = (new DriverModel())
+            ->select('id, name, email, phone, vehicle_type, vehicle_number, created_at')
+            ->where('status', 'pending')
+            ->orderBy('created_at', 'DESC')
+            ->findAll(10);
 
         $dailyRevenue = (float) $orderModel->select('IFNULL(SUM(total_amount),0) as rev')
             ->where('created_at >=', $todayStart)
@@ -95,6 +102,7 @@ class Dashboard extends BaseController
                 'pendingRestaurants' => (int) $pendingRestaurants,
                 'pendingDrivers' => (int) $pendingDrivers,
             ],
+            'pendingDrivers' => $pendingDriverList,
             'recentOrders' => $recent,
         ]);
     }

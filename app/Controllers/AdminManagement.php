@@ -167,9 +167,20 @@ class AdminManagement extends BaseController
             return redirect()->to('/login')->with('error', 'Unauthorized');
         }
 
-        $drivers = $this->driverModel->where('status', 'pending')->findAll();
+        $drivers = (new DriverModel())
+            ->where('status', 'pending')
+            ->orderBy('created_at', 'DESC')
+            ->findAll();
 
-        return view('admin/drivers/pending', ['drivers' => $drivers]);
+        $approvedDrivers = (new DriverModel())
+            ->where('status', 'approved')
+            ->orderBy('updated_at', 'DESC')
+            ->findAll();
+
+        return view('admin/drivers/pending', [
+            'drivers' => $drivers,
+            'approvedDrivers' => $approvedDrivers,
+        ]);
     }
 
     /**
@@ -187,7 +198,10 @@ class AdminManagement extends BaseController
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Driver not found']);
         }
 
-        $this->driverModel->update($id, ['status' => 'approved']);
+        $this->driverModel->update($id, [
+            'status' => 'approved',
+            'is_active' => 1,
+        ]);
         if ($driver['user_id']) {
             $this->userModel->update($driver['user_id'], ['is_active' => 1]);
             
@@ -221,7 +235,10 @@ class AdminManagement extends BaseController
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Driver not found']);
         }
 
-        $this->driverModel->update($id, ['status' => 'rejected']);
+        $this->driverModel->update($id, [
+            'status' => 'rejected',
+            'is_active' => 0,
+        ]);
         if ($driver['user_id']) {
             $this->userModel->update($driver['user_id'], ['is_active' => 0]);
             

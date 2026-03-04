@@ -70,6 +70,41 @@
   </div>
 </div>
 
+<!-- Pending Driver Approvals -->
+<section id="pendingDrivers" class="mb-5">
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h5 class="card-title m-0">Pending Driver Registrations</h5>
+          <small class="text-muted">Approve or reject new driver applications</small>
+        </div>
+        <a href="<?= site_url('admin/drivers/pending') ?>" class="btn btn-sm btn-outline-primary">View All</a>
+      </div>
+
+      <div class="table-responsive" id="pendingDriversTableWrap">
+        <table id="pendingDriversTable" class="table table-striped table-hover table-sm align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Vehicle</th>
+              <th>Applied On</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div id="pendingDriversEmpty" class="text-center py-4 text-muted d-none">
+        <small>No pending driver registrations.</small>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- Recent Orders Table -->
 <section id="orders" class="mb-5">
   <div class="card shadow-sm">
@@ -170,6 +205,43 @@
         $('#dailyRevenue').text('₱' + Number(json.metrics.dailyRevenue).toFixed(2));
         $('#pendingApprovals').text(json.metrics.pendingRestaurants + json.metrics.pendingDrivers);
 
+        // Update pending drivers table
+        const pendingDriversBody = document.querySelector('#pendingDriversTable tbody');
+        const pendingDrivers = json.pendingDrivers || [];
+        const pendingDriversEmpty = document.getElementById('pendingDriversEmpty');
+        const pendingDriversTableWrap = document.getElementById('pendingDriversTableWrap');
+
+        pendingDriversBody.innerHTML = '';
+
+        if (pendingDrivers.length === 0) {
+          pendingDriversTableWrap.classList.add('d-none');
+          pendingDriversEmpty.classList.remove('d-none');
+        } else {
+          pendingDriversTableWrap.classList.remove('d-none');
+          pendingDriversEmpty.classList.add('d-none');
+
+          pendingDrivers.forEach(driver => {
+            const row = document.createElement('tr');
+            const appliedOn = driver.created_at
+              ? new Date(driver.created_at).toLocaleDateString()
+              : '-';
+            const vehicle = [driver.vehicle_type, driver.vehicle_number].filter(Boolean).join(' • ') || '-';
+
+            row.innerHTML = `
+              <td><strong>${driver.name || '-'}</strong></td>
+              <td>${driver.email || '-'}</td>
+              <td>${driver.phone || '-'}</td>
+              <td>${vehicle}</td>
+              <td>${appliedOn}</td>
+              <td>
+                <button class="btn btn-sm btn-success" onclick="approvePendingDriver(${driver.id})">Approve</button>
+                <button class="btn btn-sm btn-danger" onclick="rejectPendingDriver(${driver.id})">Reject</button>
+              </td>
+            `;
+            pendingDriversBody.appendChild(row);
+          });
+        }
+
         // Update orders table
         const ordersBody = document.querySelector('#ordersTable tbody');
         ordersBody.innerHTML = '';
@@ -206,6 +278,36 @@
           });
       })
       .catch(err => console.error(err));
+  }
+
+  function approvePendingDriver(driverId) {
+    if (!confirm('Approve this driver?')) return;
+
+    fetch(`<?= site_url('admin/drivers') ?>/${driverId}/approve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    })
+    .then(r => r.json())
+    .then(json => {
+      alert(json.message || 'Driver approved');
+      loadDashboard();
+    })
+    .catch(err => alert('Error: ' + err));
+  }
+
+  function rejectPendingDriver(driverId) {
+    if (!confirm('Reject this driver?')) return;
+
+    fetch(`<?= site_url('admin/drivers') ?>/${driverId}/reject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    })
+    .then(r => r.json())
+    .then(json => {
+      alert(json.message || 'Driver rejected');
+      loadDashboard();
+    })
+    .catch(err => alert('Error: ' + err));
   }
 
   function assignDriver(orderId) {
