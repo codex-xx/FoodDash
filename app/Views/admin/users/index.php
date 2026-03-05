@@ -42,10 +42,12 @@
                     </td>
                     <td><?= date('M d, Y', strtotime($user['created_at'])) ?></td>
                     <td>
-                      <?php if ($user['is_active']): ?>
-                        <button class="btn btn-sm btn-danger" onclick="suspendUser(<?= $user['id'] ?>)">Suspend</button>
-                      <?php else: ?>
-                        <button class="btn btn-sm btn-success" onclick="activateUser(<?= $user['id'] ?>)">Activate</button>
+                      <?php if ((int) session()->get('user_id') !== (int) $user['id']): ?>
+                        <?php if ($user['is_active']): ?>
+                          <button class="btn btn-sm btn-danger" onclick="suspendUser(<?= $user['id'] ?>)">Suspend</button>
+                        <?php else: ?>
+                          <button class="btn btn-sm btn-success" onclick="activateUser(<?= $user['id'] ?>)">Activate</button>
+                        <?php endif; ?>
                       <?php endif; ?>
                     </td>
                   </tr>

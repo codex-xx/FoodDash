@@ -44,6 +44,10 @@ class AdminManagement extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
         }
 
+        if ((int) $session->get('user_id') === (int) $id) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'You cannot suspend your own account']);
+        }
+
         $user = $this->userModel->find($id);
         if (!$user) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'User not found']);
