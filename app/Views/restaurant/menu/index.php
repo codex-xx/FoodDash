@@ -3,69 +3,381 @@
 <?php $this->setVar('pageTitle', 'Manage Menu — FoodDash'); ?>
 
 <?= $this->section('content') ?>
-<div class="row mb-4">
-  <div class="col-12">
-    <div>
-      <h3 class="m-0">Menu Management</h3>
-      <small class="text-muted">Add, edit, and manage your menu items</small>
+<?php
+$totalItems = count($items ?? []);
+$availableItems = 0;
+
+foreach (($items ?? []) as $menuItem) {
+    if (!empty($menuItem['is_available'])) {
+        $availableItems++;
+    }
+}
+
+$unavailableItems = $totalItems - $availableItems;
+?>
+
+<style>
+  .menu-page-header {
+    border: 1px solid rgba(58, 63, 69, 0.14);
+    border-left: 4px solid var(--fd-primary);
+    border-radius: .85rem;
+    background: linear-gradient(120deg, rgba(255, 255, 255, 0.96), rgba(243, 211, 154, 0.14));
+    padding: 1rem 1.25rem;
+  }
+
+  .menu-page-header h3 {
+    letter-spacing: .01em;
+  }
+
+  .menu-stat-card {
+    border: 1px solid rgba(58, 63, 69, 0.16);
+    border-radius: .75rem;
+    background: #fff;
+    padding: .9rem 1rem;
+    height: 100%;
+  }
+
+  .menu-stat-label {
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-size: .72rem;
+    color: #6B7280;
+    display: block;
+    margin-bottom: .2rem;
+  }
+
+  .menu-stat-value {
+    font-size: 1.45rem;
+    margin: 0;
+    color: #1F2937;
+  }
+
+  .menu-grid-card .card-body {
+    padding: 1rem;
+  }
+
+  .menu-product-grid {
+    margin-top: .15rem;
+  }
+
+  .menu-product-card {
+    border: 1px solid rgba(58, 63, 69, 0.16);
+    border-radius: .95rem;
+    background: #FFFFFF;
+    box-shadow: 0 10px 24px rgba(31, 41, 55, 0.06);
+    padding: .9rem;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+  }
+
+  .menu-image-wrap {
+    position: relative;
+    border-radius: .8rem;
+    border: 1px solid rgba(58, 63, 69, 0.18);
+    background: linear-gradient(180deg, #FFFFFF, #F9FAFB);
+    overflow: hidden;
+    aspect-ratio: 4 / 3;
+    min-height: 190px;
+    padding: .35rem .45rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color .22s ease, background .22s ease;
+  }
+
+  .menu-product-image {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    object-position: center;
+    transition: transform .28s ease;
+  }
+
+  .menu-item-placeholder {
+    color: #6B7280;
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-weight: 600;
+  }
+
+  .menu-product-body {
+    display: flex;
+    flex-direction: column;
+    gap: .6rem;
+    margin-top: .85rem;
+    height: 100%;
+  }
+
+  .menu-item-name {
+    font-size: 1.04rem;
+    color: #111827;
+    margin: 0;
+    line-height: 1.3;
+    transition: color .22s ease;
+  }
+
+  .menu-category-badge {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(58, 63, 69, 0.2);
+    background-color: #F8F9FA;
+    color: #4B5563;
+    border-radius: 999px;
+    font-size: .67rem;
+    padding: .2rem .55rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    font-weight: 600;
+  }
+
+  .menu-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+  }
+
+  .menu-description-text {
+    color: #374151;
+    font-size: .9rem;
+    line-height: 1.45;
+    margin: 0;
+    min-height: 2.6em;
+  }
+
+  .menu-status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .74rem;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: .32rem .62rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    transition: transform .2s ease;
+  }
+
+  .menu-status-pill.available {
+    background: rgba(22, 163, 74, 0.12);
+    color: #166534;
+    border: 1px solid rgba(22, 163, 74, 0.24);
+  }
+
+  .menu-status-pill.unavailable {
+    background: rgba(220, 38, 38, 0.11);
+    color: #991B1B;
+    border: 1px solid rgba(220, 38, 38, 0.2);
+  }
+
+  .menu-price-block {
+    border: 1px solid rgba(58, 63, 69, 0.12);
+    border-radius: .65rem;
+    background: #F9FAFB;
+    padding: .5rem .65rem;
+  }
+
+  .menu-price-block .current-price {
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.1;
+    font-size: 1.03rem;
+  }
+
+  .menu-date {
+    color: #374151;
+    white-space: nowrap;
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    font-weight: 600;
+  }
+
+  .menu-card-actions {
+    margin-top: auto;
+    display: grid;
+    gap: .45rem;
+  }
+
+  .menu-row-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .45rem;
+  }
+
+  .menu-card-actions .btn {
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .menu-product-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 16px 34px rgba(31, 41, 55, 0.14);
+      border-color: rgba(58, 63, 69, 0.28);
+    }
+
+    .menu-product-card:hover .menu-image-wrap {
+      border-color: rgba(242, 194, 0, 0.48);
+      background: linear-gradient(180deg, #FFFFFF, #FFF8E5);
+    }
+
+    .menu-product-card:hover .menu-product-image {
+      transform: scale(1.035);
+    }
+
+    .menu-product-card:hover .menu-item-name {
+      color: #0F172A;
+    }
+
+    .menu-product-card:hover .menu-status-pill {
+      transform: translateX(2px);
+    }
+
+    .menu-card-actions .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 14px rgba(31, 41, 55, 0.14);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .menu-product-card,
+    .menu-image-wrap,
+    .menu-product-image,
+    .menu-item-name,
+    .menu-status-pill,
+    .menu-card-actions .btn {
+      transition: none;
+    }
+  }
+
+  @media (max-width: 767.98px) {
+    .menu-item-name {
+      font-size: .96rem;
+    }
+
+    .menu-image-wrap {
+      min-height: 165px;
+    }
+
+    .menu-grid-card .card-body {
+      padding: .85rem;
+    }
+
+    .menu-product-card {
+      padding: .8rem;
+    }
+
+    .menu-row-actions {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="menu-page-header mb-4">
+  <h3 class="m-0">Menu Management</h3>
+  <small class="text-muted">Manage item pricing, availability, and presentation with better visibility.</small>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-12 col-md-4">
+    <div class="menu-stat-card">
+      <small class="menu-stat-label">Total Items</small>
+      <p class="menu-stat-value"><?= $totalItems ?></p>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="menu-stat-card">
+      <small class="menu-stat-label">Available</small>
+      <p class="menu-stat-value text-success"><?= $availableItems ?></p>
+    </div>
+  </div>
+  <div class="col-12 col-md-4">
+    <div class="menu-stat-card">
+      <small class="menu-stat-label">Unavailable</small>
+      <p class="menu-stat-value text-danger"><?= $unavailableItems ?></p>
     </div>
   </div>
 </div>
 
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="card-title m-0">Your Menu Items</h5>
-          <a href="<?= site_url('menu/create') ?>" class="btn btn-sm btn-primary">+ Add Item</a>
-        </div>
-        <?php if (!empty($items)): ?>
-          <div class="table-responsive">
-            <table class="table table-striped table-hover align-middle">
-              <thead class="table-light">
-                <tr>
-                  <th>Item Name</th>
-                  <th>Price</th>
-                  <th>Description</th>
-                  <th>Availability</th>
-                  <th>Created</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php foreach ($items as $item): ?>
-                  <tr>
-                    <td>
-                      <?php if (!empty($item['image'])): ?>
-                        <img src="<?= base_url($item['image']) ?>" alt="" style="width:50px;height:50px;object-fit:cover;margin-right:8px;vertical-align:middle">
-                      <?php endif; ?>
-                      <strong><?= $item['name'] ?></strong><br>
-                      <small class="text-muted"><?= esc($item['category']) ?></small>
-                    </td>
-                    <td>₱<?= number_format($item['price'], 2) ?></td>
-                    <td><?= substr($item['description'] ?? '', 0, 50) ?>...</td>
-                    <td>
-                      <button class="btn btn-sm btn-<?= $item['is_available'] ? 'success' : 'danger' ?>" onclick="toggleAvailability(<?= $item['id'] ?>)">
-                        <?= $item['is_available'] ? 'Available' : 'Unavailable' ?>
-                      </button>
-                    </td>
-                    <td><?= date('M d, Y', strtotime($item['created_at'])) ?></td>
-                    <td>
-                      <a href="<?= site_url('menu/' . $item['id'] . '/edit') ?>" class="btn btn-sm btn-outline-primary">Edit</a>
-                      <button class="btn btn-sm btn-outline-danger" onclick="deleteItem(<?= $item['id'] ?>)">Delete</button>
-                    </td>
-                  </tr>
-                <?php endforeach; ?>
-              </tbody>
-            </table>
-          </div>
-        <?php else: ?>
-          <div class="text-center py-5 text-muted">
-            <h5>No menu items</h5>
-            <small><a href="<?= site_url('menu/create') ?>">Create your first menu item</a></small>
-          </div>
-        <?php endif; ?>
-      </div>
+<div class="card shadow-sm menu-grid-card">
+  <div class="card-body">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 p-2 p-md-3 mb-3">
+      <h5 class="card-title m-0">Your Menu Items</h5>
+      <a href="<?= site_url('menu/create') ?>" class="btn btn-sm btn-primary px-3">+ Add Menu Item</a>
     </div>
+
+    <?php if (!empty($items)): ?>
+      <div class="row g-3 menu-product-grid">
+        <?php foreach ($items as $item): ?>
+          <?php
+            $description = trim((string) ($item['description'] ?? ''));
+            if (strlen($description) > 95) {
+                $description = substr($description, 0, 92) . '...';
+            }
+            $createdAt = !empty($item['created_at']) ? strtotime($item['created_at']) : false;
+          ?>
+          <div class="col-12 col-md-6 col-xl-4">
+            <article class="menu-product-card">
+              <div class="menu-image-wrap">
+                <?php if (!empty($item['image'])): ?>
+                  <img src="<?= base_url($item['image']) ?>" alt="<?= esc($item['name']) ?>" class="menu-product-image">
+                <?php else: ?>
+                  <div class="menu-item-placeholder">No Image</div>
+                <?php endif; ?>
+              </div>
+
+              <div class="menu-product-body">
+                <h6 class="menu-item-name fw-semibold"><?= esc($item['name']) ?></h6>
+
+                <div class="menu-meta-row">
+                  <span class="menu-category-badge"><?= esc($item['category']) ?></span>
+                  <span class="menu-date"><?= $createdAt ? date('M d, Y', $createdAt) : 'N/A' ?></span>
+                </div>
+
+                <div class="menu-price-block">
+                  <div class="current-price">₱<?= number_format($item['price'], 2) ?></div>
+                </div>
+
+                <p class="menu-description-text">
+                  <?php if ($description !== ''): ?>
+                    <?= esc($description) ?>
+                  <?php else: ?>
+                    <span class="text-muted">No description provided.</span>
+                  <?php endif; ?>
+                </p>
+
+                <div class="menu-card-actions">
+                  <div>
+                    <span class="menu-status-pill <?= !empty($item['is_available']) ? 'available' : 'unavailable' ?>">
+                      <?= !empty($item['is_available']) ? 'Available' : 'Unavailable' ?>
+                    </span>
+                  </div>
+
+                  <button class="btn btn-sm btn-outline-secondary w-100" onclick="toggleAvailability(<?= $item['id'] ?>)">
+                    <?= !empty($item['is_available']) ? 'Mark Unavailable' : 'Mark Available' ?>
+                  </button>
+
+                  <div class="menu-row-actions">
+                    <a href="<?= site_url('menu/' . $item['id'] . '/edit') ?>" class="btn btn-sm btn-outline-primary w-100">Edit</a>
+                    <button class="btn btn-sm btn-outline-danger w-100" onclick="deleteItem(<?= $item['id'] ?>)">Delete</button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    <?php else: ?>
+      <div class="text-center py-5 text-muted">
+        <h5 class="mb-2">No menu items yet</h5>
+        <small><a href="<?= site_url('menu/create') ?>">Create your first menu item</a></small>
+      </div>
+    <?php endif; ?>
   </div>
 </div>
 

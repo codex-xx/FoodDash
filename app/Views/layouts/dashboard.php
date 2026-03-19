@@ -92,6 +92,7 @@
             border-radius: .5rem;
             padding: .45rem .9rem;
             font-size: .9rem;
+            transition: background-color .2s ease, color .2s ease, transform .2s ease, box-shadow .2s ease;
         }
 
         .fd-nav-link:hover {
@@ -167,6 +168,7 @@
             border-radius: .9rem;
             border: 1px solid var(--fd-border);
             background-color: rgba(255, 255, 255, 0.92);
+            transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
         }
 
         .table thead th {
@@ -175,6 +177,124 @@
 
         .table-hover tbody tr:hover {
             background-color: #F9FAFB;
+        }
+
+        .fd-content .table {
+            margin-bottom: 0;
+        }
+
+        .fd-content .table thead th {
+            font-size: .78rem;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            color: #4B5563;
+            background-color: #F8F9FA;
+            border-bottom: 1px solid rgba(58, 63, 69, 0.16);
+            white-space: nowrap;
+        }
+
+        .fd-content .table tbody td {
+            border-color: rgba(58, 63, 69, 0.09);
+        }
+
+        .fd-content .btn,
+        .fd-content .badge,
+        .fd-content .form-control,
+        .fd-content .form-select,
+        .fd-content .table-hover tbody tr {
+            transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease, border-color .18s ease;
+        }
+
+        .fd-content .btn {
+            white-space: nowrap;
+        }
+
+        .fd-content .table td > .btn {
+            margin-bottom: .2rem;
+        }
+
+        .fd-content .table td > .btn + .btn {
+            margin-left: .3rem;
+        }
+
+        @media (hover: hover) and (pointer: fine) {
+            .fd-nav-link:hover {
+                transform: translateX(3px);
+                box-shadow: inset 0 0 0 1px rgba(58, 63, 69, 0.14);
+            }
+
+            .fd-content .card.shadow-sm:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
+                border-color: rgba(58, 63, 69, 0.28);
+            }
+
+            .fd-content .summary-card:hover {
+                border-top-color: rgba(242, 194, 0, 0.95);
+                box-shadow: 0 16px 30px rgba(15, 23, 42, 0.14);
+            }
+
+            .fd-content .btn:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 6px 14px rgba(15, 23, 42, 0.16);
+            }
+
+            .fd-content .table-hover tbody tr:hover {
+                background-color: #F9FAFB;
+                box-shadow: inset 2px 0 0 rgba(242, 194, 0, 0.85);
+            }
+        }
+
+        @media (max-width: 767.98px) {
+            .fd-content {
+                padding: 1rem .85rem 2rem;
+            }
+
+            .fd-content .card .card-body {
+                padding: .9rem;
+            }
+
+            .fd-content .table {
+                font-size: .86rem;
+            }
+
+            .fd-content .table th,
+            .fd-content .table td {
+                padding: .6rem .5rem;
+            }
+
+            .fd-content .btn-sm {
+                font-size: .78rem;
+                padding: .35rem .55rem;
+            }
+
+            .fd-content .table td > .btn,
+            .fd-content .table td > .btn + .btn {
+                margin-left: 0;
+                width: 100%;
+            }
+
+            .fd-content .row.mb-4 .col-12.d-flex.justify-content-between.align-items-center {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: .65rem;
+            }
+
+            .fd-content .row.mb-4 .col-12.d-flex.justify-content-between.align-items-center .btn {
+                width: 100%;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .fd-nav-link,
+            .card.shadow-sm,
+            .fd-content .btn,
+            .fd-content .badge,
+            .fd-content .form-control,
+            .fd-content .form-select,
+            .fd-content .table-hover tbody tr {
+                transition: none;
+            }
         }
     </style>
 </head>

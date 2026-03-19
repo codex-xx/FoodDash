@@ -18,7 +18,6 @@ class MenuItemModel extends Model
         'name',
         'description',
         'price',
-        'discount_price',
         'category',
         'image',
         'is_available',

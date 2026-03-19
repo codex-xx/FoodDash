@@ -75,7 +75,6 @@ class MenuItems extends BaseController
             'name' => $this->request->getPost('name'),
             'description' => $this->request->getPost('description'),
             'price' => $this->request->getPost('price'),
-            'discount_price' => $this->request->getPost('discount_price') ?: null,
             'category' => $this->request->getPost('category'),
             'is_available' => $this->request->getPost('is_available') ? 1 : 0,
         ];
@@ -137,7 +136,6 @@ class MenuItems extends BaseController
             'name' => $this->request->getPost('name'),
             'description' => $this->request->getPost('description'),
             'price' => $this->request->getPost('price'),
-            'discount_price' => $this->request->getPost('discount_price') ?: null,
             'category' => $this->request->getPost('category'),
             'is_available' => $this->request->getPost('is_available') ? 1 : 0,
         ];
