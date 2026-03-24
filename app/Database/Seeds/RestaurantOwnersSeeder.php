@@ -106,5 +106,83 @@ class RestaurantOwnersSeeder extends Seeder
 
             $menuItemModel->insert($item);
         }
+
+        // General
+        $owner2User = $userModel->where('email', 'owner2@example.com')->first();
+        if (! $owner2User) {
+            return;
+        }
+
+        $owner2Restaurant = $restaurantModel->where('user_id', $owner2User['id'])->first();
+        if (! $owner2Restaurant) {
+            return;
+        }
+
+        $generalItems = [
+            [
+                'name' => 'Cola Drink',
+                'description' => 'Chilled carbonated cola served over ice for a crisp and refreshing taste.',
+                'price' => 49.00,
+                'category' => 'drinks',
+                'image' => '',
+                'is_available' => 1,
+            ],
+            [
+                'name' => 'Lemon Iced Tea',
+                'description' => 'Freshly brewed iced tea with a splash of lemon, perfectly sweet and refreshing.',
+                'price' => 59.00,
+                'category' => 'drinks',
+                'image' => '',
+                'is_available' => 1,
+            ],
+            [
+                'name' => 'Chocolate Milkshake',
+                'description' => 'Rich and creamy chocolate milkshake topped with whipped cream.',
+                'price' => 89.00,
+                'category' => 'drinks',
+                'image' => '',
+                'is_available' => 1,
+            ],
+            [
+                'name' => 'Iced Coffee',
+                'description' => 'Smooth brewed coffee served cold with milk and ice for a bold flavor.',
+                'price' => 69.00,
+                'category' => 'drinks',
+                'image' => '',
+                'is_available' => 1,
+            ],
+            [
+                'name' => 'Fresh Lemonade',
+                'description' => 'Zesty homemade lemonade with real lemon slices, served ice-cold.',
+                'price' => 59.00,
+                'category' => 'drinks',
+                'image' => '',
+                'is_available' => 1,
+            ],
+            [
+                'name' => 'Cold Beer',
+                'description' => 'Ice-cold premium beer with a smooth, refreshing finish.',
+                'price' => 99.00,
+                'category' => 'drinks',
+                'image' => '',
+                'is_available' => 1,
+            ],
+        ];
+
+        foreach ($generalItems as $item) {
+            $existingItem = $menuItemModel
+                ->where('restaurant_id', $owner2Restaurant['id'])
+                ->where('name', $item['name'])
+                ->first();
+
+            $item['restaurant_id'] = $owner2Restaurant['id'];
+
+            if ($existingItem) {
+                $menuItemModel->update($existingItem['id'], $item);
+                continue;
+            }
+
+            $menuItemModel->insert($item);
+        }
     }
 }
