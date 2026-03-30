@@ -68,20 +68,39 @@
       method: 'POST',
       body: formData
     })
-    .then(r => r.json())
-    .then(json => {
-      if (json.success) {
-        alert(json.message || 'Item created');
-        window.location.href = '<?= site_url('menu') ?>';
-      } else {
-        let err = json.error || 'Unknown error';
-        if (typeof err === 'object') {
-          err = Object.values(err).flat().join('\n');
-        }
-        alert('Error: ' + err);
+    .then(async (response) => {
+      const rawText = await response.text();
+      let payload = {};
+
+      try {
+        payload = rawText ? JSON.parse(rawText) : {};
+      } catch (parseError) {
+        payload = { raw: rawText };
       }
+
+      if (response.ok && payload.success) {
+        alert(payload.message || 'Item created');
+        window.location.href = '<?= site_url('menu') ?>';
+        return;
+      }
+
+      let err = payload.error || payload.message || payload.detail || payload.title || '';
+      if (!err && payload.messages && typeof payload.messages === 'object') {
+        err = Object.values(payload.messages).flat().join('\n');
+      }
+      if (typeof err === 'object' && err !== null) {
+        err = Object.values(err).flat().join('\n');
+      }
+      if (!err && payload.raw) {
+        err = 'Server returned an unexpected response.';
+      }
+      if (!err) {
+        err = 'Request failed (' + response.status + ')';
+      }
+
+      throw new Error(err);
     })
-    .catch(err => alert('Error: ' + err));
+    .catch(err => alert('Error: ' + (err.message || err)));
   });
 </script>
 <?= $this->endSection() ?>

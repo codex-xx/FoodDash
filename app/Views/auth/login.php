@@ -1,3 +1,9 @@
+<?php
+$loginWallpaperRel = 'uploads/logos/Wallpaper.png';
+$loginWallpaperAbs = FCPATH . $loginWallpaperRel;
+$hasLoginWallpaper = is_file($loginWallpaperAbs);
+?>
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -26,8 +32,15 @@
             display: flex;
             align-items: center;
             justify-content: center;
+<?php if ($hasLoginWallpaper): ?>
+            background-image: linear-gradient(135deg, rgba(36, 28, 12, 0.65), rgba(36, 28, 12, 0.42)), url('<?= base_url($loginWallpaperRel) ?>');
+            background-position: center;
+            background-size: cover;
+            background-repeat: no-repeat;
+<?php else: ?>
             background: radial-gradient(circle at 20% 10%, rgba(242, 194, 0, 0.18), rgba(255, 255, 255, 0) 45%),
                         linear-gradient(180deg, #FFFFFF 0%, var(--fd-bg) 60%, rgba(207, 198, 186, 0.55) 100%);
+<?php endif; ?>
             color: var(--fd-espresso);
         }
 

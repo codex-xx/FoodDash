@@ -1,3 +1,20 @@
+<?php
+$activePartnerTab = old('partner_type') === 'restaurant'
+    || session()->getFlashdata('restaurant_success')
+    || session()->getFlashdata('restaurant_error')
+    ? 'restaurant'
+    : 'driver';
+
+$pageWallpaperRel = null;
+foreach (['logos/Merchant.png', 'uploads/logos/Merchant.png'] as $candidateRel) {
+    if (is_file(FCPATH . $candidateRel)) {
+        $pageWallpaperRel = $candidateRel;
+        break;
+    }
+}
+$hasPageWallpaper = $pageWallpaperRel !== null;
+?>
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -22,29 +39,107 @@
         body.partner-page {
             min-height: 100vh;
             margin: 0;
-            background: linear-gradient(180deg, #FFFFFF 0%, var(--fd-bg) 60%, rgba(207, 198, 186, 0.55) 100%);
+            background: linear-gradient(180deg, #F5F1E7 0%, #EEE6D7 100%);
             color: var(--fd-espresso);
-            padding: 2rem 0;
+            padding: 1rem;
         }
 
-        .partner-card {
-            background: rgba(255, 255, 255, 0.96);
-            border: 1px solid var(--fd-border);
-            border-radius: 1rem;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        .partner-shell {
+            max-width: 1440px;
+            margin: 0 auto;
+            min-height: calc(100vh - 2rem);
+            display: grid;
+            grid-template-columns: 1.3fr 1fr;
+            border-radius: 1.25rem;
+            overflow: hidden;
+            border: 1px solid rgba(58, 63, 69, 0.14);
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.14);
         }
 
-        .partner-header {
-            background: linear-gradient(135deg, var(--fd-mustard) 0%, #FFD54A 100%);
-            border-radius: 1rem 1rem 0 0;
-            padding: 2rem;
-            text-align: center;
+        .partner-visual {
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: 4rem;
+            color: #FFFFFF;
+            background: linear-gradient(140deg, #1A6A52 0%, #2B8C6A 48%, #6AB06A 100%);
+            overflow: hidden;
         }
 
-        .partner-header h1 {
-            color: var(--fd-espresso);
+        .partner-visual::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+<?php if ($hasPageWallpaper): ?>
+            background-image: linear-gradient(120deg, rgba(0, 0, 0, 0.42) 0%, rgba(0, 0, 0, 0.52) 36%, rgba(0, 0, 0, 0.2) 100%), url('<?= base_url($pageWallpaperRel) ?>');
+            background-position: center;
+            background-size: cover;
+            background-repeat: no-repeat;
+<?php endif; ?>
+        }
+
+        .partner-visual-content {
+            position: relative;
+            z-index: 1;
+            max-width: 640px;
+        }
+
+        .partner-visual-kicker {
+            margin: 0 0 0.75rem;
+            font-size: 0.85rem;
             font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.88);
+        }
+
+        .partner-visual h1 {
             margin: 0;
+            font-size: clamp(2rem, 4vw, 4rem);
+            line-height: 1.05;
+            font-weight: 700;
+            text-wrap: balance;
+        }
+
+        .partner-visual p {
+            margin: 1.1rem 0 0;
+            max-width: 34ch;
+            font-size: clamp(1rem, 1.4vw, 1.5rem);
+            line-height: 1.35;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .partner-form-pane {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(4px);
+            padding: 1.25rem 1.25rem 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .partner-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .partner-topbar h2 {
+            margin: 0;
+            font-size: 1.02rem;
+            color: rgba(36, 28, 12, 0.72);
+            letter-spacing: 0.01em;
+        }
+
+        .partner-form-surface {
+            border: 1px solid var(--fd-border);
+            border-radius: 1rem 1rem 0 0;
+            background: rgba(255, 255, 255, 0.98);
+            overflow-y: auto;
+            min-height: 0;
         }
 
         .nav-tabs .nav-link {
@@ -57,7 +152,7 @@
         .nav-tabs .nav-link.active {
             background: var(--fd-white);
             color: var(--fd-espresso);
-            border-bottom: 3px solid var(--fd-mustard);
+            border-bottom: 3px solid #1FA565;
         }
 
         .nav-tabs .nav-link:hover {
@@ -117,35 +212,85 @@
             color: var(--fd-charcoal);
         }
 
+        @media (max-width: 1199px) {
+            .partner-shell {
+                grid-template-columns: 1fr;
+            }
+
+            .partner-visual {
+                min-height: 280px;
+                padding: 2rem 1.5rem;
+            }
+
+            .partner-visual p {
+                max-width: 44ch;
+            }
+
+            .partner-form-pane {
+                padding: 1rem 1rem 0;
+            }
+        }
+
+        @media (max-width: 767px) {
+            body.partner-page {
+                padding: 0;
+            }
+
+            .partner-shell {
+                border-radius: 0;
+                min-height: 100vh;
+                border-left: none;
+                border-right: none;
+            }
+
+            .partner-visual {
+                min-height: 240px;
+                padding: 1.5rem 1rem;
+            }
+
+            .partner-topbar {
+                flex-wrap: wrap;
+            }
+
+            .nav-tabs .nav-link {
+                padding: 0.8rem 1rem;
+                font-size: 0.95rem;
+            }
+        }
+
         .driver-icon { color: #007bff; }
         .restaurant-icon { color: #fd7e14; }
     </style>
 </head>
 
 <body class="partner-page">
-    <div class="container">
-        <a href="<?php echo site_url('login'); ?>" class="btn btn-outline-secondary mb-3">
-            ← Back to Login
-        </a>
+    <div class="partner-shell">
+        <section class="partner-visual" aria-label="Partner hero section">
+            <div class="partner-visual-content">
+                <p class="partner-visual-kicker">FoodDash Merchant Network</p>
+                <h1>More diners to satisfy. More business for you.</h1>
+                <p>Grow your business by getting your food out the door and onto the tables of hungry customers.</p>
+            </div>
+        </section>
 
-        <div class="row justify-content-center">
-            <div class="col-lg-10">
-                <div class="partner-card">
-                    <div class="partner-header">
-                        <h1>🤝 Be Our Partner</h1>
-                        <p class="mb-0">Join the FoodDash family and grow your business!</p>
-                    </div>
-                    
-                    <div class="card-body p-0">
+        <section class="partner-form-pane">
+            <div class="partner-topbar">
+                <a href="<?php echo site_url('login'); ?>" class="btn btn-outline-secondary btn-sm">
+                    ← Back to Login
+                </a>
+                <h2>Merchant Partner Sign-up</h2>
+            </div>
+
+            <div class="partner-form-surface">
                         <!-- Nav Tabs -->
                         <ul class="nav nav-tabs" id="partnerTab" role="tablist">
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link active" id="driver-tab" data-bs-toggle="tab" data-bs-target="#driver" type="button" role="tab">
+                                <button class="nav-link <?= $activePartnerTab === 'driver' ? 'active' : '' ?>" id="driver-tab" data-bs-toggle="tab" data-bs-target="#driver" type="button" role="tab" aria-selected="<?= $activePartnerTab === 'driver' ? 'true' : 'false' ?>">
                                     🏍️ Become a Driver
                                 </button>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <button class="nav-link" id="restaurant-tab" data-bs-toggle="tab" data-bs-target="#restaurant" type="button" role="tab">
+                                <button class="nav-link <?= $activePartnerTab === 'restaurant' ? 'active' : '' ?>" id="restaurant-tab" data-bs-toggle="tab" data-bs-target="#restaurant" type="button" role="tab" aria-selected="<?= $activePartnerTab === 'restaurant' ? 'true' : 'false' ?>">
                                     🍽️ Register Restaurant
                                 </button>
                             </li>
@@ -155,7 +300,7 @@
                         <div class="tab-content p-4" id="partnerTabContent">
                             
                             <!-- Driver Application Form -->
-                            <div class="tab-pane fade show active" id="driver" role="tabpanel" aria-labelledby="driver-tab">
+                            <div class="tab-pane fade <?= $activePartnerTab === 'driver' ? 'show active' : '' ?>" id="driver" role="tabpanel" aria-labelledby="driver-tab">
                                 <h4 class="mb-4"><span class="driver-icon">🏍️</span> Driver Application</h4>
                                 
                                 <!-- Requirements -->
@@ -258,7 +403,7 @@
                             </div>
 
                             <!-- Restaurant Registration Form -->
-                            <div class="tab-pane fade" id="restaurant" role="tabpanel" aria-labelledby="restaurant-tab">
+                            <div class="tab-pane fade <?= $activePartnerTab === 'restaurant' ? 'show active' : '' ?>" id="restaurant" role="tabpanel" aria-labelledby="restaurant-tab">
                                 <h4 class="mb-4"><span class="restaurant-icon">🍽️</span> Restaurant Owner Registration</h4>
                                 
                                 <!-- Requirements -->
@@ -373,9 +518,8 @@
                             </div>
                         </div>
                     </div>
-                </div>
             </div>
-        </div>
+        </section>
     </div>
 
     <!-- Driver Terms Modal -->

@@ -1,3 +1,9 @@
+<?php
+$pageWallpaperRel = 'uploads/logos/Wallpaper.png';
+$pageWallpaperAbs = FCPATH . $pageWallpaperRel;
+$hasPageWallpaper = is_file($pageWallpaperAbs);
+?>
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -22,7 +28,14 @@
         body.help-page {
             min-height: 100vh;
             margin: 0;
+<?php if ($hasPageWallpaper): ?>
+            background-image: linear-gradient(135deg, rgba(36, 28, 12, 0.65), rgba(36, 28, 12, 0.42)), url('<?= base_url($pageWallpaperRel) ?>');
+            background-position: center;
+            background-size: cover;
+            background-repeat: no-repeat;
+<?php else: ?>
             background: linear-gradient(180deg, #FFFFFF 0%, var(--fd-bg) 60%, rgba(207, 198, 186, 0.55) 100%);
+<?php endif; ?>
             color: var(--fd-espresso);
             padding: 2rem 0;
         }

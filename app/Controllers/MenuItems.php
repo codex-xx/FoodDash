@@ -47,56 +47,75 @@ class MenuItems extends BaseController
      */
     public function store()
     {
-        $session = session();
-        if (!$session->get('isLoggedIn') || $session->get('role') !== 'restaurant') {
-            return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
-        }
-
-        $restaurantId = $session->get('restaurant_id');
-
-        if (! $restaurantId) {
-            // probably the user session was not linked to a restaurant yet
-            return $this->response->setStatusCode(400)->setJSON(['error' => 'Restaurant information missing. Please logout and login again or contact support.']);
-        }
-
-        // validate input
-        $rules = [
-            'name'  => 'required|min_length[2]|max_length[255]',
-            'price' => 'required|decimal',
-            'category' => 'permit_empty|max_length[100]',
-        ];
-
-        if (! $this->validate($rules)) {
-            return $this->response->setStatusCode(400)->setJSON(['error' => $this->validator->getErrors()]);
-        }
-
-        $data = [
-            'restaurant_id' => $restaurantId,
-            'name' => $this->request->getPost('name'),
-            'description' => $this->request->getPost('description'),
-            'price' => $this->request->getPost('price'),
-            'category' => $this->request->getPost('category'),
-            'is_available' => $this->request->getPost('is_available') ? 1 : 0,
-        ];
-
-        // handle image upload
-        $image = $this->request->getFile('image');
-        if ($image && $image->isValid() && ! $image->hasMoved()) {
-            // make sure upload directory exists
-            if (! is_dir(FCPATH . 'uploads/menu')) {
-                mkdir(FCPATH . 'uploads/menu', 0755, true);
+        try {
+            $session = session();
+            if (!$session->get('isLoggedIn') || $session->get('role') !== 'restaurant') {
+                return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
             }
-            $newName = $image->getRandomName();
-            // move into public folder so the webserver can serve it
-            $image->move(FCPATH . 'uploads/menu', $newName);
-            $data['image'] = 'uploads/menu/' . $newName;
-        }
 
-        if ($this->menuItemModel->insert($data)) {
-            return $this->response->setJSON(['success' => true, 'message' => 'Menu item created']);
-        }
+            $restaurantId = $session->get('restaurant_id');
 
-        return $this->response->setStatusCode(400)->setJSON(['error' => 'Failed to create menu item']);
+            if (! $restaurantId) {
+                // probably the user session was not linked to a restaurant yet
+                return $this->response->setStatusCode(400)->setJSON(['error' => 'Restaurant information missing. Please logout and login again or contact support.']);
+            }
+
+            // validate input
+            $rules = [
+                'name'  => 'required|min_length[2]|max_length[255]',
+                'price' => 'required|decimal',
+                'category' => 'permit_empty|max_length[100]',
+            ];
+
+            if (! $this->validate($rules)) {
+                return $this->response->setStatusCode(400)->setJSON(['error' => $this->validator->getErrors()]);
+            }
+
+            $data = [
+                'restaurant_id' => $restaurantId,
+                'name' => $this->request->getPost('name'),
+                'description' => $this->request->getPost('description'),
+                'price' => $this->request->getPost('price'),
+                'category' => $this->request->getPost('category'),
+                'is_available' => $this->request->getPost('is_available') ? 1 : 0,
+            ];
+
+            // handle image upload
+            $image = $this->request->getFile('image');
+            if ($image && $image->isValid() && ! $image->hasMoved()) {
+                // make sure upload directory exists
+                if (! is_dir(FCPATH . 'uploads/menu')) {
+                    mkdir(FCPATH . 'uploads/menu', 0755, true);
+                }
+                $newName = $image->getRandomName();
+                // move into public folder so the webserver can serve it
+                $image->move(FCPATH . 'uploads/menu', $newName);
+                $data['image'] = 'uploads/menu/' . $newName;
+            }
+
+            if ($this->menuItemModel->insert($data)) {
+                return $this->response->setJSON(['success' => true, 'message' => 'Menu item created']);
+            }
+
+            $modelErrors = $this->menuItemModel->errors();
+            if (! empty($modelErrors)) {
+                return $this->response->setStatusCode(400)->setJSON(['error' => $modelErrors]);
+            }
+
+            $dbError = db_connect()->error();
+            if (! empty($dbError['code'])) {
+                return $this->response->setStatusCode(400)->setJSON([
+                    'error' => 'Failed to create menu item: ' . $dbError['message'],
+                ]);
+            }
+
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'Failed to create menu item']);
+        } catch (\Throwable $e) {
+            log_message('error', 'MenuItems::store failed: {message}', ['message' => $e->getMessage()]);
+            return $this->response->setStatusCode(500)->setJSON([
+                'error' => 'Server error while creating menu item. ' . $e->getMessage(),
+            ]);
+        }
     }
 
     /**
