@@ -14,6 +14,23 @@ foreach (($items ?? []) as $menuItem) {
 }
 
 $unavailableItems = $totalItems - $availableItems;
+
+$itemsByCategory = [];
+foreach (($items ?? []) as $menuItem) {
+  $categoryName = trim((string) ($menuItem['category'] ?? ''));
+  if ($categoryName === '') {
+    $categoryName = 'Uncategorized';
+  }
+
+  if (!array_key_exists($categoryName, $itemsByCategory)) {
+    $itemsByCategory[$categoryName] = [];
+  }
+
+  $itemsByCategory[$categoryName][] = $menuItem;
+}
+
+ksort($itemsByCategory, SORT_NATURAL | SORT_FLAG_CASE);
+$categoryCount = count($itemsByCategory);
 ?>
 
 <style>
@@ -58,6 +75,47 @@ $unavailableItems = $totalItems - $availableItems;
 
   .menu-product-grid {
     margin-top: .15rem;
+  }
+
+  .menu-category-section {
+    border-top: 1px solid rgba(58, 63, 69, 0.12);
+    padding-top: 1.1rem;
+    margin-top: 1.1rem;
+  }
+
+  .menu-category-section:first-child {
+    border-top: 0;
+    margin-top: 0;
+    padding-top: 0;
+  }
+
+  .menu-category-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    margin-bottom: .65rem;
+  }
+
+  .menu-category-title {
+    margin: 0;
+    font-size: 1rem;
+    color: #111827;
+    letter-spacing: .01em;
+  }
+
+  .menu-category-count {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(58, 63, 69, 0.2);
+    border-radius: 999px;
+    background: #F8F9FA;
+    color: #4B5563;
+    font-size: .7rem;
+    padding: .22rem .62rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    font-weight: 600;
   }
 
   .menu-product-card {
@@ -284,22 +342,28 @@ $unavailableItems = $totalItems - $availableItems;
 </div>
 
 <div class="row g-3 mb-4">
-  <div class="col-12 col-md-4">
+  <div class="col-12 col-md-6 col-xl-3">
     <div class="menu-stat-card">
       <small class="menu-stat-label">Total Items</small>
       <p class="menu-stat-value"><?= $totalItems ?></p>
     </div>
   </div>
-  <div class="col-12 col-md-4">
+  <div class="col-12 col-md-6 col-xl-3">
     <div class="menu-stat-card">
       <small class="menu-stat-label">Available</small>
       <p class="menu-stat-value text-success"><?= $availableItems ?></p>
     </div>
   </div>
-  <div class="col-12 col-md-4">
+  <div class="col-12 col-md-6 col-xl-3">
     <div class="menu-stat-card">
       <small class="menu-stat-label">Unavailable</small>
       <p class="menu-stat-value text-danger"><?= $unavailableItems ?></p>
+    </div>
+  </div>
+  <div class="col-12 col-md-6 col-xl-3">
+    <div class="menu-stat-card">
+      <small class="menu-stat-label">Categories</small>
+      <p class="menu-stat-value text-primary"><?= $categoryCount ?></p>
     </div>
   </div>
 </div>
@@ -312,66 +376,79 @@ $unavailableItems = $totalItems - $availableItems;
     </div>
 
     <?php if (!empty($items)): ?>
-      <div class="row g-3 menu-product-grid">
-        <?php foreach ($items as $item): ?>
-          <?php
-            $description = trim((string) ($item['description'] ?? ''));
-            if (strlen($description) > 95) {
-                $description = substr($description, 0, 92) . '...';
-            }
-            $createdAt = !empty($item['created_at']) ? strtotime($item['created_at']) : false;
-          ?>
-          <div class="col-12 col-md-6 col-xl-4">
-            <article class="menu-product-card">
-              <div class="menu-image-wrap">
-                <?php if (!empty($item['image'])): ?>
-                  <img src="<?= base_url($item['image']) ?>" alt="<?= esc($item['name']) ?>" class="menu-product-image">
-                <?php else: ?>
-                  <div class="menu-item-placeholder">No Image</div>
-                <?php endif; ?>
-              </div>
-
-              <div class="menu-product-body">
-                <h6 class="menu-item-name fw-semibold"><?= esc($item['name']) ?></h6>
-
-                <div class="menu-meta-row">
-                  <span class="menu-category-badge"><?= esc($item['category']) ?></span>
-                  <span class="menu-date"><?= $createdAt ? date('M d, Y', $createdAt) : 'N/A' ?></span>
-                </div>
-
-                <div class="menu-price-block">
-                  <div class="current-price">₱<?= number_format($item['price'], 2) ?></div>
-                </div>
-
-                <p class="menu-description-text">
-                  <?php if ($description !== ''): ?>
-                    <?= esc($description) ?>
-                  <?php else: ?>
-                    <span class="text-muted">No description provided.</span>
-                  <?php endif; ?>
-                </p>
-
-                <div class="menu-card-actions">
-                  <div>
-                    <span class="menu-status-pill <?= !empty($item['is_available']) ? 'available' : 'unavailable' ?>">
-                      <?= !empty($item['is_available']) ? 'Available' : 'Unavailable' ?>
-                    </span>
-                  </div>
-
-                  <button class="btn btn-sm btn-outline-secondary w-100" onclick="toggleAvailability(<?= $item['id'] ?>)">
-                    <?= !empty($item['is_available']) ? 'Mark Unavailable' : 'Mark Available' ?>
-                  </button>
-
-                  <div class="menu-row-actions">
-                    <a href="<?= site_url('menu/' . $item['id'] . '/edit') ?>" class="btn btn-sm btn-outline-primary w-100">Edit</a>
-                    <button class="btn btn-sm btn-outline-danger w-100" onclick="deleteItem(<?= $item['id'] ?>)">Delete</button>
-                  </div>
-                </div>
-              </div>
-            </article>
+      <?php foreach ($itemsByCategory as $categoryName => $categoryItems): ?>
+        <section class="menu-category-section">
+          <div class="menu-category-header">
+            <h6 class="menu-category-title"><?= esc($categoryName) ?></h6>
+            <span class="menu-category-count"><?= count($categoryItems) ?> item<?= count($categoryItems) === 1 ? '' : 's' ?></span>
           </div>
-        <?php endforeach; ?>
-      </div>
+
+          <div class="row g-3 menu-product-grid">
+            <?php foreach ($categoryItems as $item): ?>
+              <?php
+                $description = trim((string) ($item['description'] ?? ''));
+                if (strlen($description) > 95) {
+                    $description = substr($description, 0, 92) . '...';
+                }
+                $createdAt = !empty($item['created_at']) ? strtotime($item['created_at']) : false;
+                $itemCategory = trim((string) ($item['category'] ?? ''));
+                if ($itemCategory === '') {
+                    $itemCategory = 'Uncategorized';
+                }
+              ?>
+              <div class="col-12 col-md-6 col-xl-4">
+                <article class="menu-product-card">
+                  <div class="menu-image-wrap">
+                    <?php if (!empty($item['image'])): ?>
+                      <img src="<?= base_url($item['image']) ?>" alt="<?= esc($item['name']) ?>" class="menu-product-image">
+                    <?php else: ?>
+                      <div class="menu-item-placeholder">No Image</div>
+                    <?php endif; ?>
+                  </div>
+
+                  <div class="menu-product-body">
+                    <h6 class="menu-item-name fw-semibold"><?= esc($item['name']) ?></h6>
+
+                    <div class="menu-meta-row">
+                      <span class="menu-category-badge"><?= esc($itemCategory) ?></span>
+                      <span class="menu-date"><?= $createdAt ? date('M d, Y', $createdAt) : 'N/A' ?></span>
+                    </div>
+
+                    <div class="menu-price-block">
+                      <div class="current-price">₱<?= number_format($item['price'], 2) ?></div>
+                    </div>
+
+                    <p class="menu-description-text">
+                      <?php if ($description !== ''): ?>
+                        <?= esc($description) ?>
+                      <?php else: ?>
+                        <span class="text-muted">No description provided.</span>
+                      <?php endif; ?>
+                    </p>
+
+                    <div class="menu-card-actions">
+                      <div>
+                        <span class="menu-status-pill <?= !empty($item['is_available']) ? 'available' : 'unavailable' ?>">
+                          <?= !empty($item['is_available']) ? 'Available' : 'Unavailable' ?>
+                        </span>
+                      </div>
+
+                      <button class="btn btn-sm btn-outline-secondary w-100" onclick="toggleAvailability(<?= $item['id'] ?>)">
+                        <?= !empty($item['is_available']) ? 'Mark Unavailable' : 'Mark Available' ?>
+                      </button>
+
+                      <div class="menu-row-actions">
+                        <a href="<?= site_url('menu/' . $item['id'] . '/edit') ?>" class="btn btn-sm btn-outline-primary w-100">Edit</a>
+                        <button class="btn btn-sm btn-outline-danger w-100" onclick="deleteItem(<?= $item['id'] ?>)">Delete</button>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        </section>
+      <?php endforeach; ?>
     <?php else: ?>
       <div class="text-center py-5 text-muted">
         <h5 class="mb-2">No menu items yet</h5>

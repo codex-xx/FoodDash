@@ -57,8 +57,41 @@
 
           <h5 class="mb-3"><i class="bi bi-clock"></i> Opening Hours</h5>
           <div class="mb-3">
-            <textarea class="form-control" id="opening_hours" name="opening_hours" rows="7" placeholder="Example:&#10;Monday: 9:00 AM - 9:00 PM&#10;Tuesday: 9:00 AM - 9:00 PM&#10;Wednesday: 9:00 AM - 9:00 PM&#10;Thursday: 9:00 AM - 9:00 PM&#10;Friday: 9:00 AM - 10:00 PM&#10;Saturday: 10:00 AM - 10:00 PM&#10;Sunday: 10:00 AM - 8:00 PM"><?= esc($restaurant['opening_hours'] ?? '') ?></textarea>
-            <div class="form-text">Enter your operating hours for each day of the week</div>
+            <input type="hidden" id="opening_hours" name="opening_hours" value="<?= esc($restaurant['opening_hours'] ?? '') ?>">
+            <div class="table-responsive">
+              <table class="table table-sm align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width: 26%;">Day</th>
+                    <th style="width: 28%;">Open</th>
+                    <th style="width: 28%;">Close</th>
+                    <th style="width: 18%;">Closed</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']; ?>
+                  <?php foreach ($days as $day): ?>
+                    <?php $dayKey = strtolower($day); ?>
+                    <tr>
+                      <td><strong><?= esc($day) ?></strong></td>
+                      <td>
+                        <input type="time" class="form-control form-control-sm" id="open_<?= $dayKey ?>" data-day="<?= $day ?>" data-type="open" step="900">
+                      </td>
+                      <td>
+                        <input type="time" class="form-control form-control-sm" id="close_<?= $dayKey ?>" data-day="<?= $day ?>" data-type="close" step="900">
+                      </td>
+                      <td>
+                        <div class="form-check mb-0">
+                          <input class="form-check-input day-closed" type="checkbox" id="closed_<?= $dayKey ?>" data-day="<?= $day ?>">
+                          <label class="form-check-label" for="closed_<?= $dayKey ?>">Yes</label>
+                        </div>
+                      </td>
+                    </tr>
+                  <?php endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+            <div class="form-text">Pick open and close times for each day using the time picker.</div>
           </div>
 
           <hr class="my-4">
@@ -136,11 +169,176 @@
 
 <?= $this->section('scripts') ?>
 <script>
+  const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const DEFAULT_SCHEDULE = {
+    Monday: { open: '09:00', close: '21:00', closed: false },
+    Tuesday: { open: '09:00', close: '21:00', closed: false },
+    Wednesday: { open: '09:00', close: '21:00', closed: false },
+    Thursday: { open: '09:00', close: '21:00', closed: false },
+    Friday: { open: '09:00', close: '22:00', closed: false },
+    Saturday: { open: '10:00', close: '22:00', closed: false },
+    Sunday: { open: '10:00', close: '20:00', closed: false }
+  };
+
   const originalData = {
     name: document.getElementById('restaurant_name').value,
     address: document.getElementById('restaurant_address').value,
     opening_hours: document.getElementById('opening_hours').value
   };
+
+  function to24Hour(timeText) {
+    const text = (timeText || '').trim().toUpperCase();
+    if (!text) return null;
+
+    let match = text.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/);
+    if (match) {
+      let hour = parseInt(match[1], 10);
+      const minute = match[2];
+      const period = match[3];
+      if (period === 'PM' && hour < 12) hour += 12;
+      if (period === 'AM' && hour === 12) hour = 0;
+      return String(hour).padStart(2, '0') + ':' + minute;
+    }
+
+    match = text.match(/^(\d{1,2}):(\d{2})$/);
+    if (match) {
+      const hour = parseInt(match[1], 10);
+      const minute = parseInt(match[2], 10);
+      if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+        return String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0');
+      }
+    }
+
+    match = text.match(/^(\d{1,2})\s*(AM|PM)$/);
+    if (match) {
+      let hour = parseInt(match[1], 10);
+      const period = match[2];
+      if (hour < 1 || hour > 12) return null;
+      if (period === 'PM' && hour < 12) hour += 12;
+      if (period === 'AM' && hour === 12) hour = 0;
+      return String(hour).padStart(2, '0') + ':00';
+    }
+
+    return null;
+  }
+
+  function parseOpeningHours(rawText) {
+    const schedule = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE));
+    if (!rawText) return schedule;
+
+    rawText.split('\n').forEach(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+
+      const parts = trimmed.split(':');
+      if (parts.length < 2) return;
+
+      const day = parts[0].trim();
+      const value = parts.slice(1).join(':').trim();
+      if (!DAYS_OF_WEEK.includes(day)) return;
+
+      if (/^closed$/i.test(value)) {
+        schedule[day].closed = true;
+        return;
+      }
+
+      const range = value.split(/\s+-\s+|\s+to\s+/i);
+      if (range.length !== 2) return;
+
+      const openTime = to24Hour(range[0]);
+      const closeTime = to24Hour(range[1]);
+      if (openTime && closeTime) {
+        schedule[day].open = openTime;
+        schedule[day].close = closeTime;
+        schedule[day].closed = false;
+      }
+    });
+
+    return schedule;
+  }
+
+  function applyScheduleToUI(schedule) {
+    DAYS_OF_WEEK.forEach(day => {
+      const key = day.toLowerCase();
+      const openInput = document.getElementById('open_' + key);
+      const closeInput = document.getElementById('close_' + key);
+      const closedInput = document.getElementById('closed_' + key);
+      const dayData = schedule[day] || DEFAULT_SCHEDULE[day];
+
+      openInput.value = dayData.open;
+      closeInput.value = dayData.close;
+      closedInput.checked = !!dayData.closed;
+      openInput.disabled = !!dayData.closed;
+      closeInput.disabled = !!dayData.closed;
+    });
+  }
+
+  function serializeSchedule() {
+    const lines = [];
+
+    for (const day of DAYS_OF_WEEK) {
+      const key = day.toLowerCase();
+      const openInput = document.getElementById('open_' + key);
+      const closeInput = document.getElementById('close_' + key);
+      const closedInput = document.getElementById('closed_' + key);
+
+      if (closedInput.checked) {
+        lines.push(day + ': Closed');
+        continue;
+      }
+
+      const open = openInput.value;
+      const close = closeInput.value;
+
+      if (!open || !close) {
+        return {
+          valid: false,
+          error: day + ': Please select both opening and closing times, or mark the day as closed.'
+        };
+      }
+
+      if (open >= close) {
+        return {
+          valid: false,
+          error: day + ': Closing time must be later than opening time.'
+        };
+      }
+
+      lines.push(day + ': ' + open + ' - ' + close);
+    }
+
+    return { valid: true, value: lines.join('\n') };
+  }
+
+  function refreshOpeningHoursField() {
+    const serialized = serializeSchedule();
+    if (!serialized.valid) return serialized;
+    document.getElementById('opening_hours').value = serialized.value;
+    return serialized;
+  }
+
+  function bindScheduleEvents() {
+    DAYS_OF_WEEK.forEach(day => {
+      const key = day.toLowerCase();
+      const openInput = document.getElementById('open_' + key);
+      const closeInput = document.getElementById('close_' + key);
+      const closedInput = document.getElementById('closed_' + key);
+
+      closedInput.addEventListener('change', function() {
+        const isClosed = this.checked;
+        openInput.disabled = isClosed;
+        closeInput.disabled = isClosed;
+        refreshOpeningHoursField();
+      });
+
+      openInput.addEventListener('change', refreshOpeningHoursField);
+      closeInput.addEventListener('change', refreshOpeningHoursField);
+    });
+  }
+
+  applyScheduleToUI(parseOpeningHours(originalData.opening_hours));
+  bindScheduleEvents();
+  refreshOpeningHoursField();
 
   // Logo preview
   document.getElementById('restaurant_logo').addEventListener('change', function(e) {
@@ -158,7 +356,8 @@
   function resetForm() {
     document.getElementById('restaurant_name').value = originalData.name;
     document.getElementById('restaurant_address').value = originalData.address;
-    document.getElementById('opening_hours').value = originalData.opening_hours;
+    applyScheduleToUI(parseOpeningHours(originalData.opening_hours));
+    refreshOpeningHoursField();
     document.getElementById('restaurant_logo').value = '';
     document.getElementById('logoPreview').style.display = 'none';
     clearMessages();
@@ -193,6 +392,12 @@
   document.getElementById('settingsForm').addEventListener('submit', function(e) {
     e.preventDefault();
     clearMessages();
+
+    const serialized = refreshOpeningHoursField();
+    if (!serialized.valid) {
+      showMessage(serialized.error, 'error');
+      return;
+    }
 
     const submitBtn = document.getElementById('submitBtn');
     const originalBtnText = submitBtn.innerHTML;

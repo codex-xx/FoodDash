@@ -10,7 +10,10 @@
       <small class="text-muted">Manage menu, orders, and track your daily performance</small>
       <p class="mt-1">Welcome, <strong><?= esc(session()->get('restaurant_name')) ?></strong></p>
     </div>
-    <button class="btn btn-sm btn-primary" id="refreshBtn">Refresh Data</button>
+    <div class="d-flex gap-2">
+      <a href="<?= site_url('settings') ?>" class="btn btn-sm btn-outline-secondary">Settings</a>
+      <button class="btn btn-sm btn-primary" id="refreshBtn">Refresh Data</button>
+    </div>
   </div>
 </div>
 

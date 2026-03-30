@@ -376,6 +376,11 @@
                         Order History
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="<?= site_url('settings') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'settings')) ? 'active' : '' ?>">
+                        Settings
+                    </a>
+                </li>
             </ul>
 
         <?php else: ?>
