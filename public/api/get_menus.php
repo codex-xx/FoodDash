@@ -4,25 +4,31 @@ declare(strict_types=1);
 
 require __DIR__ . '/_bootstrap.php';
 
-$restaurantIdRaw = $_GET['restaurant_id'] ?? '';
-if ($restaurantIdRaw === '' || !ctype_digit((string) $restaurantIdRaw)) {
-    json_error('restaurant_id is required and must be numeric', 422);
+$restaurantIdRaw = $_GET['restaurant_id'] ?? null;
+if ($restaurantIdRaw !== null && $restaurantIdRaw !== '' && !ctype_digit((string) $restaurantIdRaw)) {
+    json_error('restaurant_id must be numeric when provided', 422);
 }
 
-$restaurantId = (int) $restaurantIdRaw;
+$restaurantId = ($restaurantIdRaw !== null && $restaurantIdRaw !== '') ? (int) $restaurantIdRaw : null;
 $conn = db_conn();
 
 $sql = 'SELECT id, restaurant_id, name, description, price, image_url, category, availability, created_at, updated_at
-    FROM menus
-    WHERE restaurant_id = ?
-    ORDER BY category ASC, name ASC';
+    FROM menus';
+
+if ($restaurantId !== null) {
+    $sql .= ' WHERE restaurant_id = ?';
+}
+
+$sql .= ' ORDER BY restaurant_id ASC, category ASC, name ASC';
 
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
     json_error('Failed to prepare query', 500);
 }
 
-$stmt->bind_param('i', $restaurantId);
+if ($restaurantId !== null) {
+    $stmt->bind_param('i', $restaurantId);
+}
 $stmt->execute();
 $result = $stmt->get_result();
 

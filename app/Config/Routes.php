@@ -113,6 +113,8 @@ $routes->post('api/logout', 'Api\AuthController::logout');
 // Menu & Restaurants (Public)
 $routes->get('api/restaurants', 'Api\MenuController::restaurants');
 $routes->get('api/restaurants/(:num)', 'Api\MenuController::restaurant/$1');
+$routes->get('api/restaurants-with-menus', 'Api\MenuController::restaurantsWithMenus');
+$routes->get('api/restaurants/(:num)/menus', 'Api\MenuController::menusByRestaurant/$1');
 $routes->get('api/menu', 'Api\MenuController::index');
 $routes->get('api/menu/search', 'Api\MenuController::search');
 $routes->get('api/menu/(:num)', 'Api\MenuController::show/$1');

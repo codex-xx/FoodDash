@@ -36,6 +36,96 @@ class MenuController extends ResourceController
     }
 
     /**
+     * Get all approved restaurants with nested menus.
+     * GET /api/restaurants-with-menus
+     */
+    public function restaurantsWithMenus()
+    {
+        $restaurants = $this->restaurantModel
+            ->where('is_active', 1)
+            ->where('status', 'approved')
+            ->orderBy('name', 'ASC')
+            ->findAll();
+
+        if (empty($restaurants)) {
+            return $this->respond([
+                'status' => 'success',
+                'restaurants' => [],
+            ]);
+        }
+
+        $restaurantIds = array_map(static fn (array $restaurant): int => (int) $restaurant['id'], $restaurants);
+
+        $menuItems = $this->menuItemModel
+            ->whereIn('restaurant_id', $restaurantIds)
+            ->orderBy('category', 'ASC')
+            ->orderBy('name', 'ASC')
+            ->findAll();
+
+        $menusByRestaurant = [];
+        foreach ($menuItems as $item) {
+            $restaurantId = (int) $item['restaurant_id'];
+            $menusByRestaurant[$restaurantId][] = $this->serializeMenuItem($item);
+        }
+
+        $payload = [];
+        foreach ($restaurants as $restaurant) {
+            $restaurantId = (int) $restaurant['id'];
+            $payload[] = [
+                'id' => $restaurantId,
+                'name' => $restaurant['name'],
+                'address' => $restaurant['address'] ?? null,
+                'menus' => $menusByRestaurant[$restaurantId] ?? [],
+            ];
+        }
+
+        return $this->respond([
+            'status' => 'success',
+            'restaurants' => $payload,
+        ]);
+    }
+
+    /**
+     * Get menus for a specific restaurant.
+     * GET /api/restaurants/{id}/menus
+     */
+    public function menusByRestaurant($id = null)
+    {
+        if ($id === null || ! ctype_digit((string) $id)) {
+            return $this->respond([
+                'status' => 'error',
+                'message' => 'restaurant_id is required and must be numeric',
+            ], 422);
+        }
+
+        $restaurant = $this->restaurantModel->find((int) $id);
+        if (! $restaurant || (int) ($restaurant['is_active'] ?? 0) !== 1 || ($restaurant['status'] ?? '') !== 'approved') {
+            return $this->respond([
+                'status' => 'error',
+                'message' => 'Restaurant not found',
+            ], 404);
+        }
+
+        $menuItems = $this->menuItemModel
+            ->where('restaurant_id', (int) $id)
+            ->orderBy('category', 'ASC')
+            ->orderBy('name', 'ASC')
+            ->findAll();
+
+        $menus = array_map(fn (array $item): array => $this->serializeMenuItem($item), $menuItems);
+
+        return $this->respond([
+            'status' => 'success',
+            'restaurant' => [
+                'id' => (int) $restaurant['id'],
+                'name' => $restaurant['name'],
+                'address' => $restaurant['address'] ?? null,
+            ],
+            'menus' => $menus,
+        ]);
+    }
+
+    /**
      * Get single restaurant details
      * GET /api/restaurants/:id
      */
@@ -134,6 +224,29 @@ class MenuController extends ResourceController
             'success' => true,
             'data'    => $menuItem
         ]);
+    }
+
+    private function serializeMenuItem(array $item): array
+    {
+        $imagePath = $item['image_url'] ?? $item['image'] ?? null;
+        $availability = (int) ($item['availability'] ?? 1);
+
+        return [
+            'id' => (int) $item['id'],
+            'restaurant_id' => (int) $item['restaurant_id'],
+            'name' => $item['name'],
+            'description' => $item['description'] ?? null,
+            'price' => (float) $item['price'],
+            'image_url' => $this->toAbsoluteImageUrl($imagePath),
+            'category' => $item['category'] ?? null,
+            'availability' => $availability,
+            'is_available' => $availability,
+            'can_order' => $availability === 1,
+            'ui_disabled' => $availability !== 1,
+            'availability_message' => $availability === 1 ? null : 'Not available for a moment',
+            'created_at' => $item['created_at'] ?? null,
+            'updated_at' => $item['updated_at'] ?? null,
+        ];
     }
 
     /**
