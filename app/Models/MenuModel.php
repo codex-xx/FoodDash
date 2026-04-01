@@ -4,9 +4,9 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class MenuItemModel extends Model
+class MenuModel extends Model
 {
-    protected $table = 'menu_items';
+    protected $table = 'menus';
     protected $primaryKey = 'id';
 
     protected $useTimestamps = true;
@@ -18,10 +18,8 @@ class MenuItemModel extends Model
         'name',
         'description',
         'price',
-        'category',
-        'image',
         'image_url',
-        'is_available',
+        'category',
         'availability',
     ];
 

@@ -117,6 +117,13 @@ $routes->get('api/menu', 'Api\MenuController::index');
 $routes->get('api/menu/search', 'Api\MenuController::search');
 $routes->get('api/menu/(:num)', 'Api\MenuController::show/$1');
 
+// Centralized Menu Sync API
+$routes->get('api/menus', 'Api\MenusController::index');
+$routes->post('api/menus', 'Api\MenusController::create');
+$routes->put('api/menus/(:num)', 'Api\MenusController::update/$1');
+$routes->post('api/menus/(:num)', 'Api\MenusController::update/$1');
+$routes->delete('api/menus/(:num)', 'Api\MenusController::delete/$1');
+
 // Profile (Authenticated)
 $routes->get('api/profile', 'Api\ProfileController::index');
 $routes->put('api/profile', 'Api\ProfileController::update');

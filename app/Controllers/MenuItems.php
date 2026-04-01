@@ -2,7 +2,7 @@
 
 namespace App\Controllers;
 
-use App\Models\MenuItemModel;
+use App\Models\MenuModel;
 
 class MenuItems extends BaseController
 {
@@ -10,7 +10,7 @@ class MenuItems extends BaseController
 
     public function __construct()
     {
-        $this->menuItemModel = new MenuItemModel();
+        $this->menuItemModel = new MenuModel();
     }
 
     /**
@@ -25,6 +25,11 @@ class MenuItems extends BaseController
 
         $restaurantId = $session->get('restaurant_id');
         $items = $this->menuItemModel->where('restaurant_id', $restaurantId)->findAll();
+
+        foreach ($items as &$item) {
+            $item['image'] = $item['image_url'] ?? null;
+            $item['is_available'] = (int) ($item['availability'] ?? 1);
+        }
 
         return view('restaurant/menu/index', ['items' => $items]);
     }
@@ -77,7 +82,7 @@ class MenuItems extends BaseController
                 'description' => $this->request->getPost('description'),
                 'price' => $this->request->getPost('price'),
                 'category' => $this->request->getPost('category'),
-                'is_available' => $this->request->getPost('is_available') ? 1 : 0,
+                'availability' => $this->request->getPost('is_available') ? 1 : 0,
             ];
 
             // handle image upload
@@ -90,7 +95,7 @@ class MenuItems extends BaseController
                 $newName = $image->getRandomName();
                 // move into public folder so the webserver can serve it
                 $image->move(FCPATH . 'uploads/menu', $newName);
-                $data['image'] = 'uploads/menu/' . $newName;
+                $data['image_url'] = 'uploads/menu/' . $newName;
             }
 
             if ($this->menuItemModel->insert($data)) {
@@ -133,6 +138,9 @@ class MenuItems extends BaseController
             return redirect()->to('/menu')->with('error', 'Menu item not found');
         }
 
+        $item['image'] = $item['image_url'] ?? null;
+        $item['is_available'] = (int) ($item['availability'] ?? 1);
+
         return view('restaurant/menu/edit', ['item' => $item]);
     }
 
@@ -156,7 +164,7 @@ class MenuItems extends BaseController
             'description' => $this->request->getPost('description'),
             'price' => $this->request->getPost('price'),
             'category' => $this->request->getPost('category'),
-            'is_available' => $this->request->getPost('is_available') ? 1 : 0,
+            'availability' => $this->request->getPost('is_available') ? 1 : 0,
         ];
 
         // image upload (optional)
@@ -167,7 +175,7 @@ class MenuItems extends BaseController
             }
             $newName = $image->getRandomName();
             $image->move(FCPATH . 'uploads/menu', $newName);
-            $data['image'] = 'uploads/menu/' . $newName;
+            $data['image_url'] = 'uploads/menu/' . $newName;
         }
 
         if ($this->menuItemModel->update($id, $data)) {
@@ -192,8 +200,10 @@ class MenuItems extends BaseController
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Menu item not found']);
         }
 
-        $newStatus = !$item['is_available'];
-        $this->menuItemModel->update($id, ['is_available' => $newStatus]);
+        $newStatus = !((int) ($item['availability'] ?? 1));
+        $this->menuItemModel->update($id, [
+            'availability' => (int) $newStatus,
+        ]);
 
         return $this->response->setJSON(['success' => true, 'is_available' => $newStatus]);
     }

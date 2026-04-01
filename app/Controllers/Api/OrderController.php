@@ -7,6 +7,7 @@ use App\Models\OrderModel;
 use App\Models\RestaurantModel;
 use App\Models\DriverModel;
 use App\Models\CustomerModel;
+use App\Models\MenuModel;
 
 class OrderController extends ResourceController
 {
@@ -120,6 +121,26 @@ class OrderController extends ResourceController
         if (!$json) {
             return $this->respond(['success' => false, 'message' => 'Invalid JSON data received'], 400);
         }
+
+        $restaurantId = (int) ($json->restaurant_id ?? 0);
+        $items = $json->items ?? null;
+
+        if ($restaurantId <= 0 || !is_array($items) || empty($items)) {
+            return $this->respond([
+                'success' => false,
+                'message' => 'restaurant_id and a non-empty items array are required'
+            ], 422);
+        }
+
+        $validation = $this->validateOrderItemsAvailability($restaurantId, $items);
+        if (!empty($validation['invalid_items'])) {
+            return $this->respond([
+                'success' => false,
+                'message' => 'Some items are not available for a moment. Please refresh menu.',
+                'notification' => 'Not available for a moment',
+                'invalid_items' => $validation['invalid_items'],
+            ], 409);
+        }
         
         // Generate order number
         $orderNumber = 'ORD-' . strtoupper(uniqid());
@@ -129,10 +150,10 @@ class OrderController extends ResourceController
             'order_number'     => $orderNumber,
             'customer_id'      => $customer['id'],
             'customer_name'    => $customer['name'],
-            'restaurant_id'    => $json->restaurant_id,
+            'restaurant_id'    => $restaurantId,
             'total_amount'     => $json->total_amount,
             'delivery_address' => $json->delivery_address ?? $customer['address'],
-            'items'            => json_encode($json->items),
+            'items'            => json_encode($items),
             'status'           => 'pending',
             'notes'            => $json->notes ?? null,
         ];
@@ -153,6 +174,91 @@ class OrderController extends ResourceController
             'message' => 'Order placed successfully',
             'data'    => $order
         ], 201);
+    }
+
+    private function validateOrderItemsAvailability(int $restaurantId, array $items): array
+    {
+        $menuModel = new MenuModel();
+        $invalidItems = [];
+
+        foreach ($items as $item) {
+            $itemArray = is_object($item) ? (array) $item : (array) $item;
+
+            $itemId = $this->extractItemId($itemArray);
+            $itemName = $this->extractItemName($itemArray);
+
+            if ($itemId !== null) {
+                $menu = $menuModel
+                    ->where('id', $itemId)
+                    ->where('restaurant_id', $restaurantId)
+                    ->first();
+            } elseif ($itemName !== null) {
+                $menu = $menuModel
+                    ->where('restaurant_id', $restaurantId)
+                    ->where('LOWER(name) =', strtolower($itemName), false)
+                    ->first();
+            } else {
+                $invalidItems[] = [
+                    'item' => $itemArray,
+                    'reason' => 'Item identifier is missing',
+                    'can_order' => false,
+                    'ui_disabled' => true,
+                    'availability_message' => 'Not available for a moment',
+                ];
+                continue;
+            }
+
+            if (!$menu) {
+                $invalidItems[] = [
+                    'item_id' => $itemId,
+                    'name' => $itemName,
+                    'reason' => 'Menu item not found',
+                    'can_order' => false,
+                    'ui_disabled' => true,
+                    'availability_message' => 'Not available for a moment',
+                ];
+                continue;
+            }
+
+            if ((int) ($menu['availability'] ?? 1) !== 1) {
+                $invalidItems[] = [
+                    'item_id' => (int) $menu['id'],
+                    'name' => $menu['name'],
+                    'reason' => 'Item is unavailable',
+                    'can_order' => false,
+                    'ui_disabled' => true,
+                    'availability_message' => 'Not available for a moment',
+                ];
+            }
+        }
+
+        return ['invalid_items' => $invalidItems];
+    }
+
+    private function extractItemId(array $item): ?int
+    {
+        foreach (['menu_id', 'item_id', 'product_id', 'id'] as $key) {
+            if (isset($item[$key]) && is_numeric($item[$key])) {
+                $id = (int) $item[$key];
+                return $id > 0 ? $id : null;
+            }
+        }
+
+        return null;
+    }
+
+    private function extractItemName(array $item): ?string
+    {
+        foreach (['name', 'item_name', 'product_name', 'title'] as $key) {
+            if (isset($item[$key])) {
+                $name = trim((string) $item[$key]);
+                if ($name !== '') {
+                    return $name;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
