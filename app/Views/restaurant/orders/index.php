@@ -7,33 +7,8 @@
   <div class="col-12">
     <div>
       <h3 class="m-0">Order Status Control</h3>
-      <small class="text-muted">Manage and track all your orders</small>
+      <small class="text-muted">Manage active orders and update their status</small>
     </div>
-  </div>
-</div>
-
-<!-- Date Filter Section -->
-<div class="card shadow-sm mb-4">
-  <div class="card-body">
-    <h5 class="card-title mb-3"><i class="bi bi-calendar-range"></i> Order History - Filter by Date</h5>
-    <form method="get" action="<?= site_url('orders') ?>" class="row g-3 align-items-end">
-      <div class="col-md-4">
-        <label for="start_date" class="form-label">From Date</label>
-        <input type="date" class="form-control" id="start_date" name="start_date" value="<?= request()->getGet('start_date') ?? '' ?>">
-      </div>
-      <div class="col-md-4">
-        <label for="end_date" class="form-label">To Date</label>
-        <input type="date" class="form-control" id="end_date" name="end_date" value="<?= request()->getGet('end_date') ?? '' ?>">
-      </div>
-      <div class="col-md-4">
-        <button type="submit" class="btn btn-primary w-100">
-          <i class="bi bi-filter"></i> Filter Orders
-        </button>
-        <a href="<?= site_url('orders') ?>" class="btn btn-outline-secondary w-100 mt-2">
-          Clear Filters
-        </a>
-      </div>
-    </form>
   </div>
 </div>
 
@@ -124,8 +99,8 @@
       </div>
     <?php else: ?>
       <div class="text-center py-5 text-muted">
-        <h5>No orders found</h5>
-        <small>Try adjusting your date filters or check back later</small>
+        <h5>No active orders found</h5>
+        <small>New incoming orders will appear here</small>
       </div>
     <?php endif; ?>
   </div>

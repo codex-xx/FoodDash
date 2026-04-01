@@ -27,22 +27,13 @@ class Orders extends BaseController
         }
 
         $restaurantId = $session->get('restaurant_id');
-        
-        // Get date filters from query string
-        $startDate = $this->request->getGet('start_date');
-        $endDate = $this->request->getGet('end_date');
-        
-        $builder = $this->orderModel->where('restaurant_id', $restaurantId);
-        
-        // Apply date filtering if provided
-        if (!empty($startDate)) {
-            $builder->where('created_at >=', $startDate . ' 00:00:00');
-        }
-        if (!empty($endDate)) {
-            $builder->where('created_at <=', $endDate . ' 23:59:59');
-        }
-        
-        $orders = $builder->orderBy('created_at', 'DESC')->findAll();
+
+        // Orders page is for active order management only.
+        $orders = $this->orderModel
+            ->where('restaurant_id', $restaurantId)
+            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->orderBy('created_at', 'DESC')
+            ->findAll();
 
         return view('restaurant/orders/index', ['orders' => $orders]);
     }
