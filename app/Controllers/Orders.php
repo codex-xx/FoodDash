@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Libraries\OrderFlowService;
 use App\Models\OrderModel;
 use App\Models\MenuItemModel;
 
@@ -9,11 +10,13 @@ class Orders extends BaseController
 {
     protected $orderModel;
     protected $menuItemModel;
+    protected $orderFlow;
 
     public function __construct()
     {
         $this->orderModel = new OrderModel();
         $this->menuItemModel = new MenuItemModel();
+        $this->orderFlow = new OrderFlowService();
     }
 
     /**
@@ -60,7 +63,7 @@ class Orders extends BaseController
         
         // Handle status update
         if ($status !== null) {
-            $allowed = ['pending', 'confirmed', 'preparing', 'ready_for_pickup', 'completed', 'cancelled'];
+            $allowed = ['pending', 'accepted', 'preparing', 'ready', 'assigned', 'on_the_way', 'delivered', 'cancelled'];
             if (!in_array($status, $allowed)) {
                 return $this->response->setStatusCode(400)->setJSON(['error' => 'Invalid status']);
             }
@@ -73,7 +76,23 @@ class Orders extends BaseController
         }
 
         if (!empty($updateData)) {
-            $this->orderModel->update($id, $updateData);
+            if (array_key_exists('status', $updateData)) {
+                $result = $this->orderFlow->updateStatus(
+                    (int) $id,
+                    (string) $updateData['status'],
+                    'restaurant',
+                    (int) ($session->get('restaurant_id') ?? 0),
+                    'Updated by restaurant panel'
+                );
+
+                if (!($result['ok'] ?? false)) {
+                    return $this->response->setStatusCode((int) ($result['code'] ?? 400))->setJSON(['error' => $result['message']]);
+                }
+            }
+
+            if (array_key_exists('estimated_preparation_time', $updateData)) {
+                $this->orderModel->update($id, ['estimated_preparation_time' => $updateData['estimated_preparation_time']]);
+            }
         }
 
         return $this->response->setJSON(['success' => true, 'status' => $status ?? $order['status']]);
@@ -94,11 +113,19 @@ class Orders extends BaseController
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Order not found']);
         }
 
-        $driverId = $this->request->getPost('driver_id');
+        $driverId = (int) $this->request->getPost('driver_id');
+        $result = $this->orderFlow->manualAssignDriver(
+            (int) $id,
+            $driverId,
+            'admin',
+            (int) ($session->get('user_id') ?? 0)
+        );
 
-        $this->orderModel->update($id, ['driver_id' => $driverId, 'status' => 'assigned']);
+        if (!($result['ok'] ?? false)) {
+            return $this->response->setStatusCode((int) ($result['code'] ?? 400))->setJSON(['error' => $result['message']]);
+        }
 
-        return $this->response->setJSON(['success' => true, 'message' => 'Driver assigned']);
+        return $this->response->setJSON(['success' => true, 'message' => $result['message']]);
     }
 
     /**
@@ -120,7 +147,7 @@ class Orders extends BaseController
         $builder = $this->orderModel->where('restaurant_id', $restaurantId);
         
         // Only show completed and cancelled orders
-        $builder->whereIn('status', ['completed', 'cancelled']);
+        $builder->whereIn('status', ['delivered', 'cancelled']);
         
         // Apply date filtering if provided
         if (!empty($startDate)) {

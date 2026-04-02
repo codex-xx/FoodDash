@@ -142,6 +142,9 @@ $routes->put('api/orders/(:num)/status', 'Api\OrderController::updateStatus/$1')
 $routes->post('api/orders/(:num)/status', 'Api\OrderController::updateStatus/$1');
 $routes->post('api/orders/(:num)/accept', 'Api\OrderController::accept/$1');
 $routes->post('api/orders/(:num)/cancel', 'Api\OrderController::cancel/$1');
+$routes->post('api/update_status', 'Api\OrderController::updateStatusEndpoint');
+$routes->post('api/assign_driver', 'Api\OrderController::assignDriverEndpoint');
+$routes->get('api/orders/stream', 'Api\RealtimeController::orders');
 // Email Notification (Mobile)
 $routes->post('api/send-notification-email', 'Api\EmailNotificationController::sendNotification');
 $routes->get('api/test-email', 'Api\EmailNotificationController::testEmail');

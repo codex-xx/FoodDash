@@ -168,3 +168,49 @@ function bind_dynamic_params(mysqli_stmt $stmt, string $types, array &$params): 
         json_error('Failed to bind statement parameters', 500);
     }
 }
+
+function canonical_order_statuses(): array
+{
+    return ['pending', 'accepted', 'preparing', 'ready', 'assigned', 'on_the_way', 'delivered', 'cancelled'];
+}
+
+function normalize_order_status(string $status): string
+{
+    $normalized = strtolower(trim($status));
+
+    $aliases = [
+        'confirmed' => 'accepted',
+        'ready_for_pickup' => 'ready',
+        'picked_up' => 'assigned',
+        'out_for_delivery' => 'on_the_way',
+        'completed' => 'delivered',
+    ];
+
+    return $aliases[$normalized] ?? $normalized;
+}
+
+function get_size_category(float $totalAmount): string
+{
+    if ($totalAmount <= 300) {
+        return 'small';
+    }
+
+    if ($totalAmount <= 900) {
+        return 'medium';
+    }
+
+    return 'bulk';
+}
+
+function recommended_vehicle_type(string $sizeCategory): string
+{
+    if ($sizeCategory === 'small') {
+        return 'motorcycle';
+    }
+
+    if ($sizeCategory === 'medium') {
+        return 'tricycle';
+    }
+
+    return 'cab';
+}

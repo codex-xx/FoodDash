@@ -60,7 +60,7 @@ class Dashboard extends BaseController
             ->where('created_at <=', $todayEnd)
             ->countAllResults();
         $pendingOrders = $orderModel->where('status', 'pending')->countAllResults();
-        $activeDeliveries = $orderModel->whereIn('status', ['assigned', 'out_for_delivery', 'on_the_way'])->countAllResults();
+        $activeDeliveries = $orderModel->whereIn('status', ['assigned', 'on_the_way'])->countAllResults();
         $activeDrivers = $driverModel->where('is_active', 1)->countAllResults();
         $totalRestaurants = $restaurantModel->countAllResults();
         $pendingRestaurants = $restaurantModel->where('status', 'pending')->countAllResults();
@@ -143,7 +143,7 @@ class Dashboard extends BaseController
             ->where('restaurant_id', $restaurantId)
             ->where('created_at >=', $todayStart)
             ->where('created_at <=', $todayEnd)
-            ->where('status', 'completed')
+            ->where('status', 'delivered')
             ->first()['rev'];
 
         // Recent orders
@@ -181,7 +181,7 @@ class Dashboard extends BaseController
         }
 
         $orderModel = new OrderModel();
-        $allowed = ['pending', 'assigned', 'out_for_delivery', 'delivered', 'cancelled'];
+        $allowed = ['pending', 'accepted', 'preparing', 'ready', 'assigned', 'on_the_way', 'delivered', 'cancelled'];
 
         $status = $this->request->getPost('status');
         if (! in_array($status, $allowed)) {

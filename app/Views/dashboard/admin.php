@@ -118,8 +118,11 @@
           <select id="statusFilter" class="form-select form-select-sm">
             <option value="">All statuses</option>
             <option value="pending">Pending</option>
+            <option value="accepted">Accepted</option>
+            <option value="preparing">Preparing</option>
+            <option value="ready">Ready</option>
             <option value="assigned">Assigned</option>
-            <option value="out_for_delivery">Out for delivery</option>
+            <option value="on_the_way">On the way</option>
             <option value="delivered">Delivered</option>
             <option value="cancelled">Cancelled</option>
           </select>
@@ -185,8 +188,11 @@
   function statusBadge(status) {
     const map = {
       pending: '<span class="badge bg-warning">Pending</span>',
+      accepted: '<span class="badge bg-info">Accepted</span>',
+      preparing: '<span class="badge bg-primary">Preparing</span>',
+      ready: '<span class="badge bg-secondary">Ready</span>',
       assigned: '<span class="badge bg-info">Assigned</span>',
-      out_for_delivery: '<span class="badge bg-primary">Out for delivery</span>',
+      on_the_way: '<span class="badge bg-primary">On the way</span>',
       delivered: '<span class="badge bg-success">Delivered</span>',
       cancelled: '<span class="badge bg-danger">Cancelled</span>'
     };
@@ -345,6 +351,20 @@
 
   $('#refreshBtn').on('click', loadDashboard);
 
-  $(document).ready(loadDashboard);
+  $(document).ready(function () {
+    loadDashboard();
+    setInterval(loadDashboard, 15000);
+  });
+
+  (function setupRealtime() {
+    if (!window.EventSource) {
+      return;
+    }
+
+    const source = new EventSource('<?= site_url('api/orders/stream') ?>');
+    source.addEventListener('order_update', function () {
+      loadDashboard();
+    });
+  })();
 </script>
 <?= $this->endSection() ?>

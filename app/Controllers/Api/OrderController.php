@@ -3,7 +3,9 @@
 namespace App\Controllers\Api;
 
 use CodeIgniter\RESTful\ResourceController;
+use App\Libraries\OrderFlowService;
 use App\Models\OrderModel;
+use App\Models\OrderItemModel;
 use App\Models\RestaurantModel;
 use App\Models\DriverModel;
 use App\Models\CustomerModel;
@@ -13,10 +15,12 @@ class OrderController extends ResourceController
 {
     protected $format = 'json';
     protected $orderModel;
+    protected $orderFlow;
 
     public function __construct()
     {
         $this->orderModel = new OrderModel();
+        $this->orderFlow = new OrderFlowService();
     }
 
     /**
@@ -146,11 +150,16 @@ class OrderController extends ResourceController
         $orderNumber = 'ORD-' . strtoupper(uniqid());
 
         // Build the data array from the received JSON object
+        $sizeCategory = $this->orderFlow->getSizeCategory((float) ($json->total_amount ?? 0));
+        $deliveryTypeId = $this->orderFlow->resolveDeliveryTypeId($sizeCategory);
+
         $data = [
             'order_number'     => $orderNumber,
             'customer_id'      => $customer['id'],
             'customer_name'    => $customer['name'],
             'restaurant_id'    => $restaurantId,
+            'delivery_type_id' => $deliveryTypeId,
+            'order_size_category' => $sizeCategory,
             'total_amount'     => $json->total_amount,
             'delivery_address' => $json->delivery_address ?? $customer['address'],
             'items'            => json_encode($items),
@@ -167,11 +176,28 @@ class OrderController extends ResourceController
             ], 500);
         }
 
+        $orderItemModel = new OrderItemModel();
+        foreach ($items as $item) {
+            $itemData = is_object($item) ? (array) $item : (array) $item;
+            $qty = max(1, (int) ($itemData['quantity'] ?? 1));
+            $unit = (float) ($itemData['price'] ?? 0);
+
+            $orderItemModel->insert([
+                'order_id' => $orderId,
+                'menu_id' => $this->extractItemId($itemData),
+                'item_name' => $this->extractItemName($itemData) ?? 'Item',
+                'quantity' => $qty,
+                'unit_price' => $unit,
+                'line_total' => $qty * $unit,
+            ]);
+        }
+
         $order = $this->orderModel->find($orderId);
 
         return $this->respond([
             'success' => true,
             'message' => 'Order placed successfully',
+            'recommended_vehicle_type' => $this->orderFlow->getVehicleTypeForSize($sizeCategory),
             'data'    => $order
         ], 201);
     }
@@ -297,7 +323,7 @@ class OrderController extends ResourceController
     }
 
     /**
-     * Update order status (Driver only)
+    * Update order status (Driver only)
      * PUT /api/orders/:id/status
      */
     public function updateStatus($id = null)
@@ -329,21 +355,27 @@ class OrderController extends ResourceController
         }
 
         $status = $this->request->getJSON()->status ?? $this->request->getPost('status');
-        
-        $validStatuses = ['picked_up', 'on_the_way', 'delivered'];
-        if (!in_array($status, $validStatuses)) {
+        $status = $this->orderFlow->normalizeStatus((string) $status);
+
+        if (!in_array($status, ['assigned', 'on_the_way', 'delivered'], true)) {
             return $this->respond([
                 'success' => false,
-                'message' => 'Invalid status. Valid statuses: ' . implode(', ', $validStatuses)
+                'message' => 'Invalid status for driver. Valid statuses: assigned, on_the_way, delivered'
             ], 400);
         }
 
-        $this->orderModel->update($id, ['status' => $status]);
+        $result = $this->orderFlow->updateStatus((int) $id, $status, 'driver', (int) $driver['id'], 'Driver app status update');
+        if (!($result['ok'] ?? false)) {
+            return $this->respond([
+                'success' => false,
+                'message' => $result['message'] ?? 'Failed to update status'
+            ], (int) ($result['code'] ?? 400));
+        }
 
         return $this->respond([
             'success' => true,
             'message' => 'Order status updated',
-            'data'    => $this->orderModel->find($id)
+            'data'    => $result['order']
         ]);
     }
 
@@ -355,7 +387,7 @@ class OrderController extends ResourceController
     {
         $orders = $this->orderModel
             ->where('driver_id', null)
-            ->where('status', 'ready_for_pickup')
+            ->where('status', 'ready')
             ->orderBy('created_at', 'ASC')
             ->findAll();
 
@@ -410,15 +442,19 @@ class OrderController extends ResourceController
             ], 400);
         }
 
-        $this->orderModel->update($id, [
-            'driver_id' => $driver['id'],
-            'status'    => 'picked_up'
-        ]);
+        $result = $this->orderFlow->manualAssignDriver((int) $id, (int) $driver['id'], 'driver', (int) $driver['id']);
+
+        if (!($result['ok'] ?? false)) {
+            return $this->respond([
+                'success' => false,
+                'message' => $result['message'] ?? 'Unable to assign order'
+            ], (int) ($result['code'] ?? 400));
+        }
 
         return $this->respond([
             'success' => true,
             'message' => 'Order accepted',
-            'data'    => $this->orderModel->find($id)
+            'data'    => $result['order']
         ]);
     }
 
@@ -461,7 +497,7 @@ class OrderController extends ResourceController
             ], 403);
         }
 
-        $nonCancellable = ['picked_up', 'on_the_way', 'delivered'];
+        $nonCancellable = ['assigned', 'on_the_way', 'delivered'];
         if (in_array($order['status'], $nonCancellable)) {
             return $this->respond([
                 'success' => false,
@@ -469,12 +505,76 @@ class OrderController extends ResourceController
             ], 400);
         }
 
-        $this->orderModel->update($id, ['status' => 'cancelled']);
+        $result = $this->orderFlow->updateStatus((int) $id, 'cancelled', 'customer', (int) $customer['id'], 'Customer cancelled order');
+        if (!($result['ok'] ?? false)) {
+            return $this->respond([
+                'success' => false,
+                'message' => $result['message'] ?? 'Unable to cancel order'
+            ], (int) ($result['code'] ?? 400));
+        }
 
         return $this->respond([
             'success' => true,
             'message' => 'Order cancelled',
-            'data'    => $this->orderModel->find($id)
+            'data'    => $result['order']
+        ]);
+    }
+
+    public function updateStatusEndpoint()
+    {
+        $orderId = (int) ($this->request->getPost('order_id') ?? $this->request->getVar('order_id'));
+        $status = (string) ($this->request->getPost('status') ?? $this->request->getVar('status'));
+
+        if ($orderId <= 0 || $status === '') {
+            return $this->respond([
+                'success' => false,
+                'message' => 'order_id and status are required'
+            ], 422);
+        }
+
+        $role = (string) ($this->request->getPost('actor_role') ?? 'system');
+        $actorId = (int) ($this->request->getPost('actor_id') ?? 0);
+
+        $result = $this->orderFlow->updateStatus($orderId, $status, $role, $actorId > 0 ? $actorId : null, 'Public update_status endpoint');
+
+        if (!($result['ok'] ?? false)) {
+            return $this->respond([
+                'success' => false,
+                'message' => $result['message'] ?? 'Unable to update status'
+            ], (int) ($result['code'] ?? 400));
+        }
+
+        return $this->respond([
+            'success' => true,
+            'message' => $result['message'],
+            'data' => $result['order']
+        ]);
+    }
+
+    public function assignDriverEndpoint()
+    {
+        $orderId = (int) ($this->request->getPost('order_id') ?? $this->request->getVar('order_id'));
+        $driverId = (int) ($this->request->getPost('driver_id') ?? $this->request->getVar('driver_id'));
+
+        if ($orderId <= 0 || $driverId <= 0) {
+            return $this->respond([
+                'success' => false,
+                'message' => 'order_id and driver_id are required'
+            ], 422);
+        }
+
+        $result = $this->orderFlow->manualAssignDriver($orderId, $driverId, 'admin', null);
+        if (!($result['ok'] ?? false)) {
+            return $this->respond([
+                'success' => false,
+                'message' => $result['message'] ?? 'Unable to assign driver'
+            ], (int) ($result['code'] ?? 400));
+        }
+
+        return $this->respond([
+            'success' => true,
+            'message' => $result['message'],
+            'data' => $result['order']
         ]);
     }
 }

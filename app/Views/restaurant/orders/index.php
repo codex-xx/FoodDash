@@ -18,10 +18,12 @@
     <h5 class="card-title mb-3"><i class="bi bi-info-circle"></i> Order Status Control</h5>
     <div class="d-flex flex-wrap gap-2">
       <span class="badge bg-warning">Pending</span>
-      <span class="badge bg-info">Confirmed</span>
+      <span class="badge bg-info">Accepted</span>
       <span class="badge bg-primary">Preparing</span>
-      <span class="badge bg-success">Ready for Pickup</span>
-      <span class="badge bg-success">Completed</span>
+      <span class="badge bg-secondary">Ready</span>
+      <span class="badge bg-dark">Assigned</span>
+      <span class="badge bg-primary">On the Way</span>
+      <span class="badge bg-success">Delivered</span>
       <span class="badge bg-danger">Cancelled</span>
     </div>
   </div>
@@ -53,10 +55,12 @@
                   <?php
                     $statusClass = match ($order['status']) {
                       'pending' => 'warning',
-                      'confirmed' => 'info',
+                      'accepted' => 'info',
                       'preparing' => 'primary',
-                      'ready_for_pickup' => 'success',
-                      'completed' => 'success',
+                      'ready' => 'secondary',
+                      'assigned' => 'dark',
+                      'on_the_way' => 'primary',
+                      'delivered' => 'success',
                       'cancelled' => 'danger',
                       default => 'secondary'
                     };
@@ -120,10 +124,12 @@
           <label for="status_select" class="form-label">Select Status</label>
           <select class="form-select" id="status_select">
             <option value="pending">Pending</option>
-            <option value="confirmed">Confirmed</option>
+            <option value="accepted">Accepted</option>
             <option value="preparing">Preparing</option>
-            <option value="ready_for_pickup">Ready for Pickup</option>
-            <option value="completed">Completed</option>
+            <option value="ready">Ready</option>
+            <option value="assigned">Assigned</option>
+            <option value="on_the_way">On the Way</option>
+            <option value="delivered">Delivered</option>
             <option value="cancelled">Cancelled</option>
           </select>
         </div>
@@ -233,6 +239,28 @@
     })
     .catch(err => alert('Error: ' + err));
   }
+
+  // Realtime updates from central API stream.
+  (function setupRealtime() {
+    if (!window.EventSource) {
+      return;
+    }
+
+    let lastId = 0;
+    const source = new EventSource(`<?= site_url('api/orders/stream') ?>?last_id=${lastId}`);
+
+    source.addEventListener('order_update', function (event) {
+      try {
+        const payload = JSON.parse(event.data || '{}');
+        if (payload.last_id) {
+          lastId = payload.last_id;
+        }
+      } catch (e) {
+        // Ignore malformed messages and still refresh.
+      }
+      location.reload();
+    });
+  })();
 </script>
 <?= $this->endSection() ?>
 

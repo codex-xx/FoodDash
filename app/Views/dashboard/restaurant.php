@@ -162,7 +162,8 @@
         if (json.menuItems && json.menuItems.length > 0) {
           document.getElementById('noMenu').style.display = 'none';
           json.menuItems.forEach(item => {
-            const availBadge = item.is_available 
+            const isAvailable = Number(item.availability ?? item.is_available ?? 1) === 1;
+            const availBadge = isAvailable
               ? '<span class="badge bg-success">Available</span>'
               : '<span class="badge bg-danger">Unavailable</span>';
             const row = `
@@ -184,17 +185,19 @@
   function getStatusBadge(status) {
     const map = {
       'pending': '<span class="badge bg-warning">Pending</span>',
-      'confirmed': '<span class="badge bg-info">Confirmed</span>',
+      'accepted': '<span class="badge bg-info">Accepted</span>',
       'preparing': '<span class="badge bg-primary">Preparing</span>',
-      'ready_for_pickup': '<span class="badge bg-success">Ready</span>',
-      'completed': '<span class="badge bg-success">Completed</span>',
+      'ready': '<span class="badge bg-secondary">Ready</span>',
+      'assigned': '<span class="badge bg-dark">Assigned</span>',
+      'on_the_way': '<span class="badge bg-primary">On the Way</span>',
+      'delivered': '<span class="badge bg-success">Delivered</span>',
       'cancelled': '<span class="badge bg-danger">Cancelled</span>'
     };
     return map[status] || '<span class="badge bg-secondary">' + status + '</span>';
   }
 
   function updateOrderStatus(orderId) {
-    const newStatus = prompt('Enter new status (pending, confirmed, preparing, ready_for_pickup, completed, cancelled):');
+    const newStatus = prompt('Enter new status (pending, accepted, preparing, ready, assigned, on_the_way, delivered, cancelled):');
     if (!newStatus) return;
 
     fetch(`<?= site_url('orders') ?>/${orderId}/status`, {
@@ -223,5 +226,16 @@
     loadDashboard();
     setInterval(loadDashboard, 30000); // Refresh every 30 seconds
   });
+
+  (function setupRealtime() {
+    if (!window.EventSource) {
+      return;
+    }
+
+    const source = new EventSource('<?= site_url('api/orders/stream') ?>');
+    source.addEventListener('order_update', function () {
+      loadDashboard();
+    });
+  })();
 </script>
 <?= $this->endSection() ?>

@@ -19,6 +19,8 @@ class OrderModel extends Model
         'customer_name',
         'restaurant_id',
         'driver_id',
+        'delivery_type_id',
+        'order_size_category',
         'status',
         'total_amount',
         'delivery_address',
