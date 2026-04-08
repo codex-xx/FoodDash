@@ -38,6 +38,34 @@ class Dashboard extends BaseController
         return view('dashboard/restaurant');
     }
 
+    public function adminOrders()
+    {
+        $session = session();
+        if (! $session->get('isLoggedIn')) {
+            return redirect()->to('/login');
+        }
+
+        if ($session->get('role') !== 'admin') {
+            return redirect()->to('/login')->with('error', 'Unauthorized');
+        }
+
+        return view('dashboard/admin_orders');
+    }
+
+    public function adminOrdersHistory()
+    {
+        $session = session();
+        if (! $session->get('isLoggedIn')) {
+            return redirect()->to('/login');
+        }
+
+        if ($session->get('role') !== 'admin') {
+            return redirect()->to('/login')->with('error', 'Unauthorized');
+        }
+
+        return view('dashboard/admin_orders_history');
+    }
+
     // Returns JSON used by admin dashboard (metrics, recent orders, chart data)
     public function adminData()
     {
@@ -73,6 +101,13 @@ class Dashboard extends BaseController
             ->orderBy('created_at', 'DESC')
             ->findAll(10);
 
+        $activeDriverList = (new DriverModel())
+            ->select('id, name, email, phone, vehicle_type, vehicle_number, current_latitude, current_longitude, updated_at')
+            ->where('status', 'approved')
+            ->where('is_active', 1)
+            ->orderBy('name', 'ASC')
+            ->findAll();
+
         $dailyRevenue = (float) $orderModel->select('IFNULL(SUM(total_amount),0) as rev')
             ->where('created_at >=', $todayStart)
             ->where('created_at <=', $todayEnd)
@@ -103,7 +138,47 @@ class Dashboard extends BaseController
                 'pendingDrivers' => (int) $pendingDrivers,
             ],
             'pendingDrivers' => $pendingDriverList,
+            'activeDriversList' => $activeDriverList,
             'recentOrders' => $recent,
+        ]);
+    }
+
+    public function adminOrdersData()
+    {
+        $session = session();
+        if (! $session->get('isLoggedIn') || $session->get('role') !== 'admin') {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Access denied']);
+        }
+
+        $scope = strtolower((string) $this->request->getGet('scope'));
+        $orderModel = new OrderModel();
+        $driverModel = new DriverModel();
+        $restaurantModel = new RestaurantModel();
+
+        $builder = $orderModel->builder();
+        $builder->select('orders.id, order_number, customer_name, orders.restaurant_id, orders.driver_id, orders.status, orders.total_amount, orders.created_at, r.name as restaurant_name, d.name as driver_name')
+            ->join('restaurants r', 'r.id = orders.restaurant_id', 'left')
+            ->join('drivers d', 'd.id = orders.driver_id', 'left')
+            ->orderBy('orders.created_at', 'DESC');
+
+        if ($scope === 'history') {
+            $builder->whereIn('orders.status', ['delivered', 'cancelled']);
+        } elseif ($scope === 'active') {
+            $builder->whereNotIn('orders.status', ['delivered', 'cancelled']);
+        }
+
+        $orders = $builder->limit(100)->get()->getResultArray();
+
+        $activeDriverList = $driverModel
+            ->select('id, name, email, phone, vehicle_type, vehicle_number, current_latitude, current_longitude, updated_at')
+            ->where('status', 'approved')
+            ->where('is_active', 1)
+            ->orderBy('name', 'ASC')
+            ->findAll();
+
+        return $this->response->setJSON([
+            'orders' => $orders,
+            'activeDriversList' => $activeDriverList,
         ]);
     }
 

@@ -120,14 +120,23 @@ class OrderController extends ResourceController
             ], 403);
         }
 
-        // Get the JSON payload sent from the app
+        // Accept both JSON and form payloads for mobile compatibility.
         $json = $this->request->getJSON();
-        if (!$json) {
-            return $this->respond(['success' => false, 'message' => 'Invalid JSON data received'], 400);
+        $input = is_object($json) ? (array) $json : $this->request->getPost();
+
+        if (empty($input)) {
+            return $this->respond(['success' => false, 'message' => 'Order payload is required'], 400);
         }
 
-        $restaurantId = (int) ($json->restaurant_id ?? 0);
-        $items = $json->items ?? null;
+        $restaurantId = (int) ($input['restaurant_id'] ?? 0);
+        $items = $input['items'] ?? null;
+
+        if (is_string($items)) {
+            $decoded = json_decode($items, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $items = $decoded;
+            }
+        }
 
         if ($restaurantId <= 0 || !is_array($items) || empty($items)) {
             return $this->respond([
@@ -150,7 +159,7 @@ class OrderController extends ResourceController
         $orderNumber = 'ORD-' . strtoupper(uniqid());
 
         // Build the data array from the received JSON object
-        $sizeCategory = $this->orderFlow->getSizeCategory((float) ($json->total_amount ?? 0));
+        $sizeCategory = $this->orderFlow->getSizeCategory((float) ($input['total_amount'] ?? 0));
         $deliveryTypeId = $this->orderFlow->resolveDeliveryTypeId($sizeCategory);
 
         $data = [
@@ -160,11 +169,11 @@ class OrderController extends ResourceController
             'restaurant_id'    => $restaurantId,
             'delivery_type_id' => $deliveryTypeId,
             'order_size_category' => $sizeCategory,
-            'total_amount'     => $json->total_amount,
-            'delivery_address' => $json->delivery_address ?? $customer['address'],
+            'total_amount'     => (float) ($input['total_amount'] ?? 0),
+            'delivery_address' => $input['delivery_address'] ?? $customer['address'],
             'items'            => json_encode($items),
             'status'           => 'pending',
-            'notes'            => $json->notes ?? null,
+            'notes'            => $input['notes'] ?? null,
         ];
 
         $orderId = $this->orderModel->insert($data);
@@ -221,7 +230,7 @@ class OrderController extends ResourceController
             } elseif ($itemName !== null) {
                 $menu = $menuModel
                     ->where('restaurant_id', $restaurantId)
-                    ->where('LOWER(name) =', strtolower($itemName), false)
+                    ->where('name', $itemName)
                     ->first();
             } else {
                 $invalidItems[] = [

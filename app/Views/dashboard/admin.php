@@ -178,6 +178,41 @@
   </div>
 </section>
 
+<!-- Assign Driver Modal -->
+<div class="modal fade" id="assignDriverModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Assign Active Rider</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-3">Choose an active rider for the selected order.</p>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Vehicle</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="activeDriversModalBody"></tbody>
+          </table>
+        </div>
+        <div id="activeDriversModalEmpty" class="text-center text-muted py-3 d-none">
+          No active riders available.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -185,6 +220,9 @@
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
 <script>
+  let selectedOrderId = null;
+  let activeDriversList = [];
+
   function statusBadge(status) {
     const map = {
       pending: '<span class="badge bg-warning">Pending</span>',
@@ -210,6 +248,7 @@
         $('#totalOrdersToday').text(json.metrics.totalOrdersToday);
         $('#dailyRevenue').text('₱' + Number(json.metrics.dailyRevenue).toFixed(2));
         $('#pendingApprovals').text(json.metrics.pendingRestaurants + json.metrics.pendingDrivers);
+        activeDriversList = Array.isArray(json.activeDriversList) ? json.activeDriversList : [];
 
         // Update pending drivers table
         const pendingDriversBody = document.querySelector('#pendingDriversTable tbody');
@@ -317,16 +356,51 @@
   }
 
   function assignDriver(orderId) {
-    const driverId = prompt('Enter Driver ID:');
-    if (!driverId) return;
-    
-    fetch(`<?= site_url('orders') ?>/${orderId}/assign-driver`, {
+    selectedOrderId = orderId;
+
+    const modalBody = document.getElementById('activeDriversModalBody');
+    const emptyState = document.getElementById('activeDriversModalEmpty');
+    modalBody.innerHTML = '';
+
+    if (!activeDriversList.length) {
+      emptyState.classList.remove('d-none');
+    } else {
+      emptyState.classList.add('d-none');
+
+      activeDriversList.forEach(driver => {
+        const row = document.createElement('tr');
+        const vehicle = [driver.vehicle_type, driver.vehicle_number].filter(Boolean).join(' • ') || '-';
+        row.innerHTML = `
+          <td><strong>${driver.name || '-'}</strong></td>
+          <td>${driver.email || '-'}</td>
+          <td>${driver.phone || '-'}</td>
+          <td>${vehicle}</td>
+          <td>
+            <button class="btn btn-sm btn-primary" onclick="confirmAssignDriver(${driver.id})">Select</button>
+          </td>
+        `;
+        modalBody.appendChild(row);
+      });
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('assignDriverModal'));
+    modal.show();
+  }
+
+  function confirmAssignDriver(driverId) {
+    if (!selectedOrderId) return;
+
+    fetch(`<?= site_url('orders') ?>/${selectedOrderId}/assign-driver`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `driver_id=${driverId}`
+      body: `driver_id=${encodeURIComponent(driverId)}`
     })
     .then(r => r.json())
     .then(json => {
+      const modalEl = document.getElementById('assignDriverModal');
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      if (modal) modal.hide();
+
       alert(json.message || 'Driver assigned');
       loadDashboard();
     })

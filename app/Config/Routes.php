@@ -26,9 +26,12 @@ $routes->post('partner/register', 'Auth::submitPartnerRegistration');
 // Dashboards (protected by filter)
 $routes->get('dashboard/admin', 'Dashboard::admin');
 $routes->get('dashboard/restaurant', 'Dashboard::restaurant');
+$routes->get('dashboard/admin/orders', 'Dashboard::adminOrders');
+$routes->get('dashboard/admin/orders/history', 'Dashboard::adminOrdersHistory');
 
 // Admin data endpoints
 $routes->get('dashboard/admin/data', 'Dashboard::adminData');
+$routes->get('dashboard/admin/orders/data', 'Dashboard::adminOrdersData');
 $routes->get('dashboard/restaurant/data', 'Dashboard::restaurantData');
 $routes->post('dashboard/order/(:num)/status', 'Dashboard::updateOrderStatus/$1');
 
@@ -136,6 +139,9 @@ $routes->post('api/driver/location', 'Api\ProfileController::updateLocation');
 // Orders (Authenticated)
 $routes->get('api/orders', 'Api\OrderController::index');
 $routes->post('api/orders', 'Api\OrderController::create');
+// Legacy mobile compatibility endpoints
+$routes->post('api/place_order', 'Api\OrderController::create');
+$routes->post('api/place_order.php', 'Api\OrderController::create');
 $routes->get('api/orders/available', 'Api\OrderController::available');
 $routes->get('api/orders/(:num)', 'Api\OrderController::show/$1');
 $routes->put('api/orders/(:num)/status', 'Api\OrderController::updateStatus/$1');
