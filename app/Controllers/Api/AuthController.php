@@ -5,10 +5,13 @@ namespace App\Controllers\Api;
 use CodeIgniter\RESTful\ResourceController;
 use App\Models\CustomerModel;
 use App\Models\DriverModel;
+use App\Libraries\JwtService;
+use App\Libraries\EmailService;
 
 class AuthController extends ResourceController
 {
     protected $format = 'json';
+    protected array $schemaSupportCache = [];
 
     /**
      * Read the first non-empty value from a list of possible input keys.
@@ -40,6 +43,93 @@ class AuthController extends ResourceController
         unset($driver['current_latitude'], $driver['current_longitude']);
 
         return $driver;
+    }
+
+    protected function issueAccessToken(string $userType, array $user): string
+    {
+        $jwtService = new JwtService();
+
+        return $jwtService->createAccessToken(
+            $userType,
+            (int) $user['id'],
+            (string) $user['email'],
+            (int) ($user['token_version'] ?? 0)
+        );
+    }
+
+    protected function sendLoginOtp(string $email, string $name, string $otpCode): bool
+    {
+        try {
+            $service = new EmailService();
+            return $service->sendLoginOtp($email, $name !== '' ? $name : 'User', $otpCode);
+        } catch (\Throwable $e) {
+            log_message('error', 'Failed to send login OTP email: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    protected function beginMfaChallenge(string $userType, array $user, $model)
+    {
+        $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $otpExpires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+
+        $model->update((int) $user['id'], [
+            'login_otp_code' => $otp,
+            'login_otp_expires' => $otpExpires,
+        ]);
+
+        $this->sendLoginOtp((string) $user['email'], (string) ($user['name'] ?? ''), $otp);
+
+        return $this->respond([
+            'success' => true,
+            'message' => 'Verification code sent. Please complete MFA to finish login.',
+            'data' => [
+                'mfa_required' => true,
+                'user_type' => $userType,
+                'email' => $user['email'],
+                'otp_expires_in' => 600,
+            ],
+        ]);
+    }
+
+    protected function tableHasColumn(string $table, string $column): bool
+    {
+        $key = $table . ':' . $column;
+        if (array_key_exists($key, $this->schemaSupportCache)) {
+            return $this->schemaSupportCache[$key];
+        }
+
+        try {
+            $hasColumn = db_connect()->fieldExists($column, $table);
+        } catch (\Throwable $e) {
+            $hasColumn = false;
+        }
+
+        $this->schemaSupportCache[$key] = $hasColumn;
+        return $hasColumn;
+    }
+
+    protected function supportsMfaColumns(string $table): bool
+    {
+        return $this->tableHasColumn($table, 'mfa_enabled')
+            && $this->tableHasColumn($table, 'login_otp_code')
+            && $this->tableHasColumn($table, 'login_otp_expires');
+    }
+
+    protected function supportsTokenVersion(string $table): bool
+    {
+        return $this->tableHasColumn($table, 'token_version');
+    }
+
+    protected function isMfaEnforced(): bool
+    {
+        $raw = env('auth.enforceMfa');
+        if ($raw === null) {
+            return false;
+        }
+
+        $value = strtolower(trim((string) $raw));
+        return in_array($value, ['1', 'true', 'yes', 'on'], true);
     }
 
     public function __construct()
@@ -250,7 +340,6 @@ class AuthController extends ResourceController
             }
 
             $customerModel = new CustomerModel();
-            $apiToken = $customerModel->generateApiToken();
 
             $data = [
                 'name'      => $this->getInput('name'),
@@ -258,9 +347,12 @@ class AuthController extends ResourceController
                 'password'  => $this->getInput('password'),
                 'phone'     => $this->resolvePhoneInput(),
                 'address'   => $this->resolveAddressInput(),
-                'api_token' => $apiToken,
                 'is_active' => 1,
             ];
+
+            if ($this->supportsMfaColumns('customers')) {
+                $data['mfa_enabled'] = $this->isMfaEnforced() ? 1 : 0;
+            }
 
             $customerId = $customerModel->insert($data);
 
@@ -272,6 +364,7 @@ class AuthController extends ResourceController
             }
 
             $customer = $customerModel->find($customerId);
+            $token = $this->issueAccessToken('customer', $customer);
             unset($customer['password']);
 
             return $this->respond([
@@ -279,7 +372,7 @@ class AuthController extends ResourceController
                 'message' => 'Registration successful',
                 'data'    => [
                     'user'      => $customer,
-                    'token'     => $apiToken,
+                    'token'     => $token,
                     'user_type' => 'customer'
                 ]
             ], 201);
@@ -340,9 +433,14 @@ class AuthController extends ResourceController
                 ], 401);
             }
 
-            // Generate new token on login
-            $apiToken = $customerModel->generateApiToken();
-            $customerModel->update($customer['id'], ['api_token' => $apiToken]);
+            if (password_needs_rehash($customer['password'], defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_BCRYPT)) {
+                $customerModel->update((int) $customer['id'], ['password' => $password]);
+                $customer = $customerModel->find((int) $customer['id']) ?? $customer;
+            }
+
+            if ($this->supportsMfaColumns('customers') && $this->isMfaEnforced() && (int) ($customer['mfa_enabled'] ?? 0) === 1) {
+                return $this->beginMfaChallenge('customer', $customer, $customerModel);
+            }
 
             // Update FCM token if provided
             $fcmToken = $this->getInput('fcm_token');
@@ -350,7 +448,8 @@ class AuthController extends ResourceController
                 $customerModel->update($customer['id'], ['fcm_token' => $fcmToken]);
             }
 
-            $customer['api_token'] = $apiToken;
+            $customer = $customerModel->find((int) $customer['id']) ?? $customer;
+            $token = $this->issueAccessToken('customer', $customer);
             unset($customer['password']);
 
             return $this->respond([
@@ -358,7 +457,7 @@ class AuthController extends ResourceController
                 'message' => 'Login successful',
                 'data'    => [
                     'user'      => $customer,
-                    'token'     => $apiToken,
+                    'token'     => $token,
                     'user_type' => 'customer'
                 ]
             ]);
@@ -397,19 +496,21 @@ class AuthController extends ResourceController
             }
 
             $driverModel = new DriverModel();
-            $apiToken = bin2hex(random_bytes(32));
 
             $data = [
                 'name'           => $this->getInput('name'),
                 'email'          => $this->getInput('email'),
-                'password'       => password_hash($this->getInput('password'), PASSWORD_DEFAULT),
+                'password'       => (string) $this->getInput('password'),
                 'phone'          => $this->resolvePhoneInput(),
                 'vehicle_type'   => $this->getInput('vehicle_type') ?? '',
                 'license_number' => $this->getInput('license_number') ?? '',
-                'api_token'      => $apiToken,
                 'status'         => 'pending', // Needs admin approval
                 'is_active'      => 0,
             ];
+
+            if ($this->supportsMfaColumns('drivers')) {
+                $data['mfa_enabled'] = $this->isMfaEnforced() ? 1 : 0;
+            }
 
             $driverId = $driverModel->insert($data);
 
@@ -437,7 +538,7 @@ class AuthController extends ResourceController
                 'message' => 'Registration successful. Please wait for admin approval.',
                 'data'    => [
                     'user'      => $driver,
-                    'token'     => $apiToken,
+                    'token'     => null,
                     'user_type' => 'driver'
                 ]
             ], 201);
@@ -498,9 +599,14 @@ class AuthController extends ResourceController
                 ], 401);
             }
 
-            // Generate new token on login
-            $apiToken = bin2hex(random_bytes(32));
-            $driverModel->update($driver['id'], ['api_token' => $apiToken]);
+            if (password_needs_rehash($driver['password'], defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_BCRYPT)) {
+                $driverModel->update((int) $driver['id'], ['password' => $password]);
+                $driver = $driverModel->find((int) $driver['id']) ?? $driver;
+            }
+
+            if ($this->supportsMfaColumns('drivers') && $this->isMfaEnforced() && (int) ($driver['mfa_enabled'] ?? 0) === 1) {
+                return $this->beginMfaChallenge('driver', $driver, $driverModel);
+            }
 
             // Update FCM token if provided
             $fcmToken = $this->getInput('fcm_token');
@@ -508,7 +614,8 @@ class AuthController extends ResourceController
                 $driverModel->update($driver['id'], ['fcm_token' => $fcmToken]);
             }
 
-            $driver['api_token'] = $apiToken;
+            $driver = $driverModel->find((int) $driver['id']) ?? $driver;
+            $token = $this->issueAccessToken('driver', $driver);
             unset($driver['password']);
             $driver = $this->stripDriverLocationFields($driver);
 
@@ -517,7 +624,7 @@ class AuthController extends ResourceController
                 'message' => 'Login successful',
                 'data'    => [
                     'user'      => $driver,
-                    'token'     => $apiToken,
+                    'token'     => $token,
                     'user_type' => 'driver'
                 ]
             ]);
@@ -537,30 +644,32 @@ class AuthController extends ResourceController
      */
     public function logout()
     {
-        $authHeader = $this->request->getHeaderLine('Authorization');
-        
-        if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-            $token = $matches[1];
-        } else {
-            $token = $authHeader;
-        }
+        $userType = $this->request->userType ?? null;
 
-        // Try to find and invalidate customer token
-        $customerModel = new CustomerModel();
-        $customer = $customerModel->where('api_token', $token)->first();
-        if ($customer) {
-            $customerModel->update($customer['id'], ['api_token' => null]);
+        if ($userType === 'customer' && isset($this->request->customer['id'])) {
+            $customerModel = new CustomerModel();
+            $customer = $this->request->customer;
+            $updateData = ['api_token' => null];
+            if ($this->supportsTokenVersion('customers')) {
+                $updateData['token_version'] = (int) ($customer['token_version'] ?? 0) + 1;
+            }
+            $customerModel->update((int) $customer['id'], $updateData);
+
             return $this->respond([
                 'success' => true,
                 'message' => 'Logged out successfully'
             ]);
         }
 
-        // Try to find and invalidate driver token
-        $driverModel = new DriverModel();
-        $driver = $driverModel->where('api_token', $token)->first();
-        if ($driver) {
-            $driverModel->update($driver['id'], ['api_token' => null]);
+        if ($userType === 'driver' && isset($this->request->driver['id'])) {
+            $driverModel = new DriverModel();
+            $driver = $this->request->driver;
+            $updateData = ['api_token' => null];
+            if ($this->supportsTokenVersion('drivers')) {
+                $updateData['token_version'] = (int) ($driver['token_version'] ?? 0) + 1;
+            }
+            $driverModel->update((int) $driver['id'], $updateData);
+
             return $this->respond([
                 'success' => true,
                 'message' => 'Logged out successfully'
@@ -571,6 +680,108 @@ class AuthController extends ResourceController
             'success' => false,
             'message' => 'Invalid token'
         ], 401);
+    }
+
+    /**
+     * Verify Login MFA OTP and issue JWT
+     * POST /api/verify-login-otp
+     */
+    public function verifyLoginOtp()
+    {
+        try {
+            $email = trim((string) $this->getInput('email'));
+            $otp = (string) ($this->getInput('otp') ?? $this->getInput('code') ?? $this->getInput('verification_code'));
+            $userType = $this->normalizeUserType($this->getInput('user_type') ?? $this->getInput('role') ?? 'customer');
+
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return $this->respond(['success' => false, 'message' => 'Valid email is required'], 400);
+            }
+
+            if (!preg_match('/^\d{6}$/', $otp)) {
+                return $this->respond(['success' => false, 'message' => 'A valid 6-digit OTP is required'], 400);
+            }
+
+            if (!in_array($userType, ['customer', 'driver'], true)) {
+                return $this->respond(['success' => false, 'message' => 'Valid user_type is required'], 400);
+            }
+
+            if ($userType === 'customer') {
+                if (!$this->supportsMfaColumns('customers')) {
+                    return $this->respond(['success' => false, 'message' => 'MFA verification is not enabled on this server yet.'], 400);
+                }
+
+                $customerModel = new CustomerModel();
+                $customer = $customerModel
+                    ->where('email', $email)
+                    ->where('login_otp_code', $otp)
+                    ->where('login_otp_expires >=', date('Y-m-d H:i:s'))
+                    ->first();
+
+                if (!$customer || !(int) ($customer['is_active'] ?? 0)) {
+                    return $this->respond(['success' => false, 'message' => 'Invalid or expired login verification code'], 400);
+                }
+
+                $customerModel->update((int) $customer['id'], [
+                    'login_otp_code' => null,
+                    'login_otp_expires' => null,
+                ]);
+
+                $customer = $customerModel->find((int) $customer['id']) ?? $customer;
+                $token = $this->issueAccessToken('customer', $customer);
+                unset($customer['password']);
+
+                return $this->respond([
+                    'success' => true,
+                    'message' => 'Login verified successfully',
+                    'data' => [
+                        'user' => $customer,
+                        'token' => $token,
+                        'user_type' => 'customer',
+                    ],
+                ]);
+            }
+
+            if (!$this->supportsMfaColumns('drivers')) {
+                return $this->respond(['success' => false, 'message' => 'MFA verification is not enabled on this server yet.'], 400);
+            }
+
+            $driverModel = new DriverModel();
+            $driver = $driverModel
+                ->where('email', $email)
+                ->where('login_otp_code', $otp)
+                ->where('login_otp_expires >=', date('Y-m-d H:i:s'))
+                ->first();
+
+            if (!$driver || !(int) ($driver['is_active'] ?? 0)) {
+                return $this->respond(['success' => false, 'message' => 'Invalid or expired login verification code'], 400);
+            }
+
+            $driverModel->update((int) $driver['id'], [
+                'login_otp_code' => null,
+                'login_otp_expires' => null,
+            ]);
+
+            $driver = $driverModel->find((int) $driver['id']) ?? $driver;
+            $token = $this->issueAccessToken('driver', $driver);
+            unset($driver['password']);
+            $driver = $this->stripDriverLocationFields($driver);
+
+            return $this->respond([
+                'success' => true,
+                'message' => 'Login verified successfully',
+                'data' => [
+                    'user' => $driver,
+                    'token' => $token,
+                    'user_type' => 'driver',
+                ],
+            ]);
+        } catch (\Exception $e) {
+            log_message('error', 'Verify login OTP error: ' . $e->getMessage());
+            return $this->respond([
+                'success' => false,
+                'message' => 'An error occurred. Please try again later.'
+            ], 500);
+        }
     }
 
     /**

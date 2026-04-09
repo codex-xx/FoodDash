@@ -98,7 +98,9 @@ $routes->options('api/(:any)', static function () {
 // Auth (Public - No token required)
 // Simple routes for Android (role-aware)
 $routes->post('api/register', 'Api\AuthController::register');
+$routes->post('api/register.php', 'Api\AuthController::register');
 $routes->post('api/login', 'Api\AuthController::login');
+$routes->post('api/login.php', 'Api\AuthController::login');
 
 // Password Reset (Public - For Android App)
 $routes->post('api/forgot-password', 'Api\AuthController::forgotPassword');
@@ -111,7 +113,9 @@ $routes->post('api/customer/register', 'Api\AuthController::customerRegister');
 $routes->post('api/customer/login', 'Api\AuthController::customerLogin');
 $routes->post('api/driver/register', 'Api\AuthController::driverRegister');
 $routes->post('api/driver/login', 'Api\AuthController::driverLogin');
+$routes->post('api/verify-login-otp', 'Api\AuthController::verifyLoginOtp');
 $routes->post('api/logout', 'Api\AuthController::logout');
+$routes->post('api/logout.php', 'Api\AuthController::logout');
 
 // Menu & Restaurants (Public)
 $routes->get('api/restaurants', 'Api\MenuController::restaurants');
