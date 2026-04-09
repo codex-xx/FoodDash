@@ -90,6 +90,28 @@ class EmailService
     }
 
     /**
+     * Send a login OTP email for MFA verification
+     */
+    public function sendLoginOtp(string $toEmail, string $toName, string $otpCode): bool
+    {
+        try {
+            $this->mailer->clearAddresses();
+            $this->mailer->addAddress($toEmail, $toName);
+
+            $this->mailer->Subject = 'FoodDash - Login Verification Code';
+            $this->mailer->Body = $this->getLoginOtpEmailTemplate($toName, $otpCode);
+            $this->mailer->AltBody = "Hello {$toName},\n\nYour FoodDash login verification code is: {$otpCode}\n\nThis code will expire in 10 minutes.\n\nIf this wasn't you, please change your password immediately.\n\nBest regards,\nFoodDash Team";
+
+            $this->mailer->send();
+            log_message('info', 'Login OTP email sent to: ' . $toEmail);
+            return true;
+        } catch (Exception $e) {
+            log_message('error', 'Failed to send login OTP email to ' . $toEmail . ': ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Send a password reset email with a link
      * 
      * @param string $toEmail Recipient email
@@ -187,6 +209,46 @@ class EmailService
         
         <p style="color: #999; font-size: 12px; text-align: center; margin: 0;">
             This is an automated message from FoodDash. Please do not reply to this email.
+        </p>
+    </div>
+</body>
+</html>
+HTML;
+    }
+
+    /**
+     * Get HTML template for login OTP email
+     */
+    protected function getLoginOtpEmailTemplate(string $name, string $code): string
+    {
+        return <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background: linear-gradient(135deg, #FF6B35 0%, #FF8C42 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 28px;">FoodDash</h1>
+        <p style="color: white; margin: 10px 0 0 0; opacity: 0.9;">Login Verification</p>
+    </div>
+
+    <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #eee; border-top: none;">
+        <h2 style="color: #333; margin-top: 0;">Hello, {$name}!</h2>
+
+        <p>Use this verification code to complete your login:</p>
+
+        <div style="background: #FF6B35; color: white; padding: 20px; text-align: center; border-radius: 8px; margin: 25px 0;">
+            <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px;">{$code}</span>
+        </div>
+
+        <p style="color: #666; font-size: 14px;">
+            This code will expire in <strong>10 minutes</strong>.
+        </p>
+
+        <p style="color: #666; font-size: 14px;">
+            If you did not try to log in, please reset your password.
         </p>
     </div>
 </body>

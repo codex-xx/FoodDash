@@ -16,16 +16,7 @@ class ProfileController extends ResourceController
      */
     public function index()
     {
-        $authHeader = $this->request->getHeaderLine('Authorization');
-        if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-            $token = $matches[1];
-        } else {
-            $token = $authHeader;
-        }
-
-        // Check customer
-        $customerModel = new CustomerModel();
-        $customer = $customerModel->where('api_token', $token)->first();
+        $customer = $this->request->customer ?? null;
 
         if ($customer) {
             unset($customer['password']);
@@ -36,9 +27,7 @@ class ProfileController extends ResourceController
             ]);
         }
 
-        // Check driver
-        $driverModel = new DriverModel();
-        $driver = $driverModel->where('api_token', $token)->first();
+        $driver = $this->request->driver ?? null;
 
         if ($driver) {
             unset($driver['password']);
@@ -62,16 +51,8 @@ class ProfileController extends ResourceController
      */
     public function update()
     {
-        $authHeader = $this->request->getHeaderLine('Authorization');
-        if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-            $token = $matches[1];
-        } else {
-            $token = $authHeader;
-        }
-
-        // Check customer
         $customerModel = new CustomerModel();
-        $customer = $customerModel->where('api_token', $token)->first();
+        $customer = $this->request->customer ?? null;
 
         if ($customer) {
             $data = [];
@@ -105,9 +86,8 @@ class ProfileController extends ResourceController
             ]);
         }
 
-        // Check driver
         $driverModel = new DriverModel();
-        $driver = $driverModel->where('api_token', $token)->first();
+        $driver = $this->request->driver ?? null;
 
         if ($driver) {
             $data = [];
@@ -154,15 +134,7 @@ class ProfileController extends ResourceController
      */
     public function updateLocation()
     {
-        $authHeader = $this->request->getHeaderLine('Authorization');
-        if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-            $token = $matches[1];
-        } else {
-            $token = $authHeader;
-        }
-
-        $driverModel = new DriverModel();
-        $driver = $driverModel->where('api_token', $token)->first();
+        $driver = $this->request->driver ?? null;
 
         if (!$driver) {
             return $this->respond([
@@ -183,14 +155,8 @@ class ProfileController extends ResourceController
      */
     public function updateFcmToken()
     {
-        $authHeader = $this->request->getHeaderLine('Authorization');
-        if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-            $token = $matches[1];
-        } else {
-            $token = $authHeader;
-        }
-
-        $fcmToken = $this->request->getJSON()->fcm_token ?? $this->request->getPost('fcm_token');
+        $json = $this->request->getJSON(true);
+        $fcmToken = (is_array($json) ? ($json['fcm_token'] ?? null) : null) ?? $this->request->getPost('fcm_token');
 
         if (!$fcmToken) {
             return $this->respond([
@@ -199,9 +165,8 @@ class ProfileController extends ResourceController
             ], 400);
         }
 
-        // Check customer
         $customerModel = new CustomerModel();
-        $customer = $customerModel->where('api_token', $token)->first();
+        $customer = $this->request->customer ?? null;
 
         if ($customer) {
             $customerModel->update($customer['id'], ['fcm_token' => $fcmToken]);
@@ -211,9 +176,8 @@ class ProfileController extends ResourceController
             ]);
         }
 
-        // Check driver
         $driverModel = new DriverModel();
-        $driver = $driverModel->where('api_token', $token)->first();
+        $driver = $this->request->driver ?? null;
 
         if ($driver) {
             $driverModel->update($driver['id'], ['fcm_token' => $fcmToken]);

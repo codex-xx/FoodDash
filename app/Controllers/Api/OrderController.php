@@ -29,15 +29,7 @@ class OrderController extends ResourceController
      */
     public function index()
     {
-        $authHeader = $this->request->getHeaderLine('Authorization');
-        if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-            $token = $matches[1];
-        } else {
-            $token = $authHeader;
-        }
-
-        $customerModel = new CustomerModel();
-        $customer = $customerModel->where('api_token', $token)->first();
+        $customer = $this->request->customer ?? null;
 
         if ($customer) {
             $orders = $this->orderModel
@@ -69,9 +61,7 @@ class OrderController extends ResourceController
             ]);
         }
 
-        // Check if driver
-        $driverModel = new DriverModel();
-        $driver = $driverModel->where('api_token', $token)->first();
+        $driver = $this->request->driver ?? null;
 
         if ($driver) {
             $orders = $this->orderModel
@@ -101,15 +91,7 @@ class OrderController extends ResourceController
      */
     public function create()
     {
-        $authHeader = $this->request->getHeaderLine('Authorization');
-        if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-            $token = $matches[1];
-        } else {
-            $token = $authHeader;
-        }
-
-        $customerModel = new CustomerModel();
-        $customer = $customerModel->where('api_token', $token)->first();
+        $customer = $this->request->customer ?? null;
 
         if (!$customer) {
             return $this->respond([
@@ -323,15 +305,7 @@ class OrderController extends ResourceController
      */
     public function updateStatus($id = null)
     {
-        $authHeader = $this->request->getHeaderLine('Authorization');
-        if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-            $token = $matches[1];
-        } else {
-            $token = $authHeader;
-        }
-
-        $driverModel = new DriverModel();
-        $driver = $driverModel->where('api_token', $token)->first();
+        $driver = $this->request->driver ?? null;
 
         if (!$driver) {
             return $this->respond([
@@ -402,15 +376,7 @@ class OrderController extends ResourceController
      */
     public function accept($id = null)
     {
-        $authHeader = $this->request->getHeaderLine('Authorization');
-        if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-            $token = $matches[1];
-        } else {
-            $token = $authHeader;
-        }
-
-        $driverModel = new DriverModel();
-        $driver = $driverModel->where('api_token', $token)->first();
+        $driver = $this->request->driver ?? null;
 
         if (!$driver) {
             return $this->respond([
@@ -527,15 +493,7 @@ class OrderController extends ResourceController
      */
     public function cancel($id = null)
     {
-        $authHeader = $this->request->getHeaderLine('Authorization');
-        if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-            $token = $matches[1];
-        } else {
-            $token = $authHeader;
-        }
-
-        $customerModel = new CustomerModel();
-        $customer = $customerModel->where('api_token', $token)->first();
+        $customer = $this->request->customer ?? null;
 
         if (!$customer) {
             return $this->respond([
