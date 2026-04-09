@@ -96,13 +96,13 @@ class Dashboard extends BaseController
             ->where('status', 'pending')
             ->countAllResults();
         $pendingDriverList = (new DriverModel())
-            ->select('id, name, email, phone, vehicle_type, vehicle_number, created_at')
+            ->select('id, name, email, phone, vehicle_type, created_at')
             ->where('status', 'pending')
             ->orderBy('created_at', 'DESC')
             ->findAll(10);
 
         $activeDriverList = (new DriverModel())
-            ->select('id, name, email, phone, vehicle_type, vehicle_number, current_latitude, current_longitude, updated_at')
+            ->select('id, name, email, phone, vehicle_type, updated_at')
             ->where('status', 'approved')
             ->where('is_active', 1)
             ->orderBy('name', 'ASC')
@@ -170,7 +170,7 @@ class Dashboard extends BaseController
         $orders = $builder->limit(100)->get()->getResultArray();
 
         $activeDriverList = $driverModel
-            ->select('id, name, email, phone, vehicle_type, vehicle_number, current_latitude, current_longitude, updated_at')
+            ->select('id, name, email, phone, vehicle_type, updated_at')
             ->where('status', 'approved')
             ->where('is_active', 1)
             ->orderBy('name', 'ASC')

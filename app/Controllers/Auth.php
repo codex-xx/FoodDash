@@ -254,7 +254,6 @@ class Auth extends BaseController
                 'email'        => $this->request->getPost('driver_email'),
                 'phone'        => $this->request->getPost('driver_phone'),
                 'vehicle_type' => $this->request->getPost('vehicle_type'),
-                'vehicle_number' => $this->request->getPost('license_plate'),
                 'status'       => 'pending',
                 'is_active'    => 0,
             ];

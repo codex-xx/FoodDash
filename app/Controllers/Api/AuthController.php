@@ -10,6 +10,38 @@ class AuthController extends ResourceController
 {
     protected $format = 'json';
 
+    /**
+     * Read the first non-empty value from a list of possible input keys.
+     */
+    protected function getFirstInput(array $keys, $default = null)
+    {
+        foreach ($keys as $key) {
+            $value = $this->getInput($key);
+            if ($value !== null && trim((string) $value) !== '') {
+                return $value;
+            }
+        }
+
+        return $default;
+    }
+
+    protected function resolvePhoneInput(): string
+    {
+        return (string) ($this->getFirstInput(['phone', 'phone_number', 'mobile', 'contact_number'], '') ?? '');
+    }
+
+    protected function resolveAddressInput(): string
+    {
+        return (string) ($this->getFirstInput(['address', 'full_address', 'location'], '') ?? '');
+    }
+
+    protected function stripDriverLocationFields(array $driver): array
+    {
+        unset($driver['current_latitude'], $driver['current_longitude']);
+
+        return $driver;
+    }
+
     public function __construct()
     {
         // Set CORS headers
@@ -206,6 +238,7 @@ class AuthController extends ResourceController
                 'email'    => 'required|valid_email|is_unique[customers.email]',
                 'password' => 'required|min_length[6]',
                 'phone'    => 'permit_empty|max_length[20]',
+                'address'  => 'permit_empty|max_length[500]',
             ];
 
             if (!$this->validate($rules)) {
@@ -223,7 +256,8 @@ class AuthController extends ResourceController
                 'name'      => $this->getInput('name'),
                 'email'     => $this->getInput('email'),
                 'password'  => $this->getInput('password'),
-                'phone'     => $this->getInput('phone') ?? '',
+                'phone'     => $this->resolvePhoneInput(),
+                'address'   => $this->resolveAddressInput(),
                 'api_token' => $apiToken,
                 'is_active' => 1,
             ];
@@ -351,7 +385,6 @@ class AuthController extends ResourceController
                 'password'       => 'required|min_length[6]',
                 'phone'          => 'permit_empty|max_length[20]',
                 'vehicle_type'   => 'permit_empty|max_length[50]',
-                'vehicle_number' => 'permit_empty|max_length[50]',
                 'license_number' => 'permit_empty|max_length[50]',
             ];
 
@@ -370,9 +403,8 @@ class AuthController extends ResourceController
                 'name'           => $this->getInput('name'),
                 'email'          => $this->getInput('email'),
                 'password'       => password_hash($this->getInput('password'), PASSWORD_DEFAULT),
-                'phone'          => $this->getInput('phone') ?? '',
+                'phone'          => $this->resolvePhoneInput(),
                 'vehicle_type'   => $this->getInput('vehicle_type') ?? '',
-                'vehicle_number' => $this->getInput('vehicle_number') ?? '',
                 'license_number' => $this->getInput('license_number') ?? '',
                 'api_token'      => $apiToken,
                 'status'         => 'pending', // Needs admin approval
@@ -390,6 +422,7 @@ class AuthController extends ResourceController
 
             $driver = $driverModel->find($driverId);
             unset($driver['password']);
+            $driver = $this->stripDriverLocationFields($driver);
 
             // Send application received confirmation email
             try {
@@ -477,6 +510,7 @@ class AuthController extends ResourceController
 
             $driver['api_token'] = $apiToken;
             unset($driver['password']);
+            $driver = $this->stripDriverLocationFields($driver);
 
             return $this->respond([
                 'success' => true,

@@ -270,7 +270,7 @@
             const appliedOn = driver.created_at
               ? new Date(driver.created_at).toLocaleDateString()
               : '-';
-            const vehicle = [driver.vehicle_type, driver.vehicle_number].filter(Boolean).join(' • ') || '-';
+            const vehicle = driver.vehicle_type || '-';
 
             row.innerHTML = `
               <td><strong>${driver.name || '-'}</strong></td>
@@ -369,7 +369,7 @@
 
       activeDriversList.forEach(driver => {
         const row = document.createElement('tr');
-        const vehicle = [driver.vehicle_type, driver.vehicle_number].filter(Boolean).join(' • ') || '-';
+        const vehicle = driver.vehicle_type || '-';
         row.innerHTML = `
           <td><strong>${driver.name || '-'}</strong></td>
           <td>${driver.email || '-'}</td>

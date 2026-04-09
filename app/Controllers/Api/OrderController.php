@@ -79,10 +79,8 @@ class OrderController extends ResourceController
                 ->orderBy('created_at', 'DESC')
                 ->findAll();
 
-            $restaurantModel = new RestaurantModel();
             foreach ($orders as &$order) {
-                $restaurant = $restaurantModel->find($order['restaurant_id']);
-                $order['restaurant'] = $restaurant;
+                $order = $this->enrichOrderForDriver($order);
             }
 
             return $this->respond([
@@ -311,19 +309,7 @@ class OrderController extends ResourceController
             ], 404);
         }
 
-        $restaurantModel = new RestaurantModel();
-        $restaurant = $restaurantModel->find($order['restaurant_id']);
-        $order['restaurant'] = $restaurant;
-
-        if ($order['driver_id']) {
-            $driverModel = new DriverModel();
-            $driver = $driverModel->find($order['driver_id']);
-            $order['driver'] = $driver ? [
-                'id'    => $driver['id'],
-                'name'  => $driver['name'],
-                'phone' => $driver['phone'],
-            ] : null;
-        }
+        $order = $this->enrichOrderForDriver($order);
 
         return $this->respond([
             'success' => true,
@@ -400,10 +386,8 @@ class OrderController extends ResourceController
             ->orderBy('created_at', 'ASC')
             ->findAll();
 
-        $restaurantModel = new RestaurantModel();
         foreach ($orders as &$order) {
-            $restaurant = $restaurantModel->find($order['restaurant_id']);
-            $order['restaurant'] = $restaurant;
+            $order = $this->enrichOrderForDriver($order);
         }
 
         return $this->respond([
@@ -463,8 +447,78 @@ class OrderController extends ResourceController
         return $this->respond([
             'success' => true,
             'message' => 'Order accepted',
-            'data'    => $result['order']
+            'data'    => $this->enrichOrderForDriver($result['order'])
         ]);
+    }
+
+    private function enrichOrderForDriver(array $order): array
+    {
+        $restaurantModel = new RestaurantModel();
+        $customerModel = new CustomerModel();
+        $driverModel = new DriverModel();
+        $orderItemModel = new OrderItemModel();
+
+        $restaurant = $restaurantModel->find($order['restaurant_id']);
+        $order['restaurant'] = $restaurant;
+
+        $customer = null;
+        if (!empty($order['customer_id'])) {
+            $customer = $customerModel
+                ->select('id, name, email, phone, address')
+                ->find((int) $order['customer_id']);
+        }
+
+        $order['customer'] = $customer ? [
+            'id' => $customer['id'],
+            'name' => $customer['name'] ?? ($order['customer_name'] ?? null),
+            'email' => $customer['email'] ?? null,
+            'phone' => $customer['phone'] ?? null,
+            'address' => $customer['address'] ?? ($order['delivery_address'] ?? null),
+        ] : [
+            'id' => $order['customer_id'] ?? null,
+            'name' => $order['customer_name'] ?? null,
+            'phone' => null,
+            'address' => $order['delivery_address'] ?? null,
+        ];
+
+        if (!empty($order['driver_id'])) {
+            $driver = $driverModel->find((int) $order['driver_id']);
+            $order['driver'] = $driver ? [
+                'id'    => $driver['id'],
+                'name'  => $driver['name'],
+                'phone' => $driver['phone'],
+            ] : null;
+        }
+
+        $orderItems = $orderItemModel
+            ->where('order_id', (int) $order['id'])
+            ->findAll();
+
+        if (!empty($orderItems)) {
+            $order['items_data'] = $orderItems;
+        } else {
+            $order['items_data'] = $this->parseOrderItems($order['items'] ?? null);
+        }
+
+        $order['customer_phone'] = $order['customer']['phone'] ?? null;
+        $order['customer_address'] = $order['customer']['address'] ?? ($order['delivery_address'] ?? null);
+
+        return $order;
+    }
+
+    private function parseOrderItems($items): array
+    {
+        if (is_array($items)) {
+            return $items;
+        }
+
+        if (!is_string($items) || trim($items) === '') {
+            return [];
+        }
+
+        $decoded = json_decode($items, true);
+
+        return is_array($decoded) ? $decoded : [];
     }
 
     /**

@@ -42,6 +42,7 @@ class ProfileController extends ResourceController
 
         if ($driver) {
             unset($driver['password']);
+            unset($driver['current_latitude'], $driver['current_longitude']);
             return $this->respond([
                 'success'   => true,
                 'user_type' => 'driver',
@@ -125,9 +126,6 @@ class ProfileController extends ResourceController
             if (isset($json['vehicle_type'])) {
                 $data['vehicle_type'] = $json['vehicle_type'];
             }
-            if (isset($json['vehicle_number'])) {
-                $data['vehicle_number'] = $json['vehicle_number'];
-            }
 
             if (!empty($data)) {
                 $driverModel->update($driver['id'], $data);
@@ -135,6 +133,7 @@ class ProfileController extends ResourceController
 
             $updatedDriver = $driverModel->find($driver['id']);
             unset($updatedDriver['password']);
+            unset($updatedDriver['current_latitude'], $updatedDriver['current_longitude']);
 
             return $this->respond([
                 'success' => true,
@@ -172,32 +171,9 @@ class ProfileController extends ResourceController
             ], 403);
         }
 
-        $json = $this->request->getJSON(true);
-        if (!$json) {
-            $json = $this->request->getPost();
-        }
-
-        $rules = [
-            'latitude'  => 'required|numeric',
-            'longitude' => 'required|numeric',
-        ];
-
-        if (!$this->validate($rules)) {
-            return $this->respond([
-                'success' => false,
-                'message' => 'Validation failed',
-                'errors'  => $this->validator->getErrors()
-            ], 400);
-        }
-
-        $driverModel->update($driver['id'], [
-            'current_latitude'  => $json['latitude'] ?? $this->request->getPost('latitude'),
-            'current_longitude' => $json['longitude'] ?? $this->request->getPost('longitude'),
-        ]);
-
         return $this->respond([
             'success' => true,
-            'message' => 'Location updated'
+            'message' => 'Location tracking is disabled'
         ]);
     }
 
