@@ -11,3 +11,6 @@
 !/writable/logs/index.html
 !/writable/session/index.html
 !/writable/uploads/index.html
+
+# Composer dependencies (local build artifacts)
+/vendor/
