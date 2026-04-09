@@ -26,7 +26,24 @@ class DriverModel extends Model
         'is_active',
         'api_token',
         'fcm_token',
+        'mfa_enabled',
+        'login_otp_code',
+        'login_otp_expires',
+        'token_version',
     ];
 
     protected $returnType = 'array';
+
+    protected $beforeInsert = ['hashPassword'];
+    protected $beforeUpdate = ['hashPassword'];
+
+    protected function hashPassword(array $data): array
+    {
+        if (isset($data['data']['password'])) {
+            $algo = defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_BCRYPT;
+            $data['data']['password'] = password_hash($data['data']['password'], $algo);
+        }
+
+        return $data;
+    }
 }

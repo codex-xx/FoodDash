@@ -25,6 +25,10 @@ class CustomerModel extends Model
         'reset_token',
         'reset_expires',
         'reset_code',
+        'mfa_enabled',
+        'login_otp_code',
+        'login_otp_expires',
+        'token_version',
         'is_active',
     ];
 
@@ -36,7 +40,8 @@ class CustomerModel extends Model
     protected function hashPassword(array $data): array
     {
         if (isset($data['data']['password'])) {
-            $data['data']['password'] = password_hash($data['data']['password'], PASSWORD_DEFAULT);
+            $algo = defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_BCRYPT;
+            $data['data']['password'] = password_hash($data['data']['password'], $algo);
         }
         return $data;
     }

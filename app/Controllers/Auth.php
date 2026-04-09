@@ -182,10 +182,8 @@ class Auth extends BaseController
             return redirect()->to('/login')->with('error', 'Reset token invalid or expired');
         }
 
-        $newHash = password_hash($this->request->getPost('password'), PASSWORD_DEFAULT);
-
         $this->userModel->update($user['id'], [
-            'password'      => $newHash,
+            'password'      => $this->request->getPost('password'),
             'reset_token'   => null,
             'reset_expires' => null,
         ]);
@@ -232,12 +230,11 @@ class Auth extends BaseController
 
             // Generate a random password (they can reset it later)
             $tempPassword = bin2hex(random_bytes(8));
-            $hashedPassword = password_hash($tempPassword, PASSWORD_DEFAULT);
 
             // Create user account
             $userId = $this->userModel->insert([
                 'email'      => $this->request->getPost('driver_email'),
-                'password'   => $hashedPassword,
+                'password'   => $tempPassword,
                 'role'       => 'driver',
                 'is_active'  => 0, // Not active until approved
             ]);
@@ -304,12 +301,11 @@ class Auth extends BaseController
 
             // Generate a random password (they can reset it later)
             $tempPassword = bin2hex(random_bytes(8));
-            $hashedPassword = password_hash($tempPassword, PASSWORD_DEFAULT);
 
             // Create user account
             $userId = $this->userModel->insert([
                 'email'      => $this->request->getPost('owner_email'),
-                'password'   => $hashedPassword,
+                'password'   => $tempPassword,
                 'role'       => 'restaurant',
                 'is_active'  => 0, // Not active until approved
             ]);
