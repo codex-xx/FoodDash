@@ -3,6 +3,7 @@
 namespace App\Controllers\Api;
 
 use App\Models\MenuModel;
+use App\Libraries\PermissionService;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\RESTful\ResourceController;
 
@@ -10,10 +11,12 @@ class MenusController extends ResourceController
 {
     protected $format = 'json';
     protected MenuModel $menuItemModel;
+    protected PermissionService $permissions;
 
     public function __construct()
     {
         $this->menuItemModel = new MenuModel();
+        $this->permissions = new PermissionService();
     }
 
     /**
@@ -343,7 +346,7 @@ class MenusController extends ResourceController
         $isLoggedIn = (bool) $session->get('isLoggedIn');
         $role = (string) $session->get('role');
 
-        if (! $isLoggedIn || ! in_array($role, ['restaurant', 'admin'], true)) {
+        if (! $isLoggedIn || ! $this->permissions->allows($role, 'menus', 'write')) {
             return $this->respond([
                 'success' => false,
                 'message' => 'Only restaurant/admin can modify menu',
