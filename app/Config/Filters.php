@@ -37,6 +37,7 @@ class Filters extends BaseFilters
         'auth'          => \App\Filters\AuthFilter::class,
         'admin'         => \App\Filters\AdminFilter::class,
         'api'           => \App\Filters\ApiFilter::class,
+        'apiadmin'      => \App\Filters\ApiAdminFilter::class,
     ];
 
     /**
@@ -122,6 +123,10 @@ class Filters extends BaseFilters
             'api/driver/location',
             'api/fcm-token',
             'api/logout',
+        ]],
+        'apiadmin' => ['before' => [
+            'api/update_status',
+            'api/assign_driver',
         ]],
     ];
 }

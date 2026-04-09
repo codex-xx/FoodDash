@@ -10,17 +10,20 @@ use App\Models\RestaurantModel;
 use App\Models\DriverModel;
 use App\Models\CustomerModel;
 use App\Models\MenuModel;
+use App\Libraries\PermissionService;
 
 class OrderController extends ResourceController
 {
     protected $format = 'json';
     protected $orderModel;
     protected $orderFlow;
+    protected $permissions;
 
     public function __construct()
     {
         $this->orderModel = new OrderModel();
         $this->orderFlow = new OrderFlowService();
+        $this->permissions = new PermissionService();
     }
 
     /**
@@ -282,6 +285,14 @@ class OrderController extends ResourceController
      */
     public function show($id = null)
     {
+        $actor = $this->resolveActor();
+        if (! $this->permissions->allows($actor['role'], 'orders', 'read')) {
+            return $this->respond([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
+
         $order = $this->orderModel->find($id);
 
         if (!$order) {
@@ -289,6 +300,13 @@ class OrderController extends ResourceController
                 'success' => false,
                 'message' => 'Order not found'
             ], 404);
+        }
+
+        if (! $this->canAccessOrder($actor, $order)) {
+            return $this->respond([
+                'success' => false,
+                'message' => 'You are not allowed to access this order'
+            ], 403);
         }
 
         $order = $this->enrichOrderForDriver($order);
@@ -354,6 +372,15 @@ class OrderController extends ResourceController
      */
     public function available()
     {
+        $actor = $this->resolveActor();
+
+        if ($actor['role'] !== 'driver' || ! $this->permissions->allows('driver', 'orders', 'read')) {
+            return $this->respond([
+                'success' => false,
+                'message' => 'Only drivers can view available orders'
+            ], 403);
+        }
+
         $orders = $this->orderModel
             ->where('driver_id', null)
             ->where('status', 'ready')
@@ -543,6 +570,16 @@ class OrderController extends ResourceController
 
     public function updateStatusEndpoint()
     {
+        $session = session();
+        $role = (string) $session->get('role');
+
+        if (! (bool) $session->get('isLoggedIn') || $role !== 'admin' || ! $this->permissions->allows($role, 'orders', 'update')) {
+            return $this->respond([
+                'success' => false,
+                'message' => 'Admin authorization required'
+            ], 403);
+        }
+
         $orderId = (int) ($this->request->getPost('order_id') ?? $this->request->getVar('order_id'));
         $status = (string) ($this->request->getPost('status') ?? $this->request->getVar('status'));
 
@@ -553,7 +590,7 @@ class OrderController extends ResourceController
             ], 422);
         }
 
-        $role = (string) ($this->request->getPost('actor_role') ?? 'system');
+        $role = (string) ($this->request->getPost('actor_role') ?? 'admin');
         $actorId = (int) ($this->request->getPost('actor_id') ?? 0);
 
         $result = $this->orderFlow->updateStatus($orderId, $status, $role, $actorId > 0 ? $actorId : null, 'Public update_status endpoint');
@@ -574,6 +611,16 @@ class OrderController extends ResourceController
 
     public function assignDriverEndpoint()
     {
+        $session = session();
+        $role = (string) $session->get('role');
+
+        if (! (bool) $session->get('isLoggedIn') || $role !== 'admin' || ! $this->permissions->allows($role, 'orders', 'assign')) {
+            return $this->respond([
+                'success' => false,
+                'message' => 'Admin authorization required'
+            ], 403);
+        }
+
         $orderId = (int) ($this->request->getPost('order_id') ?? $this->request->getVar('order_id'));
         $driverId = (int) ($this->request->getPost('driver_id') ?? $this->request->getVar('driver_id'));
 
@@ -597,5 +644,52 @@ class OrderController extends ResourceController
             'message' => $result['message'],
             'data' => $result['order']
         ]);
+    }
+
+    private function resolveActor(): array
+    {
+        $customer = $this->request->customer ?? null;
+        if ($customer) {
+            return ['role' => 'customer', 'id' => (int) $customer['id']];
+        }
+
+        $driver = $this->request->driver ?? null;
+        if ($driver) {
+            return ['role' => 'driver', 'id' => (int) $driver['id']];
+        }
+
+        $session = session();
+        if ((bool) $session->get('isLoggedIn')) {
+            return [
+                'role' => (string) $session->get('role'),
+                'id' => (int) $session->get('user_id'),
+                'restaurant_id' => (int) $session->get('restaurant_id'),
+            ];
+        }
+
+        return ['role' => null, 'id' => 0];
+    }
+
+    private function canAccessOrder(array $actor, array $order): bool
+    {
+        $role = $actor['role'] ?? null;
+
+        if ($role === 'admin') {
+            return true;
+        }
+
+        if ($role === 'customer') {
+            return (int) ($order['customer_id'] ?? 0) === (int) ($actor['id'] ?? 0);
+        }
+
+        if ($role === 'driver') {
+            return (int) ($order['driver_id'] ?? 0) === (int) ($actor['id'] ?? 0);
+        }
+
+        if ($role === 'restaurant') {
+            return (int) ($order['restaurant_id'] ?? 0) === (int) ($actor['restaurant_id'] ?? 0);
+        }
+
+        return false;
     }
 }
