@@ -104,6 +104,20 @@ class OrderFlowService
             return ['ok' => false, 'message' => 'Invalid status', 'code' => 400];
         }
 
+        $normalizedRole = strtolower(trim($actorRole));
+        if ($normalizedRole === 'rider') {
+            $normalizedRole = 'driver';
+        }
+
+        $allowedForRole = $this->allowedStatusesForRole($normalizedRole);
+        if (! in_array($normalizedTarget, $allowedForRole, true)) {
+            return [
+                'ok' => false,
+                'message' => 'Status is not allowed for role: ' . $normalizedRole,
+                'code' => 403,
+            ];
+        }
+
         $fromStatus = $this->normalizeStatus((string) ($order['status'] ?? self::STATUS_PENDING));
 
         $updateData = [
@@ -117,7 +131,7 @@ class OrderFlowService
             $updateData['delivery_type_id'] = $this->resolveDeliveryTypeId($sizeCategory);
         }
 
-        if ($normalizedTarget === self::STATUS_READY && empty($order['driver_id'])) {
+        if ($normalizedTarget === self::STATUS_READY && empty($order['driver_id']) && $normalizedRole !== 'restaurant') {
             $assigned = $this->autoAssignDriver($order, $sizeCategory);
             if ($assigned !== null) {
                 $updateData['driver_id'] = $assigned;
@@ -145,11 +159,45 @@ class OrderFlowService
         ];
     }
 
+    private function allowedStatusesForRole(string $role): array
+    {
+        return match ($role) {
+            'restaurant' => [
+                self::STATUS_ACCEPTED,
+                self::STATUS_PREPARING,
+                self::STATUS_READY,
+            ],
+            'driver' => [
+                self::STATUS_ASSIGNED,
+                self::STATUS_ON_THE_WAY,
+                self::STATUS_DELIVERED,
+            ],
+            'customer' => [
+                self::STATUS_CANCELLED,
+            ],
+            default => $this->validStatuses(),
+        };
+    }
+
     public function manualAssignDriver(int $orderId, int $driverId, string $actorRole, ?int $actorId = null): array
     {
         $order = $this->orderModel->find($orderId);
         if (! $order) {
             return ['ok' => false, 'message' => 'Order not found', 'code' => 404];
+        }
+
+        $normalizedRole = strtolower(trim($actorRole));
+        if ($normalizedRole !== 'admin') {
+            return ['ok' => false, 'message' => 'Only admin can assign rider', 'code' => 403];
+        }
+
+        $currentStatus = $this->normalizeStatus((string) ($order['status'] ?? self::STATUS_PENDING));
+        if ($currentStatus !== self::STATUS_PREPARING) {
+            return [
+                'ok' => false,
+                'message' => 'Rider can only be assigned when order is in preparing status',
+                'code' => 422,
+            ];
         }
 
         $driver = $this->driverModel->find($driverId);

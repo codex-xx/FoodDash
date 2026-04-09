@@ -31,6 +31,11 @@
             color: #212529;
         }
 
+        .fd-shell {
+            display: flex;
+            min-height: calc(100vh - 56px);
+        }
+
         .navbar-dashboard {
             background: linear-gradient(90deg, var(--fd-espresso), var(--fd-charcoal));
             box-shadow: 0 2px 6px rgba(15, 23, 42, 0.35);
@@ -55,10 +60,11 @@
 
         .fd-sidebar {
             width: 250px;
-            height: 100vh;
-            position: fixed;
+            height: calc(100vh - 56px);
+            position: sticky;
             top: 56px;
             left: 0;
+            flex: 0 0 250px;
             overflow-y: auto;
             background: linear-gradient(180deg, #FFFFFF, rgba(243, 211, 154, 0.35));
             border-right: 1px solid var(--fd-border);
@@ -66,21 +72,49 @@
         }
 
         .fd-content {
-            margin-left: 250px;
+            flex: 1;
+            min-width: 0;
+            margin-left: 0;
             padding: 1.5rem 1.75rem 2.5rem;
         }
 
         @media (max-width: 991.98px) {
             .fd-sidebar {
-                left: -260px;
-                transition: left .2s ease-in-out;
+                width: 0;
+                flex-basis: 0;
+                overflow: hidden;
+                border-right: 0;
+                box-shadow: none;
+                transition: width .25s ease, flex-basis .25s ease;
             }
+
             .fd-sidebar.show {
-                left: 0;
+                width: 220px;
+                flex-basis: 220px;
+                border-right: 1px solid var(--fd-border);
+                box-shadow: 2px 0 8px rgba(15, 23, 42, 0.06);
             }
+
             .fd-content {
-                margin-left: 0;
                 padding-top: 1.25rem;
+            }
+
+            .fd-content .table {
+                display: block;
+                width: 100%;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .fd-sidebar.show {
+                width: 180px;
+                flex-basis: 180px;
+            }
+
+            .fd-content {
+                padding: 1rem .75rem 2rem;
             }
         }
 
@@ -306,7 +340,7 @@
             <strong>🏍️ FoodDash</strong>
         </a>
 
-        <button class="btn btn-outline-light d-lg-none" id="fdSidebarToggle" type="button">
+        <button class="btn btn-outline-light d-lg-none" id="fdSidebarToggle" type="button" aria-controls="fdSidebar" aria-expanded="false" aria-label="Toggle sidebar">
             <span class="navbar-toggler-icon"></span>
         </button>
 
@@ -320,6 +354,7 @@
     </div>
 </nav>
 
+<div class="fd-shell">
 <aside class="fd-sidebar" id="fdSidebar">
     <div class="p-3">
         <div class="mb-4">
@@ -416,6 +451,7 @@
         <?= $this->renderSection('content') ?>
     </div>
 </main>
+</div>
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -423,6 +459,22 @@
     $(function () {
         $('#fdSidebarToggle').on('click', function () {
             $('#fdSidebar').toggleClass('show');
+            const expanded = $('#fdSidebar').hasClass('show');
+            $(this).attr('aria-expanded', expanded ? 'true' : 'false');
+        });
+
+        $('#fdSidebar a').on('click', function () {
+            if (window.innerWidth <= 991.98) {
+                $('#fdSidebar').removeClass('show');
+                $('#fdSidebarToggle').attr('aria-expanded', 'false');
+            }
+        });
+
+        $(window).on('resize', function () {
+            if (window.innerWidth > 991.98) {
+                $('#fdSidebar').removeClass('show');
+                $('#fdSidebarToggle').attr('aria-expanded', 'false');
+            }
         });
     });
 </script>

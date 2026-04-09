@@ -123,14 +123,9 @@
         <div class="mb-3">
           <label for="status_select" class="form-label">Select Status</label>
           <select class="form-select" id="status_select">
-            <option value="pending">Pending</option>
             <option value="accepted">Accepted</option>
             <option value="preparing">Preparing</option>
             <option value="ready">Ready</option>
-            <option value="assigned">Assigned</option>
-            <option value="on_the_way">On the Way</option>
-            <option value="delivered">Delivered</option>
-            <option value="cancelled">Cancelled</option>
           </select>
         </div>
         <div class="mb-3">
@@ -150,6 +145,36 @@
 
 <?= $this->section('scripts') ?>
 <script>
+  function postOrderUpdate(orderId, formData) {
+    return fetch(`<?= site_url('orders') ?>/${orderId}/status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Accept': 'application/json'
+      },
+      body: formData.toString()
+    }).then(async (response) => {
+      const raw = await response.text();
+      let json = null;
+
+      try {
+        json = raw ? JSON.parse(raw) : {};
+      } catch (e) {
+        throw new Error(raw || `Unexpected response (HTTP ${response.status})`);
+      }
+
+      if (!response.ok || !(json && json.success)) {
+        const message = (json && (json.error || json.message))
+          ? (json.error || json.message)
+          : `Request failed (HTTP ${response.status})`;
+        throw new Error(message);
+      }
+
+      return json;
+    });
+  }
+
   // Handle modal show
   const statusModal = document.getElementById('statusModal');
   statusModal.addEventListener('show.bs.modal', function (event) {
@@ -181,31 +206,14 @@
       formData.append('estimated_preparation_time', prepTime);
     }
     
-    fetch(`<?= site_url('orders') ?>/${orderId}/status`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: formData.toString()
-    })
-    .then(r => r.json())
-    .then(json => {
-      if (json.success) {
-        // Close modal
+    postOrderUpdate(orderId, formData)
+      .then(() => {
         const modal = bootstrap.Modal.getInstance(statusModal);
         modal.hide();
-        
-        // Show success message
         alert('Order status updated successfully!');
-        
-        // Reload page
         location.reload();
-      } else {
-        alert('Error: ' + (json.error || 'Unknown error'));
-      }
-    })
-    .catch(err => alert('Error: ' + err));
+      })
+      .catch(err => alert('Error: ' + err.message));
   }
 
   // Update preparation time directly from input
@@ -220,24 +228,12 @@
     const formData = new URLSearchParams();
     formData.append('estimated_preparation_time', prepTime);
     
-    fetch(`<?= site_url('orders') ?>/${orderId}/status`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: formData.toString()
-    })
-    .then(r => r.json())
-    .then(json => {
-      if (json.success) {
+    postOrderUpdate(orderId, formData)
+      .then(() => {
         alert('Preparation time updated!');
         location.reload();
-      } else {
-        alert('Error: ' + (json.error || 'Unknown error'));
-      }
-    })
-    .catch(err => alert('Error: ' + err));
+      })
+      .catch(err => alert('Error: ' + err.message));
   }
 
   // Realtime updates from central API stream.

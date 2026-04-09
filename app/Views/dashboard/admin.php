@@ -291,6 +291,7 @@
         const ordersBody = document.querySelector('#ordersTable tbody');
         ordersBody.innerHTML = '';
         (json.recentOrders || []).forEach(order => {
+          const canAssign = order.status === 'preparing';
           const row = document.createElement('tr');
           row.innerHTML = `
             <td><strong>${order.order_number}</strong></td>
@@ -300,7 +301,7 @@
             <td>${statusBadge(order.status)}</td>
             <td>₱${parseFloat(order.total_amount).toFixed(2)}</td>
             <td>${new Date(order.created_at).toLocaleDateString()}</td>
-            <td><button class="btn btn-sm btn-outline-secondary" onclick="assignDriver(${order.id})">Assign</button></td>
+            <td><button class="btn btn-sm btn-outline-secondary" onclick="assignDriver(${order.id})" ${canAssign ? '' : 'disabled'} title="${canAssign ? 'Assign rider' : 'Only available when order is Preparing'}">Assign</button></td>
           `;
           ordersBody.appendChild(row);
         });

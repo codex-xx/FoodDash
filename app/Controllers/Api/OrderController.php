@@ -355,7 +355,7 @@ class OrderController extends ResourceController
         if (!in_array($status, ['assigned', 'on_the_way', 'delivered'], true)) {
             return $this->respond([
                 'success' => false,
-                'message' => 'Invalid status for driver. Valid statuses: assigned, on_the_way, delivered'
+                'message' => 'Invalid status for driver. Valid statuses: picked_up (or assigned), on_the_way, delivered'
             ], 400);
         }
 

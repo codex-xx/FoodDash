@@ -197,7 +197,7 @@
   }
 
   function updateOrderStatus(orderId) {
-    const newStatus = prompt('Enter new status (pending, accepted, preparing, ready, assigned, on_the_way, delivered, cancelled):');
+    const newStatus = prompt('Enter new status (accepted, preparing, ready):');
     if (!newStatus) return;
 
     fetch(`<?= site_url('orders') ?>/${orderId}/status`, {

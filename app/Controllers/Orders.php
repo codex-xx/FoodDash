@@ -47,12 +47,21 @@ class Orders extends BaseController
     public function updateRestaurantOrderStatus($id)
     {
         $session = session();
-        if (!$session->get('isLoggedIn') || $session->get('role') !== 'restaurant') {
+        if (!$session->get('isLoggedIn')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
+        }
+
+        $role = (string) $session->get('role');
+        if (!in_array($role, ['restaurant', 'admin'], true)) {
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
         }
 
         $order = $this->orderModel->find($id);
-        if (!$order || $order['restaurant_id'] != $session->get('restaurant_id')) {
+        if (!$order) {
+            return $this->response->setStatusCode(404)->setJSON(['error' => 'Order not found']);
+        }
+
+        if ($role === 'restaurant' && (int) $order['restaurant_id'] !== (int) $session->get('restaurant_id')) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Order not found']);
         }
 
@@ -63,9 +72,9 @@ class Orders extends BaseController
         
         // Handle status update
         if ($status !== null) {
-            $allowed = ['pending', 'accepted', 'preparing', 'ready', 'assigned', 'on_the_way', 'delivered', 'cancelled'];
+            $allowed = ['accepted', 'preparing', 'ready'];
             if (!in_array($status, $allowed)) {
-                return $this->response->setStatusCode(400)->setJSON(['error' => 'Invalid status']);
+                return $this->response->setStatusCode(400)->setJSON(['error' => 'Restaurant can only set: accepted, preparing, ready']);
             }
             $updateData['status'] = $status;
         }
@@ -77,11 +86,16 @@ class Orders extends BaseController
 
         if (!empty($updateData)) {
             if (array_key_exists('status', $updateData)) {
+                $actorRole = $role === 'admin' ? 'admin' : 'restaurant';
+                $actorId = $role === 'admin'
+                    ? (int) ($session->get('user_id') ?? 0)
+                    : (int) ($session->get('restaurant_id') ?? 0);
+
                 $result = $this->orderFlow->updateStatus(
                     (int) $id,
                     (string) $updateData['status'],
-                    'restaurant',
-                    (int) ($session->get('restaurant_id') ?? 0),
+                    $actorRole,
+                    $actorId,
                     'Updated by restaurant panel'
                 );
 
