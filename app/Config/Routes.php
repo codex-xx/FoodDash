@@ -155,6 +155,12 @@ $routes->post('api/orders/(:num)/cancel', 'Api\OrderController::cancel/$1');
 $routes->post('api/update_status', 'Api\OrderController::updateStatusEndpoint');
 $routes->post('api/assign_driver', 'Api\OrderController::assignDriverEndpoint');
 $routes->get('api/orders/stream', 'Api\RealtimeController::orders');
+
+// Database backup management (Admin Web App)
+$routes->get('api/admin/backups', 'Api\AdminBackupController::index');
+$routes->post('api/admin/backups/run', 'Api\AdminBackupController::runBackup');
+$routes->post('api/admin/backups/restore', 'Api\AdminBackupController::restoreBackup');
+
 // Email Notification (Mobile)
 $routes->post('api/send-notification-email', 'Api\EmailNotificationController::sendNotification');
 $routes->get('api/test-email', 'Api\EmailNotificationController::testEmail');

@@ -5,8 +5,11 @@ namespace App\Controllers\Api;
 use CodeIgniter\RESTful\ResourceController;
 use App\Models\CustomerModel;
 use App\Models\DriverModel;
+use App\Models\AuthTokenModel;
+use App\Models\LoginActivityModel;
 use App\Libraries\JwtService;
 use App\Libraries\EmailService;
+use App\Libraries\SensitiveDataService;
 
 class AuthController extends ResourceController
 {
@@ -49,12 +52,95 @@ class AuthController extends ResourceController
     {
         $jwtService = new JwtService();
 
-        return $jwtService->createAccessToken(
+        $token = $jwtService->createAccessToken(
             $userType,
             (int) $user['id'],
             (string) $user['email'],
             (int) ($user['token_version'] ?? 0)
         );
+
+        $this->persistAuthToken($userType, (int) $user['id'], $token);
+
+        return $token;
+    }
+
+    protected function persistAuthToken(string $userType, int $userId, string $token): void
+    {
+        if (! $this->tableExists('auth_tokens')) {
+            return;
+        }
+
+        $jwtService = new JwtService();
+        $claims = $jwtService->decodeAccessToken($token);
+        if (! is_array($claims)) {
+            return;
+        }
+
+        $issuedAt = isset($claims['iat']) ? date('Y-m-d H:i:s', (int) $claims['iat']) : date('Y-m-d H:i:s');
+        $expiresAt = isset($claims['exp']) ? date('Y-m-d H:i:s', (int) $claims['exp']) : date('Y-m-d H:i:s', strtotime('+1 hour'));
+
+        try {
+            $model = new AuthTokenModel();
+            $model->insert([
+                'user_type' => $userType,
+                'user_id' => $userId,
+                'jti' => (string) ($claims['jti'] ?? bin2hex(random_bytes(16))),
+                'token_hash' => hash('sha256', $token),
+                'issued_at' => $issuedAt,
+                'expires_at' => $expiresAt,
+                'ip_address' => $this->request->getIPAddress(),
+                'user_agent' => substr((string) $this->request->getUserAgent(), 0, 255),
+            ]);
+        } catch (\Throwable $e) {
+            log_message('error', 'Unable to persist auth token: ' . $e->getMessage());
+        }
+    }
+
+    protected function revokeCurrentToken(): void
+    {
+        if (! $this->tableExists('auth_tokens')) {
+            return;
+        }
+
+        $claims = $this->request->tokenClaims ?? null;
+        $jti = is_array($claims) ? ($claims['jti'] ?? null) : null;
+        if (! is_string($jti) || trim($jti) === '') {
+            return;
+        }
+
+        try {
+            $model = new AuthTokenModel();
+            $model->where('jti', $jti)->set([
+                'revoked_at' => date('Y-m-d H:i:s'),
+            ])->update();
+        } catch (\Throwable $e) {
+            log_message('error', 'Unable to revoke auth token: ' . $e->getMessage());
+        }
+    }
+
+    protected function logLoginAttempt(?string $userType, ?int $userId, ?string $email, bool $success, ?string $reason = null): void
+    {
+        if (! $this->tableExists('login_activities')) {
+            return;
+        }
+
+        $sensitive = new SensitiveDataService();
+
+        try {
+            $model = new LoginActivityModel();
+            $model->insert([
+                'user_type' => $userType,
+                'user_id' => $userId,
+                'email_hash' => $sensitive->hashForLookup($email),
+                'ip_address' => $this->request->getIPAddress(),
+                'user_agent' => substr((string) $this->request->getUserAgent(), 0, 255),
+                'success' => $success ? 1 : 0,
+                'failure_reason' => $success ? null : ($reason ?? 'login_failed'),
+                'login_at' => date('Y-m-d H:i:s'),
+            ]);
+        } catch (\Throwable $e) {
+            log_message('error', 'Unable to write login activity: ' . $e->getMessage());
+        }
     }
 
     protected function sendLoginOtp(string $email, string $name, string $otpCode): bool
@@ -107,6 +193,23 @@ class AuthController extends ResourceController
 
         $this->schemaSupportCache[$key] = $hasColumn;
         return $hasColumn;
+    }
+
+    protected function tableExists(string $table): bool
+    {
+        $key = 'table:' . $table;
+        if (array_key_exists($key, $this->schemaSupportCache)) {
+            return (bool) $this->schemaSupportCache[$key];
+        }
+
+        try {
+            $exists = db_connect()->tableExists($table);
+        } catch (\Throwable $e) {
+            $exists = false;
+        }
+
+        $this->schemaSupportCache[$key] = $exists;
+        return $exists;
     }
 
     protected function supportsMfaColumns(string $table): bool
@@ -413,6 +516,7 @@ class AuthController extends ResourceController
             $customer = $customerModel->where('email', $email)->first();
 
             if (!$customer) {
+                $this->logLoginAttempt('customer', null, (string) $email, false, 'user_not_found');
                 return $this->respond([
                     'success' => false,
                     'message' => 'Invalid email or password'
@@ -420,6 +524,7 @@ class AuthController extends ResourceController
             }
 
             if (!(int) $customer['is_active']) {
+                $this->logLoginAttempt('customer', (int) $customer['id'], (string) $email, false, 'account_disabled');
                 return $this->respond([
                     'success' => false,
                     'message' => 'Account is disabled'
@@ -427,6 +532,7 @@ class AuthController extends ResourceController
             }
 
             if (!password_verify($password, $customer['password'])) {
+                $this->logLoginAttempt('customer', (int) $customer['id'], (string) $email, false, 'invalid_password');
                 return $this->respond([
                     'success' => false,
                     'message' => 'Invalid email or password'
@@ -450,6 +556,7 @@ class AuthController extends ResourceController
 
             $customer = $customerModel->find((int) $customer['id']) ?? $customer;
             $token = $this->issueAccessToken('customer', $customer);
+            $this->logLoginAttempt('customer', (int) $customer['id'], (string) $email, true, null);
             unset($customer['password']);
 
             return $this->respond([
@@ -579,6 +686,7 @@ class AuthController extends ResourceController
             $driver = $driverModel->where('email', $email)->first();
 
             if (!$driver) {
+                $this->logLoginAttempt('driver', null, (string) $email, false, 'user_not_found');
                 return $this->respond([
                     'success' => false,
                     'message' => 'Invalid email or password'
@@ -586,6 +694,7 @@ class AuthController extends ResourceController
             }
 
             if (!(int) $driver['is_active']) {
+                $this->logLoginAttempt('driver', (int) $driver['id'], (string) $email, false, 'account_disabled');
                 return $this->respond([
                     'success' => false,
                     'message' => 'Account is not approved yet or disabled'
@@ -593,6 +702,7 @@ class AuthController extends ResourceController
             }
 
             if (!password_verify($password, $driver['password'])) {
+                $this->logLoginAttempt('driver', (int) $driver['id'], (string) $email, false, 'invalid_password');
                 return $this->respond([
                     'success' => false,
                     'message' => 'Invalid email or password'
@@ -616,6 +726,7 @@ class AuthController extends ResourceController
 
             $driver = $driverModel->find((int) $driver['id']) ?? $driver;
             $token = $this->issueAccessToken('driver', $driver);
+            $this->logLoginAttempt('driver', (int) $driver['id'], (string) $email, true, null);
             unset($driver['password']);
             $driver = $this->stripDriverLocationFields($driver);
 
@@ -654,6 +765,7 @@ class AuthController extends ResourceController
                 $updateData['token_version'] = (int) ($customer['token_version'] ?? 0) + 1;
             }
             $customerModel->update((int) $customer['id'], $updateData);
+            $this->revokeCurrentToken();
 
             return $this->respond([
                 'success' => true,
@@ -669,6 +781,7 @@ class AuthController extends ResourceController
                 $updateData['token_version'] = (int) ($driver['token_version'] ?? 0) + 1;
             }
             $driverModel->update((int) $driver['id'], $updateData);
+            $this->revokeCurrentToken();
 
             return $this->respond([
                 'success' => true,

@@ -127,6 +127,8 @@ class Filters extends BaseFilters
         'apiadmin' => ['before' => [
             'api/update_status',
             'api/assign_driver',
+            'api/admin/backups',
+            'api/admin/backups/*',
         ]],
     ];
 }
