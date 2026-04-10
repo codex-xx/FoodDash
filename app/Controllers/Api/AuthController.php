@@ -15,6 +15,7 @@ class AuthController extends ResourceController
 {
     protected $format = 'json';
     protected array $schemaSupportCache = [];
+    protected int $registerOtpTtlSeconds = 600;
 
     /**
      * Read the first non-empty value from a list of possible input keys.
@@ -152,6 +153,71 @@ class AuthController extends ResourceController
             log_message('error', 'Failed to send login OTP email: ' . $e->getMessage());
             return false;
         }
+    }
+
+    protected function sendRegisterOtp(string $email, string $name, string $otpCode): bool
+    {
+        try {
+            $service = new EmailService();
+            return $service->sendRegisterOtp($email, $name !== '' ? $name : 'User', $otpCode);
+        } catch (\Throwable $e) {
+            log_message('error', 'Failed to send register OTP email: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    protected function registrationOtpCacheKey(string $userType, string $email): string
+    {
+        $normalizedEmail = preg_replace('/[^a-z0-9_\-.]/i', '_', strtolower(trim($email))) ?? '';
+
+        return 'register_otp_' . $userType . '_' . $normalizedEmail;
+    }
+
+    protected function getOtpInputValue(): string
+    {
+        return trim((string) ($this->getInput('otp') ?? $this->getInput('code') ?? $this->getInput('verification_code') ?? ''));
+    }
+
+    protected function saveRegistrationOtp(string $userType, string $email, string $otp): bool
+    {
+        $cache = service('cache');
+
+        return (bool) $cache->save(
+            $this->registrationOtpCacheKey($userType, $email),
+            [
+                'otp' => $otp,
+                'expires_at' => time() + $this->registerOtpTtlSeconds,
+            ],
+            $this->registerOtpTtlSeconds
+        );
+    }
+
+    protected function validateRegistrationOtp(string $userType, string $email, string $otp): bool
+    {
+        if (!preg_match('/^\d{6}$/', $otp)) {
+            return false;
+        }
+
+        $cache = service('cache');
+        $cached = $cache->get($this->registrationOtpCacheKey($userType, $email));
+
+        if (!is_array($cached)) {
+            return false;
+        }
+
+        $cachedOtp = (string) ($cached['otp'] ?? '');
+        $expiresAt = (int) ($cached['expires_at'] ?? 0);
+
+        if ($cachedOtp === '' || $expiresAt < time()) {
+            return false;
+        }
+
+        return hash_equals($cachedOtp, $otp);
+    }
+
+    protected function clearRegistrationOtp(string $userType, string $email): void
+    {
+        service('cache')->delete($this->registrationOtpCacheKey($userType, $email));
     }
 
     protected function beginMfaChallenge(string $userType, array $user, $model)
@@ -398,6 +464,130 @@ class AuthController extends ResourceController
     }
 
     /**
+     * Send registration OTP (MFA pre-check)
+     * POST /api/send-register-otp
+     */
+    public function sendRegisterOtpCode()
+    {
+        try {
+            $userType = $this->resolveRegisterUserType();
+
+            if ($userType === null) {
+                return $this->respond([
+                    'success' => false,
+                    'message' => 'Invalid user_type. Use customer or driver.'
+                ], 400);
+            }
+
+            $email = trim((string) $this->getInput('email'));
+            $name = trim((string) $this->getInput('name'));
+
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return $this->respond([
+                    'success' => false,
+                    'message' => 'A valid email is required.'
+                ], 400);
+            }
+
+            if ($name === '' || mb_strlen($name) < 2) {
+                return $this->respond([
+                    'success' => false,
+                    'message' => 'Name must be at least 2 characters.'
+                ], 400);
+            }
+
+            if ($userType === 'driver') {
+                $exists = (new DriverModel())->where('email', $email)->first() !== null;
+            } else {
+                $exists = (new CustomerModel())->where('email', $email)->first() !== null;
+            }
+
+            if ($exists) {
+                return $this->respond([
+                    'success' => false,
+                    'message' => 'Email is already registered.'
+                ], 409);
+            }
+
+            $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            $stored = $this->saveRegistrationOtp($userType, $email, $otp);
+
+            if (!$stored) {
+                return $this->respond([
+                    'success' => false,
+                    'message' => 'Unable to prepare verification code. Please try again.'
+                ], 500);
+            }
+
+            if (!$this->sendRegisterOtp($email, $name, $otp)) {
+                $this->clearRegistrationOtp($userType, $email);
+
+                return $this->respond([
+                    'success' => false,
+                    'message' => 'Failed to send verification code. Please try again later.'
+                ], 500);
+            }
+
+            return $this->respond([
+                'success' => true,
+                'message' => 'Verification code sent to your email.',
+                'data' => [
+                    'user_type' => $userType,
+                    'email' => $email,
+                    'otp_expires_in' => $this->registerOtpTtlSeconds,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            log_message('error', 'Send register OTP error: ' . $e->getMessage());
+            return $this->respond([
+                'success' => false,
+                'message' => 'An error occurred. Please try again later.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Verify registration OTP only
+     * POST /api/verify-register-otp
+     */
+    public function verifyRegisterOtp()
+    {
+        try {
+            $userType = $this->normalizeUserType($this->getInput('user_type') ?? $this->getInput('role') ?? 'customer');
+            $email = trim((string) $this->getInput('email'));
+            $otp = $this->getOtpInputValue();
+
+            if (!in_array($userType, ['customer', 'driver'], true)) {
+                return $this->respond(['success' => false, 'message' => 'Valid user_type is required'], 400);
+            }
+
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return $this->respond(['success' => false, 'message' => 'Valid email is required'], 400);
+            }
+
+            if (!$this->validateRegistrationOtp($userType, $email, $otp)) {
+                return $this->respond(['success' => false, 'message' => 'Invalid or expired registration verification code'], 400);
+            }
+
+            return $this->respond([
+                'success' => true,
+                'message' => 'Registration code verified successfully',
+                'data' => [
+                    'email' => $email,
+                    'user_type' => $userType,
+                    'verified' => true,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            log_message('error', 'Verify register OTP error: ' . $e->getMessage());
+            return $this->respond([
+                'success' => false,
+                'message' => 'An error occurred. Please try again later.'
+            ], 500);
+        }
+    }
+
+    /**
      * Role-aware Login (customer or driver)
      * POST /api/login
      */
@@ -442,11 +632,21 @@ class AuthController extends ResourceController
                 ], 400);
             }
 
+            $email = trim((string) $this->getInput('email'));
+            $otp = $this->getOtpInputValue();
+
+            if (!$this->validateRegistrationOtp('customer', $email, $otp)) {
+                return $this->respond([
+                    'success' => false,
+                    'message' => 'Invalid or expired registration OTP. Please request a new code first.'
+                ], 400);
+            }
+
             $customerModel = new CustomerModel();
 
             $data = [
                 'name'      => $this->getInput('name'),
-                'email'     => $this->getInput('email'),
+                'email'     => $email,
                 'password'  => $this->getInput('password'),
                 'phone'     => $this->resolvePhoneInput(),
                 'address'   => $this->resolveAddressInput(),
@@ -465,6 +665,8 @@ class AuthController extends ResourceController
                     'message' => 'Registration failed'
                 ], 500);
             }
+
+            $this->clearRegistrationOtp('customer', $email);
 
             $customer = $customerModel->find($customerId);
             $token = $this->issueAccessToken('customer', $customer);
@@ -602,11 +804,21 @@ class AuthController extends ResourceController
                 ], 400);
             }
 
+            $email = trim((string) $this->getInput('email'));
+            $otp = $this->getOtpInputValue();
+
+            if (!$this->validateRegistrationOtp('driver', $email, $otp)) {
+                return $this->respond([
+                    'success' => false,
+                    'message' => 'Invalid or expired registration OTP. Please request a new code first.'
+                ], 400);
+            }
+
             $driverModel = new DriverModel();
 
             $data = [
                 'name'           => $this->getInput('name'),
-                'email'          => $this->getInput('email'),
+                'email'          => $email,
                 'password'       => (string) $this->getInput('password'),
                 'phone'          => $this->resolvePhoneInput(),
                 'vehicle_type'   => $this->getInput('vehicle_type') ?? '',
@@ -627,6 +839,8 @@ class AuthController extends ResourceController
                     'message' => 'Registration failed'
                 ], 500);
             }
+
+            $this->clearRegistrationOtp('driver', $email);
 
             $driver = $driverModel->find($driverId);
             unset($driver['password']);

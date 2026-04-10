@@ -113,6 +113,8 @@ $routes->post('api/customer/register', 'Api\AuthController::customerRegister');
 $routes->post('api/customer/login', 'Api\AuthController::customerLogin');
 $routes->post('api/driver/register', 'Api\AuthController::driverRegister');
 $routes->post('api/driver/login', 'Api\AuthController::driverLogin');
+$routes->post('api/send-register-otp', 'Api\AuthController::sendRegisterOtpCode');
+$routes->post('api/verify-register-otp', 'Api\AuthController::verifyRegisterOtp');
 $routes->post('api/verify-login-otp', 'Api\AuthController::verifyLoginOtp');
 $routes->post('api/logout', 'Api\AuthController::logout');
 $routes->post('api/logout.php', 'Api\AuthController::logout');
