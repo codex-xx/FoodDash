@@ -6,7 +6,7 @@ use App\Models\OrderModel;
 use App\Models\DriverModel;
 use App\Models\RestaurantModel;
 use App\Models\UserModel;
-use App\Models\MenuItemModel;
+use App\Models\MenuModel;
 
 class Dashboard extends BaseController
 {
@@ -194,7 +194,7 @@ class Dashboard extends BaseController
 
         $restaurantId = $session->get('restaurant_id');
         $orderModel = new OrderModel();
-        $menuItemModel = new MenuItemModel();
+        $menuItemModel = new MenuModel();
 
         $todayStart = date('Y-m-d') . ' 00:00:00';
         $todayEnd   = date('Y-m-d') . ' 23:59:59';

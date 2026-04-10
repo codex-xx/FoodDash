@@ -21,6 +21,7 @@ class RestaurantModel extends Model
         'opening_hours',
         'status',
         'is_active',
+        'is_open',
     ];
 
     protected $returnType = 'array';

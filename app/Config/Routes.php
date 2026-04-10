@@ -42,6 +42,7 @@ $routes->post('menu/store', 'MenuItems::store');
 $routes->get('menu/(:num)/edit', 'MenuItems::edit/$1');
 $routes->post('menu/(:num)/update', 'MenuItems::update/$1');
 $routes->post('menu/(:num)/delete', 'MenuItems::delete/$1');
+$routes->post('menu/(:num)/restore', 'MenuItems::restore/$1');
 $routes->post('menu/(:num)/toggle', 'MenuItems::toggleAvailability/$1');
 
 // Orders

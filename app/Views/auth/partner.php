@@ -6,7 +6,7 @@ $activePartnerTab = old('partner_type') === 'restaurant'
     : 'driver';
 
 $pageWallpaperRel = null;
-foreach (['logos/Merchant.png', 'uploads/logos/Merchant.png'] as $candidateRel) {
+foreach (['upload/logo/Merchant.png', 'logos/Merchant.png', 'uploads/logos/Merchant.png'] as $candidateRel) {
     if (is_file(FCPATH . $candidateRel)) {
         $pageWallpaperRel = $candidateRel;
         break;
@@ -20,7 +20,7 @@ $hasPageWallpaper = $pageWallpaperRel !== null;
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>FoodDash - Be Our Partner</title>
+    <title>FoodDash - Rider Registration</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root {
@@ -267,9 +267,9 @@ $hasPageWallpaper = $pageWallpaperRel !== null;
     <div class="partner-shell">
         <section class="partner-visual" aria-label="Partner hero section">
             <div class="partner-visual-content">
-                <p class="partner-visual-kicker">FoodDash Merchant Network</p>
-                <h1>More diners to satisfy. More business for you.</h1>
-                <p>Grow your business by getting your food out the door and onto the tables of hungry customers.</p>
+                <p class="partner-visual-kicker">FoodDash Rider Team</p>
+                <h1>Ride with FoodDash. Earn on your own schedule.</h1>
+                <p>Deliver orders across your area, choose your working hours, and start earning with every completed delivery.</p>
             </div>
         </section>
 
@@ -278,7 +278,7 @@ $hasPageWallpaper = $pageWallpaperRel !== null;
                 <a href="<?php echo site_url('login'); ?>" class="btn btn-outline-secondary btn-sm">
                     ← Back to Login
                 </a>
-                <h2>Merchant Partner Sign-up</h2>
+                <h2>Rider Registration</h2>
             </div>
 
             <div class="partner-form-surface">

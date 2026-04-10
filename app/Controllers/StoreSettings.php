@@ -65,6 +65,7 @@ class StoreSettings extends BaseController
             'name' => $this->request->getPost('name'),
             'address' => $this->request->getPost('address'),
             'opening_hours' => $this->request->getPost('opening_hours') ?: null,
+            'is_open' => $this->request->getPost('is_open') ? 1 : 0,
         ];
 
         // Handle logo upload

@@ -1,5 +1,5 @@
 <?php
-$loginWallpaperRel = 'uploads/logos/Wallpaper.png';
+$loginWallpaperRel = 'uploads/logos/WALLAPAPER_2.png';
 $loginWallpaperAbs = FCPATH . $loginWallpaperRel;
 $hasLoginWallpaper = is_file($loginWallpaperAbs);
 ?>
@@ -11,111 +11,219 @@ $hasLoginWallpaper = is_file($loginWallpaperAbs);
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FoodDash - Login</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --fd-mustard: #F2C200;
-            --fd-sand: #F3D39A;
-            --fd-espresso: #241C0C;
-            --fd-slate: #6B7C87;
-            --fd-stone: #CFC6BA;
-            --fd-charcoal: #3A3F45;
-
-            --fd-primary: var(--fd-mustard);
-            --fd-border: rgba(58, 63, 69, 0.18);
+            --fd-ink: #16202A;
+            --fd-ink-soft: #3A4A59;
+            --fd-ocean: #0F7A8A;
+            --fd-ocean-deep: #075B67;
+            --fd-amber: #E3A323;
+            --fd-paper: #F5F8FA;
             --fd-white: #FFFFFF;
-            --fd-bg: #F6F3EE;
+            --fd-border: rgba(22, 32, 42, 0.16);
+            --fd-shadow: 0 28px 70px rgba(14, 24, 33, 0.28);
         }
 
         body.login-page {
             min-height: 100vh;
             margin: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            font-family: 'Manrope', sans-serif;
+            color: var(--fd-ink);
+            position: relative;
+            overflow-x: hidden;
+            background: linear-gradient(180deg, #DFE8EE 0%, #E9EFF2 100%);
+        }
+
+        .login-page::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -2;
 <?php if ($hasLoginWallpaper): ?>
-            background-image: linear-gradient(135deg, rgba(36, 28, 12, 0.65), rgba(36, 28, 12, 0.42)), url('<?= base_url($loginWallpaperRel) ?>');
+            background-image: linear-gradient(125deg, rgba(10, 20, 30, 0.36), rgba(8, 38, 55, 0.3), rgba(10, 26, 38, 0.34)), url('<?= base_url($loginWallpaperRel) ?>');
             background-position: center;
             background-size: cover;
             background-repeat: no-repeat;
 <?php else: ?>
-            background: radial-gradient(circle at 20% 10%, rgba(242, 194, 0, 0.18), rgba(255, 255, 255, 0) 45%),
-                        linear-gradient(180deg, #FFFFFF 0%, var(--fd-bg) 60%, rgba(207, 198, 186, 0.55) 100%);
+            background: radial-gradient(circle at 12% 8%, rgba(15, 122, 138, 0.28), rgba(0, 0, 0, 0) 42%),
+                        radial-gradient(circle at 86% 92%, rgba(227, 163, 35, 0.24), rgba(0, 0, 0, 0) 36%),
+                        linear-gradient(150deg, #122838 0%, #1D3347 52%, #172A3A 100%);
 <?php endif; ?>
-            color: var(--fd-espresso);
+        }
+
+        .login-page::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background: radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0) 44%),
+                        radial-gradient(circle at 84% 90%, rgba(15, 122, 138, 0.08), rgba(0, 0, 0, 0) 35%);
+        }
+
+        .login-stage {
+            min-height: 100vh;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        .login-shell {
+            width: min(430px, 92vw);
+            border-radius: 1.4rem;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            box-shadow: 0 16px 40px rgba(14, 24, 33, 0.18);
+            backdrop-filter: blur(2px);
+            background: rgba(245, 248, 250, 0.04);
+        }
+
+        .form-panel {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.46), rgba(247, 250, 252, 0.4));
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .panel-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.7rem;
+            margin-bottom: 1rem;
+        }
+
+        .panel-links {
+            display: flex;
+            gap: 0.55rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-utility {
+            border: 1px solid rgba(22, 32, 42, 0.24);
+            color: var(--fd-ink);
+            background: rgba(255, 255, 255, 0.92);
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 0.65rem;
+            padding: 0.38rem 0.65rem;
+            text-decoration: none;
+        }
+
+        .btn-utility:hover {
+            background: #FFFFFF;
+            color: var(--fd-ink);
+            border-color: rgba(22, 32, 42, 0.34);
         }
 
         .login-card {
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(243, 211, 154, 0.14));
-            border: 1px solid var(--fd-border);
-            color: var(--fd-espresso);
+            background: rgba(255, 255, 255, 0.52);
+            border: 1px solid rgba(22, 32, 42, 0.14);
             border-radius: 1rem;
+            box-shadow: 0 8px 18px rgba(19, 35, 48, 0.1);
+            backdrop-filter: blur(2px);
+            padding: 1rem;
         }
 
         .login-card .form-label {
-            color: rgba(36, 28, 12, 0.78);
+            color: var(--fd-ink-soft);
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 0.35rem;
+        }
+
+        .login-title {
+            margin: 0;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.2rem;
+            color: var(--fd-ink);
+        }
+
+        .login-subtitle {
+            margin: 0.35rem 0 0;
+            color: rgba(58, 74, 89, 0.84);
+            font-size: 0.85rem;
         }
 
         .login-card .form-control {
-            background-color: rgba(255, 255, 255, 0.95);
-            border-color: rgba(58, 63, 69, 0.25);
-            color: var(--fd-espresso);
+            background-color: rgba(255, 255, 255, 0.82);
+            border-color: rgba(58, 74, 89, 0.3);
+            color: var(--fd-ink);
+            border-radius: 0.75rem;
+            padding: 0.68rem 0.8rem;
         }
 
         .login-card .form-control:focus {
-            border-color: rgba(242, 194, 0, 0.7);
-            box-shadow: 0 0 0 0.15rem rgba(242, 194, 0, 0.28);
+            border-color: rgba(15, 122, 138, 0.8);
+            box-shadow: 0 0 0 0.2rem rgba(15, 122, 138, 0.18);
         }
 
-        .login-card .btn-primary {
-            background-color: var(--fd-primary);
-            border-color: var(--fd-primary);
-            color: var(--fd-espresso);
-        }
-
-        .login-card .btn-primary:hover,
-        .login-card .btn-primary:focus {
-            background-color: #FFD54A;
-            border-color: #FFD54A;
-            color: var(--fd-espresso);
-        }
-
-        .login-logo {
+        .btn-login {
+            border: none;
+            background: linear-gradient(120deg, var(--fd-ocean) 0%, var(--fd-ocean-deep) 100%);
+            color: #FFFFFF;
+            border-radius: 0.75rem;
+            padding: 0.62rem 1.2rem;
             font-weight: 700;
-            letter-spacing: 0.05em;
-            color: var(--fd-espresso);
+            letter-spacing: 0.01em;
         }
 
-        .login-card a {
-            color: var(--fd-slate);
+        .btn-login:hover,
+        .btn-login:focus {
+            background: linear-gradient(120deg, #108B9D 0%, #0A6674 100%);
+            color: #FFFFFF;
         }
 
-        .login-card a:hover {
-            color: var(--fd-espresso);
+        .login-footlink {
+            font-size: 0.9rem;
+            color: var(--fd-ink-soft);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .login-footlink:hover {
+            color: var(--fd-ocean-deep);
+        }
+
+        @media (max-width: 991px) {
+            .form-panel {
+                padding: 1rem;
+            }
+        }
+
+        @media (max-width: 575px) {
+            .login-stage {
+                padding: 0.65rem;
+            }
+
+            .login-card {
+                padding: 1rem;
+            }
         }
     </style>
 </head>
 
 <body class="login-page">
-<div class="container">
-    <!-- Help Centre and Be Our Partner Links -->
-    <div class="row justify-content-center mb-4">
-        <div class="col-md-5 d-flex justify-content-between">
-            <a href="<?php echo site_url('help'); ?>" class="btn btn-outline-secondary btn-sm">
-                ❓ Help Centre
-            </a>
-            <a href="<?php echo site_url('partner'); ?>" class="btn btn-outline-primary btn-sm">
-                🤝 Be Our Partner
-            </a>
-        </div>
-    </div>
-    <div class="row justify-content-center">
-        <div class="col-md-5">
-            <div class="card shadow-sm login-card">
-                <div class="card-body">
-                    <div class="text-center mb-3">
-                        <div class="login-logo">🏍️ FoodDash</div>
-                        <small class="text-muted">Sign in to your dashboard</small>
+    <main class="login-stage">
+        <section class="login-shell" aria-label="FoodDash login">
+            <section class="form-panel">
+                <div class="panel-topbar">
+                    <div class="panel-links">
+                        <a href="<?php echo site_url('help'); ?>" class="btn-utility">Help Centre</a>
+                        <a href="<?php echo site_url('partner'); ?>" class="btn-utility">Be Our Partner</a>
                     </div>
+                </div>
+
+                <div class="login-card">
+                    <header class="mb-3">
+                        <h2 class="login-title">Sign in</h2>
+                        <p class="login-subtitle">FoodDash</p>
+                    </header>
 
                     <?php if (session()->getFlashdata('error')): ?>
                         <div class="alert alert-danger">
@@ -144,17 +252,14 @@ $hasLoginWallpaper = is_file($loginWallpaperAbs);
                             <input type="password" class="form-control" id="password" name="password" required>
                         </div>
 
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <a href="<?php echo site_url('forgot'); ?>" class="text-decoration-none">Forgot Password?</a>
-                            <button class="btn btn-primary px-4">Login</button>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <a href="<?php echo site_url('forgot'); ?>" class="login-footlink">Forgot password?</a>
+                            <button class="btn btn-login" type="submit">Login</button>
                         </div>
                     </form>
-
                 </div>
-            </div>
-
-        </div>
-    </div>
-</div>
+            </section>
+        </section>
+    </main>
 </body>
 </html>

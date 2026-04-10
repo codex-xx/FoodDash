@@ -22,6 +22,25 @@
       <div class="card-body">
         <h5 class="card-title mb-4"><i class="bi bi-shop"></i> Store Information</h5>
         <form id="settingsForm" enctype="multipart/form-data">
+          <div class="card border-0 bg-light mb-3">
+            <div class="card-body py-3">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <label class="form-label fw-semibold mb-1" for="is_open_toggle">Store Open for Orders</label>
+                  <div class="text-muted small">Quickly pause or resume incoming orders.</div>
+                </div>
+                <div class="form-check form-switch m-0">
+                  <input class="form-check-input" type="checkbox" role="switch" id="is_open_toggle" <?= !array_key_exists('is_open', $restaurant) || (int) $restaurant['is_open'] === 1 ? 'checked' : '' ?>>
+                  <label class="form-check-label" id="is_open_label" for="is_open_toggle">
+                    <?= !array_key_exists('is_open', $restaurant) || (int) $restaurant['is_open'] === 1 ? 'Open' : 'Closed' ?>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <input type="hidden" id="is_open" name="is_open" value="<?= !array_key_exists('is_open', $restaurant) || (int) $restaurant['is_open'] === 1 ? '1' : '0' ?>">
+
           <div class="mb-3">
             <label for="restaurant_name" class="form-label">Restaurant Name <span class="text-danger">*</span></label>
             <input type="text" class="form-control" id="restaurant_name" name="name" value="<?= esc($restaurant['name']) ?>" required>
@@ -141,6 +160,18 @@
             <?= $restaurant['is_active'] ? 'Accepting orders' : 'Not accepting orders' ?>
           </small>
         </div>
+
+        <div class="mb-3">
+          <label class="text-muted mb-1">Store Availability</label>
+          <div>
+            <span class="badge bg-<?= !array_key_exists('is_open', $restaurant) || (int) $restaurant['is_open'] === 1 ? 'success' : 'secondary' ?>" id="storeAvailabilityBadge">
+              <?= !array_key_exists('is_open', $restaurant) || (int) $restaurant['is_open'] === 1 ? 'Open' : 'Closed' ?>
+            </span>
+          </div>
+          <small class="text-muted d-block mt-1" id="storeAvailabilityText">
+            <?= !array_key_exists('is_open', $restaurant) || (int) $restaurant['is_open'] === 1 ? 'Visible as open to customers' : 'Temporarily not accepting new orders' ?>
+          </small>
+        </div>
       </div>
     </div>
 
@@ -183,8 +214,29 @@
   const originalData = {
     name: document.getElementById('restaurant_name').value,
     address: document.getElementById('restaurant_address').value,
-    opening_hours: document.getElementById('opening_hours').value
+    opening_hours: document.getElementById('opening_hours').value,
+    is_open: document.getElementById('is_open').value
   };
+
+  function applyStoreOpenState(isOpen) {
+    const hidden = document.getElementById('is_open');
+    const toggle = document.getElementById('is_open_toggle');
+    const label = document.getElementById('is_open_label');
+    const badge = document.getElementById('storeAvailabilityBadge');
+    const helper = document.getElementById('storeAvailabilityText');
+
+    hidden.value = isOpen ? '1' : '0';
+    toggle.checked = isOpen;
+    label.textContent = isOpen ? 'Open' : 'Closed';
+
+    badge.textContent = isOpen ? 'Open' : 'Closed';
+    badge.classList.remove('bg-success', 'bg-secondary');
+    badge.classList.add(isOpen ? 'bg-success' : 'bg-secondary');
+
+    helper.textContent = isOpen
+      ? 'Visible as open to customers'
+      : 'Temporarily not accepting new orders';
+  }
 
   function to24Hour(timeText) {
     const text = (timeText || '').trim().toUpperCase();
@@ -358,6 +410,7 @@
     document.getElementById('restaurant_address').value = originalData.address;
     applyScheduleToUI(parseOpeningHours(originalData.opening_hours));
     refreshOpeningHoursField();
+    applyStoreOpenState(originalData.is_open === '1');
     document.getElementById('restaurant_logo').value = '';
     document.getElementById('logoPreview').style.display = 'none';
     clearMessages();
@@ -422,6 +475,7 @@
         originalData.name = formData.get('name');
         originalData.address = formData.get('address');
         originalData.opening_hours = formData.get('opening_hours');
+        originalData.is_open = formData.get('is_open');
         
         // Update logo preview if new logo was uploaded
         if (data.logo) {
@@ -457,5 +511,11 @@
       submitBtn.innerHTML = originalBtnText;
     });
   });
+
+  document.getElementById('is_open_toggle').addEventListener('change', function() {
+    applyStoreOpenState(this.checked);
+  });
+
+  applyStoreOpenState(document.getElementById('is_open').value === '1');
 </script>
 <?= $this->endSection() ?>

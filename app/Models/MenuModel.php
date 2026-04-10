@@ -8,10 +8,12 @@ class MenuModel extends Model
 {
     protected $table = 'menus';
     protected $primaryKey = 'id';
+    protected $useSoftDeletes = true;
 
     protected $useTimestamps = true;
     protected $createdField  = 'created_at';
     protected $updatedField  = 'updated_at';
+    protected $deletedField  = 'deleted_at';
 
     protected $allowedFields = [
         'restaurant_id',
@@ -21,6 +23,7 @@ class MenuModel extends Model
         'image_url',
         'category',
         'availability',
+        'deleted_at',
     ];
 
     protected $returnType = 'array';

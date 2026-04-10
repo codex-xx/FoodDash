@@ -14,6 +14,8 @@ foreach (($items ?? []) as $menuItem) {
 }
 
 $unavailableItems = $totalItems - $availableItems;
+$archivedItems = $archivedItems ?? [];
+$archivedCount = count($archivedItems);
 
 $itemsByCategory = [];
 foreach (($items ?? []) as $menuItem) {
@@ -366,6 +368,12 @@ $categoryCount = count($itemsByCategory);
       <p class="menu-stat-value text-primary"><?= $categoryCount ?></p>
     </div>
   </div>
+  <div class="col-12 col-md-6 col-xl-3">
+    <div class="menu-stat-card">
+      <small class="menu-stat-label">Archived</small>
+      <p class="menu-stat-value text-secondary"><?= $archivedCount ?></p>
+    </div>
+  </div>
 </div>
 
 <div class="card shadow-sm menu-grid-card">
@@ -439,7 +447,7 @@ $categoryCount = count($itemsByCategory);
 
                       <div class="menu-row-actions">
                         <a href="<?= site_url('menu/' . $item['id'] . '/edit') ?>" class="btn btn-sm btn-outline-primary w-100">Edit</a>
-                        <button class="btn btn-sm btn-outline-danger w-100" onclick="deleteItem(<?= $item['id'] ?>)">Delete</button>
+                        <button class="btn btn-sm btn-outline-danger w-100" onclick="deleteItem(<?= $item['id'] ?>)">Archive</button>
                       </div>
                     </div>
                   </div>
@@ -458,6 +466,51 @@ $categoryCount = count($itemsByCategory);
   </div>
 </div>
 
+<?php if (!empty($archivedItems)): ?>
+  <div class="card shadow-sm mt-4">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+        <h5 class="card-title m-0">Archived Menu Items</h5>
+        <small class="text-muted">Restore items to make them active again.</small>
+      </div>
+
+      <div class="row g-3">
+        <?php foreach ($archivedItems as $item): ?>
+          <?php
+            $itemCategory = trim((string) ($item['category'] ?? ''));
+            if ($itemCategory === '') {
+                $itemCategory = 'Uncategorized';
+            }
+          ?>
+          <div class="col-12 col-md-6 col-xl-4">
+            <article class="menu-product-card">
+              <div class="menu-image-wrap">
+                <?php if (!empty($item['image'])): ?>
+                  <img src="<?= base_url($item['image']) ?>" alt="<?= esc($item['name']) ?>" class="menu-product-image">
+                <?php else: ?>
+                  <div class="menu-item-placeholder">No Image</div>
+                <?php endif; ?>
+              </div>
+
+              <div class="menu-product-body">
+                <h6 class="menu-item-name fw-semibold"><?= esc($item['name']) ?></h6>
+                <div class="menu-meta-row">
+                  <span class="menu-category-badge"><?= esc($itemCategory) ?></span>
+                  <span class="menu-status-pill unavailable">Archived</span>
+                </div>
+                <div class="menu-price-block">
+                  <div class="current-price">₱<?= number_format($item['price'], 2) ?></div>
+                </div>
+                <button class="btn btn-sm btn-outline-success w-100" onclick="restoreItem(<?= $item['id'] ?>)">Restore</button>
+              </div>
+            </article>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  </div>
+<?php endif; ?>
+
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -475,7 +528,7 @@ $categoryCount = count($itemsByCategory);
   }
 
   function deleteItem(itemId) {
-    if (!confirm('Are you sure you want to delete this item?')) return;
+    if (!confirm('Archive this item? You can restore it later.')) return;
     
     fetch(`<?= site_url('menu') ?>/${itemId}/delete`, {
       method: 'POST',
@@ -483,7 +536,20 @@ $categoryCount = count($itemsByCategory);
     })
     .then(r => r.json())
     .then(json => {
-      alert(json.message || 'Item deleted');
+      alert(json.message || 'Item archived');
+      location.reload();
+    })
+    .catch(err => alert('Error: ' + err));
+  }
+
+  function restoreItem(itemId) {
+    fetch(`<?= site_url('menu') ?>/${itemId}/restore`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    })
+    .then(r => r.json())
+    .then(json => {
+      alert(json.message || 'Item restored');
       location.reload();
     })
     .catch(err => alert('Error: ' + err));
