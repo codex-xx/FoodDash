@@ -220,6 +220,37 @@ class AuthController extends ResourceController
         service('cache')->delete($this->registrationOtpCacheKey($userType, $email));
     }
 
+    protected function resolveRegistrationOtpUserType(string $email, string $otp, ?string $requestedUserType = null): ?string
+    {
+        if ($requestedUserType !== null) {
+            return $this->validateRegistrationOtp($requestedUserType, $email, $otp)
+                ? $requestedUserType
+                : null;
+        }
+
+        $matches = [];
+        foreach (['customer', 'driver'] as $candidateType) {
+            if ($this->validateRegistrationOtp($candidateType, $email, $otp)) {
+                $matches[] = $candidateType;
+            }
+        }
+
+        if (count($matches) === 1) {
+            return $matches[0];
+        }
+
+        if (count($matches) > 1) {
+            $hintedType = $this->resolveRegisterUserType();
+            if ($hintedType !== null && in_array($hintedType, $matches, true)) {
+                return $hintedType;
+            }
+
+            return $matches[0];
+        }
+
+        return null;
+    }
+
     protected function beginMfaChallenge(string $userType, array $user, $model)
     {
         $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
@@ -553,11 +584,12 @@ class AuthController extends ResourceController
     public function verifyRegisterOtp()
     {
         try {
-            $userType = $this->normalizeUserType($this->getInput('user_type') ?? $this->getInput('role') ?? 'customer');
+            $rawUserType = $this->getInput('user_type') ?? $this->getInput('role') ?? $this->getInput('type');
+            $userType = $this->normalizeUserType($rawUserType);
             $email = trim((string) $this->getInput('email'));
             $otp = $this->getOtpInputValue();
 
-            if (!in_array($userType, ['customer', 'driver'], true)) {
+            if ($rawUserType !== null && trim((string) $rawUserType) !== '' && $userType === null) {
                 return $this->respond(['success' => false, 'message' => 'Valid user_type is required'], 400);
             }
 
@@ -565,7 +597,8 @@ class AuthController extends ResourceController
                 return $this->respond(['success' => false, 'message' => 'Valid email is required'], 400);
             }
 
-            if (!$this->validateRegistrationOtp($userType, $email, $otp)) {
+            $resolvedUserType = $this->resolveRegistrationOtpUserType($email, $otp, $userType);
+            if ($resolvedUserType === null) {
                 return $this->respond(['success' => false, 'message' => 'Invalid or expired registration verification code'], 400);
             }
 
@@ -574,7 +607,7 @@ class AuthController extends ResourceController
                 'message' => 'Registration code verified successfully',
                 'data' => [
                     'email' => $email,
-                    'user_type' => $userType,
+                    'user_type' => $resolvedUserType,
                     'verified' => true,
                 ],
             ]);
@@ -1197,6 +1230,10 @@ class AuthController extends ResourceController
         try {
             $email = $this->getInput('email');
             $code = $this->getInput('code') ?? $this->getInput('otp') ?? $this->getInput('verification_code');
+            $rawUserType = $this->getInput('user_type') ?? $this->getInput('role') ?? $this->getInput('type');
+            $requestedUserType = $this->normalizeUserType($rawUserType);
+            $requestPath = strtolower(trim((string) $this->request->getUri()->getPath(), '/'));
+            $isGenericVerifyCodeEndpoint = str_ends_with($requestPath, 'api/verify-code');
 
             log_message('info', 'Verify code request - Email: ' . $email . ', Code: ' . $code);
 
@@ -1222,6 +1259,28 @@ class AuthController extends ResourceController
                 ->first();
 
             if (!$customer) {
+                if ($isGenericVerifyCodeEndpoint) {
+                    if ($rawUserType !== null && trim((string) $rawUserType) !== '' && $requestedUserType === null) {
+                        return $this->respond([
+                            'success' => false,
+                            'message' => 'Valid user_type is required'
+                        ], 400);
+                    }
+
+                    $resolvedUserType = $this->resolveRegistrationOtpUserType((string) $email, (string) $code, $requestedUserType);
+                    if ($resolvedUserType !== null) {
+                        return $this->respond([
+                            'success' => true,
+                            'message' => 'Registration code verified successfully.',
+                            'data' => [
+                                'email' => (string) $email,
+                                'user_type' => $resolvedUserType,
+                                'verified' => true,
+                            ]
+                        ]);
+                    }
+                }
+
                 log_message('info', 'Verify code failed - Invalid code for email: ' . $email);
                 return $this->respond([
                     'success' => false,

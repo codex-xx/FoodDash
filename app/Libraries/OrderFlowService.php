@@ -131,12 +131,14 @@ class OrderFlowService
             $updateData['delivery_type_id'] = $this->resolveDeliveryTypeId($sizeCategory);
         }
 
-        if ($normalizedTarget === self::STATUS_READY && empty($order['driver_id']) && $normalizedRole !== 'restaurant') {
+        $shouldAutoAssign = empty($order['driver_id'])
+            && $normalizedRole === 'restaurant'
+            && in_array($normalizedTarget, [self::STATUS_ACCEPTED, self::STATUS_READY], true);
+
+        if ($shouldAutoAssign) {
             $assigned = $this->autoAssignDriver($order, $sizeCategory);
             if ($assigned !== null) {
                 $updateData['driver_id'] = $assigned;
-                $updateData['status'] = self::STATUS_ASSIGNED;
-                $normalizedTarget = self::STATUS_ASSIGNED;
                 $notes = trim(($notes ? $notes . ' | ' : '') . 'Auto-assigned driver #' . $assigned);
             }
         }

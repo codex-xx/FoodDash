@@ -381,11 +381,24 @@ class OrderController extends ResourceController
             ], 403);
         }
 
-        $orders = $this->orderModel
+        $incomingAssignedOrders = $this->orderModel
+            ->where('driver_id', (int) $actor['id'])
+            ->whereIn('status', ['accepted', 'preparing', 'ready'])
+            ->orderBy('created_at', 'ASC')
+            ->findAll();
+
+        $openPoolOrders = $this->orderModel
             ->where('driver_id', null)
             ->where('status', 'ready')
             ->orderBy('created_at', 'ASC')
             ->findAll();
+
+        $ordersById = [];
+        foreach (array_merge($incomingAssignedOrders, $openPoolOrders) as $order) {
+            $ordersById[(int) $order['id']] = $order;
+        }
+
+        $orders = array_values($ordersById);
 
         foreach ($orders as &$order) {
             $order = $this->enrichOrderForDriver($order);
@@ -421,14 +434,35 @@ class OrderController extends ResourceController
             ], 404);
         }
 
-        if ($order['driver_id']) {
+        if (!empty($order['driver_id']) && (int) $order['driver_id'] !== (int) $driver['id']) {
             return $this->respond([
                 'success' => false,
                 'message' => 'Order already assigned to another driver'
             ], 400);
         }
 
-        $result = $this->orderFlow->manualAssignDriver((int) $id, (int) $driver['id'], 'driver', (int) $driver['id']);
+        if (in_array((string) $order['status'], ['on_the_way', 'delivered', 'cancelled'], true)) {
+            return $this->respond([
+                'success' => false,
+                'message' => 'Order cannot be accepted in current status'
+            ], 400);
+        }
+
+        if ((int) ($order['driver_id'] ?? 0) === 0) {
+            $this->orderModel->update((int) $id, ['driver_id' => (int) $driver['id']]);
+        }
+
+        if ((string) $order['status'] === 'assigned') {
+            $current = $this->orderModel->find($id);
+
+            return $this->respond([
+                'success' => true,
+                'message' => 'Order already accepted',
+                'data'    => $this->enrichOrderForDriver($current)
+            ]);
+        }
+
+        $result = $this->orderFlow->updateStatus((int) $id, 'assigned', 'driver', (int) $driver['id'], 'Driver accepted incoming request');
 
         if (!($result['ok'] ?? false)) {
             return $this->respond([

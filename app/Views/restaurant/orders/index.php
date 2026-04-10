@@ -39,6 +39,7 @@
             <tr>
               <th>Order #</th>
               <th>Customer</th>
+              <th>Rider</th>
               <th>Status</th>
               <th>Est. Prep Time</th>
               <th>Amount</th>
@@ -50,7 +51,22 @@
             <?php foreach ($orders as $order): ?>
               <tr>
                 <td><strong><?= $order['order_number'] ?></strong></td>
-                <td><?= $order['customer_name'] ?></td>
+                <td>
+                  <div class="fw-semibold"><?= esc($order['display_customer_name'] ?? $order['customer_name']) ?></div>
+                  <?php if (!empty($order['display_customer_phone'])): ?>
+                    <small class="text-muted d-block"><?= esc($order['display_customer_phone']) ?></small>
+                  <?php endif; ?>
+                </td>
+                <td>
+                  <?php if (!empty($order['driver_name'])): ?>
+                    <div class="fw-semibold"><?= esc($order['driver_name']) ?></div>
+                    <?php if (!empty($order['driver_phone'])): ?>
+                      <small class="text-muted"><?= esc($order['driver_phone']) ?></small>
+                    <?php endif; ?>
+                  <?php else: ?>
+                    <small class="text-muted">Waiting for rider acceptance</small>
+                  <?php endif; ?>
+                </td>
                 <td>
                   <?php
                     $statusClass = match ($order['status']) {
@@ -88,6 +104,10 @@
                 <td>₱<?= number_format($order['total_amount'], 2) ?></td>
                 <td><?= date('M d, Y H:i', strtotime($order['created_at'])) ?></td>
                 <td>
+                  <button class="btn btn-sm btn-outline-secondary mb-1" type="button" onclick="showOrderDetails(<?= (int) $order['id'] ?>)">
+                    <i class="bi bi-receipt"></i> View Details
+                  </button>
+                  <br>
                   <button class="btn btn-sm btn-outline-primary" 
                           data-bs-toggle="modal" 
                           data-bs-target="#statusModal"
@@ -107,6 +127,56 @@
         <small>New incoming orders will appear here</small>
       </div>
     <?php endif; ?>
+  </div>
+</div>
+
+<!-- Order Details Modal -->
+<div class="modal fade" id="orderDetailsModal" tabindex="-1" aria-labelledby="orderDetailsLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="orderDetailsLabel">Order Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <div class="border rounded p-3 h-100">
+              <h6 class="mb-2">Customer Info</h6>
+              <div><strong>Name:</strong> <span id="detail_customer_name">-</span></div>
+              <div><strong>Phone:</strong> <span id="detail_customer_phone">-</span></div>
+              <div><strong>Email:</strong> <span id="detail_customer_email">-</span></div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="border rounded p-3 h-100">
+              <h6 class="mb-2">Delivery Info</h6>
+              <div><strong>Order #:</strong> <span id="detail_order_number">-</span></div>
+              <div><strong>Status:</strong> <span id="detail_order_status">-</span></div>
+              <div><strong>Address:</strong> <span id="detail_delivery_address">-</span></div>
+            </div>
+          </div>
+        </div>
+
+        <h6 class="mb-2">Items</h6>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle" id="detail_items_table">
+            <thead class="table-light">
+              <tr>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -145,6 +215,73 @@
 
 <?= $this->section('scripts') ?>
 <script>
+  const orderDetails = <?= json_encode(array_map(static function ($order) {
+    return [
+      'id' => (int) ($order['id'] ?? 0),
+      'order_number' => (string) ($order['order_number'] ?? ''),
+      'status' => (string) ($order['status'] ?? ''),
+      'customer_name' => (string) ($order['display_customer_name'] ?? $order['customer_name'] ?? ''),
+      'customer_phone' => (string) ($order['display_customer_phone'] ?? ''),
+      'customer_email' => (string) ($order['display_customer_email'] ?? ''),
+      'delivery_address' => (string) ($order['display_customer_address'] ?? $order['delivery_address'] ?? ''),
+      'items_data' => is_array($order['items_data'] ?? null) ? $order['items_data'] : [],
+    ];
+  }, $orders), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+
+  const orderDetailsById = orderDetails.reduce((acc, order) => {
+    acc[String(order.id)] = order;
+    return acc;
+  }, {});
+
+  const orderDetailsModalEl = document.getElementById('orderDetailsModal');
+  const orderDetailsModal = new bootstrap.Modal(orderDetailsModalEl);
+
+  function textOrDash(value) {
+    const text = (value ?? '').toString().trim();
+    return text !== '' ? text : '-';
+  }
+
+  function showOrderDetails(orderId) {
+    const order = orderDetailsById[String(orderId)];
+    if (!order) {
+      alert('Order details unavailable. Please refresh the page.');
+      return;
+    }
+
+    document.getElementById('detail_customer_name').textContent = textOrDash(order.customer_name);
+    document.getElementById('detail_customer_phone').textContent = textOrDash(order.customer_phone);
+    document.getElementById('detail_customer_email').textContent = textOrDash(order.customer_email);
+    document.getElementById('detail_order_number').textContent = textOrDash(order.order_number);
+    document.getElementById('detail_order_status').textContent = textOrDash(order.status).replaceAll('_', ' ');
+    document.getElementById('detail_delivery_address').textContent = textOrDash(order.delivery_address);
+
+    const tbody = document.querySelector('#detail_items_table tbody');
+    tbody.innerHTML = '';
+
+    const items = Array.isArray(order.items_data) ? order.items_data : [];
+    if (!items.length) {
+      const emptyRow = document.createElement('tr');
+      emptyRow.innerHTML = '<td colspan="4" class="text-muted">No item details available.</td>';
+      tbody.appendChild(emptyRow);
+    } else {
+      items.forEach(item => {
+        const qty = Math.max(1, parseInt(item.quantity || 1, 10));
+        const unit = parseFloat(item.unit_price || 0);
+        const total = parseFloat(item.line_total || (unit * qty));
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${textOrDash(item.item_name)}</td>
+          <td>${qty}</td>
+          <td>PHP ${unit.toFixed(2)}</td>
+          <td>PHP ${total.toFixed(2)}</td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    orderDetailsModal.show();
+  }
+
   function postOrderUpdate(orderId, formData) {
     return fetch(`<?= site_url('orders') ?>/${orderId}/status`, {
       method: 'POST',

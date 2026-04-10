@@ -387,13 +387,8 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="<?= site_url('dashboard/admin/orders') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'dashboard/admin/orders') && !str_contains(uri_string(), 'history')) ? 'active' : '' ?>">
-                        Orders
-                    </a>
-                </li>
-                <li class="nav-item">
                     <a href="<?= site_url('dashboard/admin/orders/history') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'dashboard/admin/orders/history')) ? 'active' : '' ?>">
-                        Order History
+                        Delivered History
                     </a>
                 </li>
             </ul>

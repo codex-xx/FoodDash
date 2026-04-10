@@ -49,7 +49,7 @@ class Dashboard extends BaseController
             return redirect()->to('/login')->with('error', 'Unauthorized');
         }
 
-        return view('dashboard/admin_orders');
+        return redirect()->to(site_url('dashboard/admin/orders/history'));
     }
 
     public function adminOrdersHistory()
@@ -162,7 +162,7 @@ class Dashboard extends BaseController
             ->orderBy('orders.created_at', 'DESC');
 
         if ($scope === 'history') {
-            $builder->whereIn('orders.status', ['delivered', 'cancelled']);
+            $builder->where('orders.status', 'delivered');
         } elseif ($scope === 'active') {
             $builder->whereNotIn('orders.status', ['delivered', 'cancelled']);
         }

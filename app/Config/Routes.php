@@ -26,7 +26,7 @@ $routes->post('partner/register', 'Auth::submitPartnerRegistration');
 // Dashboards (protected by filter)
 $routes->get('dashboard/admin', 'Dashboard::admin');
 $routes->get('dashboard/restaurant', 'Dashboard::restaurant');
-$routes->get('dashboard/admin/orders', 'Dashboard::adminOrders');
+$routes->get('dashboard/admin/orders', 'Dashboard::adminOrdersHistory');
 $routes->get('dashboard/admin/orders/history', 'Dashboard::adminOrdersHistory');
 
 // Admin data endpoints
@@ -114,6 +114,7 @@ $routes->post('api/customer/login', 'Api\AuthController::customerLogin');
 $routes->post('api/driver/register', 'Api\AuthController::driverRegister');
 $routes->post('api/driver/login', 'Api\AuthController::driverLogin');
 $routes->post('api/send-register-otp', 'Api\AuthController::sendRegisterOtpCode');
+$routes->post('api/register/verify', 'Api\AuthController::verifyRegisterOtp');
 $routes->post('api/verify-register-otp', 'Api\AuthController::verifyRegisterOtp');
 $routes->post('api/verify-login-otp', 'Api\AuthController::verifyLoginOtp');
 $routes->post('api/logout', 'Api\AuthController::logout');

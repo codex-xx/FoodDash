@@ -3,6 +3,8 @@
 namespace App\Controllers;
 
 use App\Libraries\OrderFlowService;
+use App\Models\CustomerModel;
+use App\Models\OrderItemModel;
 use App\Models\OrderModel;
 use App\Models\MenuItemModel;
 
@@ -11,11 +13,13 @@ class Orders extends BaseController
     protected $orderModel;
     protected $menuItemModel;
     protected $orderFlow;
+    protected $orderItemModel;
 
     public function __construct()
     {
         $this->orderModel = new OrderModel();
         $this->menuItemModel = new MenuItemModel();
+        $this->orderItemModel = new OrderItemModel();
         $this->orderFlow = new OrderFlowService();
     }
 
@@ -32,13 +36,85 @@ class Orders extends BaseController
         $restaurantId = $session->get('restaurant_id');
 
         // Orders page is for active order management only.
-        $orders = $this->orderModel
-            ->where('restaurant_id', $restaurantId)
-            ->whereNotIn('status', ['completed', 'cancelled'])
-            ->orderBy('created_at', 'DESC')
-            ->findAll();
+        $builder = $this->orderModel->builder();
+        $orders = $builder
+            ->select('orders.*, d.name as driver_name, d.phone as driver_phone, c.name as customer_full_name, c.phone as customer_phone, c.email as customer_email, c.address as customer_address')
+            ->join('drivers d', 'd.id = orders.driver_id', 'left')
+            ->join('customers c', 'c.id = orders.customer_id', 'left')
+            ->where('orders.restaurant_id', $restaurantId)
+            ->whereNotIn('orders.status', ['completed', 'cancelled'])
+            ->orderBy('orders.created_at', 'DESC')
+            ->get()
+            ->getResultArray();
+
+        $orderIds = array_map(static fn(array $order): int => (int) $order['id'], $orders);
+        $itemsByOrderId = [];
+        if (!empty($orderIds)) {
+            $rows = $this->orderItemModel
+                ->whereIn('order_id', $orderIds)
+                ->orderBy('id', 'ASC')
+                ->findAll();
+
+            foreach ($rows as $row) {
+                $orderId = (int) ($row['order_id'] ?? 0);
+                if ($orderId <= 0) {
+                    continue;
+                }
+
+                $itemsByOrderId[$orderId][] = [
+                    'item_name' => (string) ($row['item_name'] ?? 'Item'),
+                    'quantity' => (int) ($row['quantity'] ?? 1),
+                    'unit_price' => (float) ($row['unit_price'] ?? 0),
+                    'line_total' => (float) ($row['line_total'] ?? 0),
+                ];
+            }
+        }
+
+        foreach ($orders as &$order) {
+            $id = (int) ($order['id'] ?? 0);
+            $fallbackName = trim((string) ($order['customer_name'] ?? ''));
+            $joinedName = trim((string) ($order['customer_full_name'] ?? ''));
+
+            $order['display_customer_name'] = $joinedName !== '' ? $joinedName : ($fallbackName !== '' ? $fallbackName : 'Customer');
+            $order['display_customer_phone'] = trim((string) ($order['customer_phone'] ?? ''));
+            $order['display_customer_email'] = trim((string) ($order['customer_email'] ?? ''));
+            $order['display_customer_address'] = trim((string) ($order['delivery_address'] ?? $order['customer_address'] ?? ''));
+
+            $order['items_data'] = $itemsByOrderId[$id] ?? $this->parseOrderItems((string) ($order['items'] ?? ''));
+        }
+        unset($order);
 
         return view('restaurant/orders/index', ['orders' => $orders]);
+    }
+
+    private function parseOrderItems(string $items): array
+    {
+        if (trim($items) === '') {
+            return [];
+        }
+
+        $decoded = json_decode($items, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($decoded as $item) {
+            $row = is_array($item) ? $item : (array) $item;
+            $name = (string) ($row['item_name'] ?? $row['name'] ?? $row['title'] ?? 'Item');
+            $quantity = max(1, (int) ($row['quantity'] ?? 1));
+            $unitPrice = (float) ($row['unit_price'] ?? $row['price'] ?? 0);
+            $lineTotal = (float) ($row['line_total'] ?? ($unitPrice * $quantity));
+
+            $normalized[] = [
+                'item_name' => $name,
+                'quantity' => $quantity,
+                'unit_price' => $unitPrice,
+                'line_total' => $lineTotal,
+            ];
+        }
+
+        return $normalized;
     }
 
     /**
