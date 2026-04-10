@@ -38,16 +38,101 @@ class JwtService
             'jti' => bin2hex(random_bytes(16)),
         ];
 
-        return JWT::encode($payload, $this->secret, 'HS256');
+        if (class_exists(JWT::class)) {
+            return JWT::encode($payload, $this->secret, 'HS256');
+        }
+
+        return $this->encodeFallback($payload);
     }
 
     public function decodeAccessToken(string $token): ?array
     {
         try {
-            $decoded = JWT::decode($token, new Key($this->secret, 'HS256'));
-            return (array) $decoded;
+            if (class_exists(JWT::class) && class_exists(Key::class)) {
+                $decoded = JWT::decode($token, new Key($this->secret, 'HS256'));
+                return (array) $decoded;
+            }
+
+            return $this->decodeFallback($token);
         } catch (\Throwable $e) {
             return null;
         }
+    }
+
+    protected function encodeFallback(array $payload): string
+    {
+        $header = ['alg' => 'HS256', 'typ' => 'JWT'];
+
+        $headerPart = $this->base64UrlEncode(json_encode($header));
+        $payloadPart = $this->base64UrlEncode(json_encode($payload));
+        $signature = hash_hmac('sha256', $headerPart . '.' . $payloadPart, $this->secret, true);
+        $signaturePart = $this->base64UrlEncode($signature);
+
+        return $headerPart . '.' . $payloadPart . '.' . $signaturePart;
+    }
+
+    protected function decodeFallback(string $token): ?array
+    {
+        $parts = explode('.', $token);
+        if (count($parts) !== 3) {
+            return null;
+        }
+
+        [$headerPart, $payloadPart, $signaturePart] = $parts;
+
+        $headerJson = $this->base64UrlDecode($headerPart);
+        $payloadJson = $this->base64UrlDecode($payloadPart);
+        $signature = $this->base64UrlDecode($signaturePart);
+
+        if ($headerJson === null || $payloadJson === null || $signature === null) {
+            return null;
+        }
+
+        $header = json_decode($headerJson, true);
+        $payload = json_decode($payloadJson, true);
+
+        if (!is_array($header) || !is_array($payload)) {
+            return null;
+        }
+
+        if (($header['alg'] ?? '') !== 'HS256') {
+            return null;
+        }
+
+        $expectedSignature = hash_hmac('sha256', $headerPart . '.' . $payloadPart, $this->secret, true);
+        if (!hash_equals($expectedSignature, $signature)) {
+            return null;
+        }
+
+        $now = time();
+
+        if (isset($payload['nbf']) && (int) $payload['nbf'] > $now) {
+            return null;
+        }
+
+        if (isset($payload['exp']) && (int) $payload['exp'] <= $now) {
+            return null;
+        }
+
+        return $payload;
+    }
+
+    protected function base64UrlEncode(string $value): string
+    {
+        return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
+    }
+
+    protected function base64UrlDecode(string $value): ?string
+    {
+        $padded = strtr($value, '-_', '+/');
+        $padding = strlen($padded) % 4;
+
+        if ($padding > 0) {
+            $padded .= str_repeat('=', 4 - $padding);
+        }
+
+        $decoded = base64_decode($padded, true);
+
+        return $decoded === false ? null : $decoded;
     }
 }
