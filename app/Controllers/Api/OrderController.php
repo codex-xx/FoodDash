@@ -18,6 +18,7 @@ class OrderController extends ResourceController
     protected $orderModel;
     protected $orderFlow;
     protected $permissions;
+    private const RIDER_CONFIRMED_STATUSES = ['assigned', 'on_the_way', 'delivered'];
 
     public function __construct()
     {
@@ -48,13 +49,15 @@ class OrderController extends ResourceController
                 $restaurant = $restaurantModel->find($order['restaurant_id']);
                 $order['restaurant'] = $restaurant;
 
-                if ($order['driver_id']) {
+                if ($order['driver_id'] && $this->canExposeDriverToCustomer($order)) {
                     $driver = $driverModel->find($order['driver_id']);
                     $order['driver'] = $driver ? [
                         'id'    => $driver['id'],
                         'name'  => $driver['name'],
                         'phone' => $driver['phone'],
                     ] : null;
+                } else {
+                    $order['driver'] = null;
                 }
             }
 
@@ -67,10 +70,23 @@ class OrderController extends ResourceController
         $driver = $this->request->driver ?? null;
 
         if ($driver) {
-            $orders = $this->orderModel
-                ->where('driver_id', $driver['id'])
+            $assignedToDriver = $this->orderModel
+                ->where('driver_id', (int) $driver['id'])
+                ->whereIn('status', ['accepted', 'preparing', 'ready', 'assigned', 'on_the_way'])
                 ->orderBy('created_at', 'DESC')
                 ->findAll();
+
+            $openIncoming = $this->orderModel
+                ->where('driver_id', null)
+                ->whereIn('status', ['accepted', 'preparing', 'ready'])
+                ->orderBy('created_at', 'DESC')
+                ->findAll();
+
+            $ordersById = [];
+            foreach (array_merge($assignedToDriver, $openIncoming) as $order) {
+                $ordersById[(int) $order['id']] = $order;
+            }
+            $orders = array_values($ordersById);
 
             foreach ($orders as &$order) {
                 $order = $this->enrichOrderForDriver($order);
@@ -104,21 +120,86 @@ class OrderController extends ResourceController
         }
 
         // Accept both JSON and form payloads for mobile compatibility.
-        $json = $this->request->getJSON();
-        $input = is_object($json) ? (array) $json : $this->request->getPost();
+        $input = [];
+        $contentType = strtolower((string) $this->request->getHeaderLine('Content-Type'));
+        if (str_contains($contentType, 'application/json')) {
+            $raw = (string) $this->request->getBody();
+            if ($raw !== '') {
+                $decoded = json_decode($raw, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $input = $decoded;
+                }
+            }
+        }
+
+        if (empty($input)) {
+            $input = $this->request->getPost();
+        }
 
         if (empty($input)) {
             return $this->respond(['success' => false, 'message' => 'Order payload is required'], 400);
         }
 
-        $restaurantId = (int) ($input['restaurant_id'] ?? 0);
-        $items = $input['items'] ?? null;
+        if (isset($input['order']) && is_array($input['order'])) {
+            $input = array_merge($input['order'], $input);
+        }
+
+        // Normalize legacy and camelCase keys sent by older Android clients.
+        $restaurantId = (int) (
+            $input['restaurant_id']
+            ?? $input['restaurantId']
+            ?? $input['restaurantID']
+            ?? $input['resto_id']
+            ?? $input['store_id']
+            ?? $input['shop_id']
+            ?? $input['vendor_id']
+            ?? 0
+        );
+
+        $items = $input['items']
+            ?? $input['order_items']
+            ?? $input['orderItems']
+            ?? $input['cart_items']
+            ?? $input['cartItems']
+            ?? $input['cart']
+            ?? $input['menu_items']
+            ?? $input['menuItems']
+            ?? $input['products']
+            ?? $input['product_items']
+            ?? $input['food_items']
+            ?? $input['foods']
+            ?? $input['selected_items']
+            ?? $input['line_items']
+            ?? null;
 
         if (is_string($items)) {
             $decoded = json_decode($items, true);
             if (json_last_error() === JSON_ERROR_NONE) {
                 $items = $decoded;
             }
+        }
+
+        if (is_object($items)) {
+            $items = (array) $items;
+        }
+
+        if (is_array($items) && !$this->isListArray($items)) {
+            // Some clients submit a single item object instead of an array.
+            if ($this->looksLikeOrderItem($items)) {
+                $items = [$items];
+            } elseif (isset($items['items']) && is_array($items['items'])) {
+                $items = $items['items'];
+            }
+        }
+
+        if ($restaurantId <= 0 && is_array($items) && !empty($items)) {
+            $first = is_array($items[0] ?? null) ? $items[0] : [];
+            $restaurantId = (int) (
+                $first['restaurant_id']
+                ?? $first['restaurantId']
+                ?? $first['store_id']
+                ?? 0
+            );
         }
 
         if ($restaurantId <= 0 || !is_array($items) || empty($items)) {
@@ -142,8 +223,10 @@ class OrderController extends ResourceController
         $orderNumber = 'ORD-' . strtoupper(uniqid());
 
         // Build the data array from the received JSON object
-        $sizeCategory = $this->orderFlow->getSizeCategory((float) ($input['total_amount'] ?? 0));
+        $totalAmount = (float) ($input['total_amount'] ?? $input['totalAmount'] ?? 0);
+        $sizeCategory = $this->orderFlow->getSizeCategory($totalAmount);
         $deliveryTypeId = $this->orderFlow->resolveDeliveryTypeId($sizeCategory);
+        $deliveryAddress = $input['delivery_address'] ?? $input['deliveryAddress'] ?? $customer['address'];
 
         $data = [
             'order_number'     => $orderNumber,
@@ -152,11 +235,11 @@ class OrderController extends ResourceController
             'restaurant_id'    => $restaurantId,
             'delivery_type_id' => $deliveryTypeId,
             'order_size_category' => $sizeCategory,
-            'total_amount'     => (float) ($input['total_amount'] ?? 0),
-            'delivery_address' => $input['delivery_address'] ?? $customer['address'],
+            'total_amount'     => $totalAmount,
+            'delivery_address' => $deliveryAddress,
             'items'            => json_encode($items),
             'status'           => 'pending',
-            'notes'            => $input['notes'] ?? null,
+            'notes'            => $input['notes'] ?? $input['special_instructions'] ?? null,
         ];
 
         $orderId = $this->orderModel->insert($data);
@@ -279,6 +362,22 @@ class OrderController extends ResourceController
         return null;
     }
 
+    private function isListArray(array $array): bool
+    {
+        return array_keys($array) === range(0, count($array) - 1);
+    }
+
+    private function looksLikeOrderItem(array $item): bool
+    {
+        foreach (['menu_id', 'item_id', 'product_id', 'id', 'name', 'item_name', 'product_name', 'title'] as $key) {
+            if (array_key_exists($key, $item)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /**
      * Get single order details
      * GET /api/orders/:id
@@ -389,7 +488,7 @@ class OrderController extends ResourceController
 
         $openPoolOrders = $this->orderModel
             ->where('driver_id', null)
-            ->where('status', 'ready')
+            ->whereIn('status', ['accepted', 'preparing', 'ready'])
             ->orderBy('created_at', 'ASC')
             ->findAll();
 
@@ -508,13 +607,15 @@ class OrderController extends ResourceController
             'address' => $order['delivery_address'] ?? null,
         ];
 
-        if (!empty($order['driver_id'])) {
+        if (!empty($order['driver_id']) && $this->canExposeDriverToCustomer($order)) {
             $driver = $driverModel->find((int) $order['driver_id']);
             $order['driver'] = $driver ? [
                 'id'    => $driver['id'],
                 'name'  => $driver['name'],
                 'phone' => $driver['phone'],
             ] : null;
+        } else {
+            $order['driver'] = null;
         }
 
         $orderItems = $orderItemModel
@@ -546,6 +647,13 @@ class OrderController extends ResourceController
         $decoded = json_decode($items, true);
 
         return is_array($decoded) ? $decoded : [];
+    }
+
+    private function canExposeDriverToCustomer(array $order): bool
+    {
+        $status = $this->orderFlow->normalizeStatus((string) ($order['status'] ?? ''));
+
+        return in_array($status, self::RIDER_CONFIRMED_STATUSES, true);
     }
 
     /**
@@ -604,18 +712,38 @@ class OrderController extends ResourceController
 
     public function updateStatusEndpoint()
     {
+        $driver = $this->request->driver ?? null;
         $session = session();
-        $role = (string) $session->get('role');
+        $sessionRole = (string) $session->get('role');
 
-        if (! (bool) $session->get('isLoggedIn') || $role !== 'admin' || ! $this->permissions->allows($role, 'orders', 'update')) {
+        $isAdminSession = (bool) $session->get('isLoggedIn')
+            && $sessionRole === 'admin'
+            && $this->permissions->allows($sessionRole, 'orders', 'update');
+
+        if (!$isAdminSession && !$driver) {
             return $this->respond([
                 'success' => false,
-                'message' => 'Admin authorization required'
+                'message' => 'Driver or admin authorization required'
             ], 403);
         }
 
-        $orderId = (int) ($this->request->getPost('order_id') ?? $this->request->getVar('order_id'));
-        $status = (string) ($this->request->getPost('status') ?? $this->request->getVar('status'));
+        $orderId = (int) (
+            $this->request->getPost('order_id')
+            ?? $this->request->getVar('order_id')
+            ?? $this->request->getPost('orderId')
+            ?? $this->request->getVar('orderId')
+            ?? $this->request->getPost('id')
+            ?? $this->request->getVar('id')
+        );
+
+        $status = (string) (
+            $this->request->getPost('status')
+            ?? $this->request->getVar('status')
+            ?? $this->request->getPost('order_status')
+            ?? $this->request->getVar('order_status')
+            ?? $this->request->getPost('orderStatus')
+            ?? $this->request->getVar('orderStatus')
+        );
 
         if ($orderId <= 0 || $status === '') {
             return $this->respond([
@@ -624,8 +752,10 @@ class OrderController extends ResourceController
             ], 422);
         }
 
-        $role = (string) ($this->request->getPost('actor_role') ?? 'admin');
-        $actorId = (int) ($this->request->getPost('actor_id') ?? 0);
+        $role = $driver ? 'driver' : (string) ($this->request->getPost('actor_role') ?? 'admin');
+        $actorId = $driver
+            ? (int) ($driver['id'] ?? 0)
+            : (int) ($this->request->getPost('actor_id') ?? 0);
 
         $result = $this->orderFlow->updateStatus($orderId, $status, $role, $actorId > 0 ? $actorId : null, 'Public update_status endpoint');
 

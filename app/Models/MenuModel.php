@@ -8,7 +8,7 @@ class MenuModel extends Model
 {
     protected $table = 'menus';
     protected $primaryKey = 'id';
-    protected $useSoftDeletes = true;
+    protected $useSoftDeletes = false;
 
     protected $useTimestamps = true;
     protected $createdField  = 'created_at';

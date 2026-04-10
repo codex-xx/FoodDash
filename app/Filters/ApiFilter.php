@@ -14,21 +14,25 @@ class ApiFilter implements FilterInterface
     public function before(RequestInterface $request, $arguments = null)
     {
         $authHeader = $request->getHeaderLine('Authorization');
+        $token = '';
 
-        if (empty($authHeader)) {
-            return $this->unauthorizedResponse('Authorization token required');
-        }
-
-        // Extract Bearer token
-        if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
-            $token = $matches[1];
+        if (!empty($authHeader)) {
+            // Extract Bearer token
+            if (preg_match('/Bearer\s+(.*)$/i', $authHeader, $matches)) {
+                $token = $matches[1];
+            } else {
+                $token = $authHeader;
+            }
         } else {
-            $token = $authHeader;
+            // Legacy mobile clients pass token in query/body as api_token.
+            $token = (string) ($request->getGet('api_token') ?? $request->getPost('api_token') ?? '');
         }
 
         if (empty($token)) {
-            return $this->unauthorizedResponse('Invalid token format');
+            return $this->unauthorizedResponse('Authorization token required');
         }
+
+        $token = trim($token);
 
         $jwtService = new JwtService();
         $claims = $jwtService->decodeAccessToken($token);

@@ -131,15 +131,10 @@ class OrderFlowService
             $updateData['delivery_type_id'] = $this->resolveDeliveryTypeId($sizeCategory);
         }
 
-        $shouldAutoAssign = empty($order['driver_id'])
-            && $normalizedRole === 'restaurant'
-            && in_array($normalizedTarget, [self::STATUS_ACCEPTED, self::STATUS_READY], true);
-
-        if ($shouldAutoAssign) {
-            $assigned = $this->autoAssignDriver($order, $sizeCategory);
-            if ($assigned !== null) {
-                $updateData['driver_id'] = $assigned;
-                $notes = trim(($notes ? $notes . ' | ' : '') . 'Auto-assigned driver #' . $assigned);
+        // Keep order unassigned until a driver explicitly accepts it from mobile app.
+        if ($normalizedRole === 'restaurant' && in_array($normalizedTarget, [self::STATUS_ACCEPTED, self::STATUS_PREPARING, self::STATUS_READY], true)) {
+            if (empty($order['driver_id'])) {
+                $updateData['driver_id'] = null;
             }
         }
 

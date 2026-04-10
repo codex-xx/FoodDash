@@ -157,6 +157,11 @@ $routes->post('api/orders/(:num)/status', 'Api\OrderController::updateStatus/$1'
 $routes->post('api/orders/(:num)/accept', 'Api\OrderController::accept/$1');
 $routes->post('api/orders/(:num)/cancel', 'Api\OrderController::cancel/$1');
 $routes->post('api/update_status', 'Api\OrderController::updateStatusEndpoint');
+$routes->get('api/update_status', 'Api\OrderController::updateStatusEndpoint');
+$routes->post('api/update_order_status', 'Api\OrderController::updateStatusEndpoint');
+$routes->get('api/update_order_status', 'Api\OrderController::updateStatusEndpoint');
+$routes->post('api/update_order_status.php', 'Api\OrderController::updateStatusEndpoint');
+$routes->get('api/update_order_status.php', 'Api\OrderController::updateStatusEndpoint');
 $routes->post('api/assign_driver', 'Api\OrderController::assignDriverEndpoint');
 $routes->get('api/orders/stream', 'Api\RealtimeController::orders');
 
