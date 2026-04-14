@@ -31,8 +31,10 @@ $routes->get('dashboard/admin/orders/history', 'Dashboard::adminOrdersHistory');
 
 // Admin data endpoints
 $routes->get('dashboard/admin/data', 'Dashboard::adminData');
+$routes->get('dashboard/admin/chart-data', 'Dashboard::adminChartData');
 $routes->get('dashboard/admin/orders/data', 'Dashboard::adminOrdersData');
 $routes->get('dashboard/restaurant/data', 'Dashboard::restaurantData');
+$routes->get('dashboard/restaurant/chart-data', 'Dashboard::restaurantChartData');
 $routes->post('dashboard/order/(:num)/status', 'Dashboard::updateOrderStatus/$1');
 
 // Menu Items (Restaurant)

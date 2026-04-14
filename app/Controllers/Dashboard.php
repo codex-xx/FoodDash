@@ -247,6 +247,170 @@ class Dashboard extends BaseController
         ]);
     }
 
+    /**
+     * Get real-time admin dashboard charts data (popular menu, monthly orders, order breakdown)
+     */
+    public function adminChartData()
+    {
+        $session = session();
+        if (! $session->get('isLoggedIn') || $session->get('role') !== 'admin') {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Access denied']);
+        }
+
+        $db = \Config\Database::connect();
+        $orderModel = new OrderModel();
+
+        // Get top 5 popular menu items by delivered order count.
+        // Use order_items.item_name to avoid schema mismatches across menu tables.
+        $popularMenus = [];
+        try {
+            $popularMenus = $db->query(" 
+                SELECT oi.item_name as name, COUNT(oi.id) as order_count, IFNULL(AVG(oi.unit_price), 0) as price
+                FROM order_items oi
+                JOIN orders o ON o.id = oi.order_id
+                WHERE o.status = 'delivered'
+                GROUP BY oi.item_name
+                ORDER BY order_count DESC
+                LIMIT 5
+            ")->getResultArray();
+        } catch (\Throwable $e) {
+            log_message('error', 'adminChartData popular menu query failed: {message}', ['message' => $e->getMessage()]);
+        }
+
+        // Get monthly orders for the current year
+        $monthlyOrders = [];
+        for ($month = 1; $month <= 12; $month++) {
+            $startDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-01 00:00:00';
+            $endDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . cal_days_in_month(CAL_GREGORIAN, $month, date('Y')) . ' 23:59:59';
+
+            $count = $orderModel
+                ->where('created_at >=', $startDate)
+                ->where('created_at <=', $endDate)
+                ->countAllResults();
+
+            $monthlyOrders[] = $count;
+        }
+
+        // Get order status breakdown for today
+        $todayStart = date('Y-m-d') . ' 00:00:00';
+        $todayEnd   = date('Y-m-d') . ' 23:59:59';
+
+        $completed = $orderModel
+            ->where('status', 'delivered')
+            ->where('created_at >=', $todayStart)
+            ->where('created_at <=', $todayEnd)
+            ->countAllResults();
+
+        $delivered = $orderModel
+            ->whereIn('status', ['on_the_way', 'assigned'])
+            ->where('created_at >=', $todayStart)
+            ->where('created_at <=', $todayEnd)
+            ->countAllResults();
+
+        $cancelled = $orderModel
+            ->where('status', 'cancelled')
+            ->where('created_at >=', $todayStart)
+            ->where('created_at <=', $todayEnd)
+            ->countAllResults();
+
+        $pending = $orderModel
+            ->where('status', 'pending')
+            ->where('created_at >=', $todayStart)
+            ->where('created_at <=', $todayEnd)
+            ->countAllResults();
+
+        return $this->response->setJSON([
+            'popularMenus' => $popularMenus,
+            'monthlyOrders' => $monthlyOrders,
+            'orderBreakdown' => [
+                'completed' => $completed,
+                'delivered' => $delivered,
+                'cancelled' => $cancelled,
+                'pending' => $pending
+            ]
+        ]);
+    }
+
+    /**
+     * Get real-time restaurant dashboard charts data (all restaurants)
+     */
+    public function restaurantChartData()
+    {
+        $session = session();
+        if (! $session->get('isLoggedIn') || $session->get('role') !== 'restaurant') {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Access denied']);
+        }
+
+        $db = \Config\Database::connect();
+        $orderModel = new OrderModel();
+
+        $popularMenus = [];
+        try {
+            $popularMenus = $db->query(" 
+                SELECT oi.item_name as name, COUNT(oi.id) as order_count, IFNULL(AVG(oi.unit_price), 0) as price
+                FROM order_items oi
+                JOIN orders o ON o.id = oi.order_id
+                WHERE o.status = 'delivered'
+                GROUP BY oi.item_name
+                ORDER BY order_count DESC
+                LIMIT 5
+            ")->getResultArray();
+        } catch (\Throwable $e) {
+            log_message('error', 'restaurantChartData popular menu query failed: {message}', ['message' => $e->getMessage()]);
+        }
+
+        $monthlyOrders = [];
+        for ($month = 1; $month <= 12; $month++) {
+            $startDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-01 00:00:00';
+            $endDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . cal_days_in_month(CAL_GREGORIAN, $month, date('Y')) . ' 23:59:59';
+
+            $count = $orderModel
+                ->where('created_at >=', $startDate)
+                ->where('created_at <=', $endDate)
+                ->countAllResults();
+
+            $monthlyOrders[] = $count;
+        }
+
+        $todayStart = date('Y-m-d') . ' 00:00:00';
+        $todayEnd   = date('Y-m-d') . ' 23:59:59';
+
+        $completed = $orderModel
+            ->where('status', 'delivered')
+            ->where('created_at >=', $todayStart)
+            ->where('created_at <=', $todayEnd)
+            ->countAllResults();
+
+        $delivered = $orderModel
+            ->whereIn('status', ['on_the_way', 'assigned'])
+            ->where('created_at >=', $todayStart)
+            ->where('created_at <=', $todayEnd)
+            ->countAllResults();
+
+        $cancelled = $orderModel
+            ->where('status', 'cancelled')
+            ->where('created_at >=', $todayStart)
+            ->where('created_at <=', $todayEnd)
+            ->countAllResults();
+
+        $pending = $orderModel
+            ->where('status', 'pending')
+            ->where('created_at >=', $todayStart)
+            ->where('created_at <=', $todayEnd)
+            ->countAllResults();
+
+        return $this->response->setJSON([
+            'popularMenus' => $popularMenus,
+            'monthlyOrders' => $monthlyOrders,
+            'orderBreakdown' => [
+                'completed' => $completed,
+                'delivered' => $delivered,
+                'cancelled' => $cancelled,
+                'pending' => $pending,
+            ],
+        ]);
+    }
+
     // Update order status (AJAX)
     public function updateOrderStatus($id)
     {

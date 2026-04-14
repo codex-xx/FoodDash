@@ -8,9 +8,19 @@ class MenuItems extends BaseController
 {
     protected $menuItemModel;
 
+    protected $supportsArchive = false;
+
     public function __construct()
     {
         $this->menuItemModel = new MenuModel();
+
+        // Some installations do not have deleted_at on menu tables.
+        $db = db_connect();
+        if ($db->tableExists('menus') && $db->fieldExists('deleted_at', 'menus')) {
+            $this->supportsArchive = true;
+        } elseif ($db->tableExists('menu_items') && $db->fieldExists('deleted_at', 'menu_items')) {
+            $this->supportsArchive = true;
+        }
     }
 
     /**
@@ -25,11 +35,15 @@ class MenuItems extends BaseController
 
         $restaurantId = $session->get('restaurant_id');
         $items = $this->menuItemModel->where('restaurant_id', $restaurantId)->findAll();
-        $archivedItems = $this->menuItemModel
-            ->withDeleted()
-            ->where('restaurant_id', $restaurantId)
-            ->where('deleted_at IS NOT NULL', null, false)
-            ->findAll();
+        $archivedItems = [];
+
+        if ($this->supportsArchive) {
+            $archivedItems = $this->menuItemModel
+                ->withDeleted()
+                ->where('restaurant_id', $restaurantId)
+                ->where('deleted_at IS NOT NULL', null, false)
+                ->findAll();
+        }
 
         foreach ($items as &$item) {
             $item['image'] = $item['image_url'] ?? null;
@@ -267,6 +281,10 @@ class MenuItems extends BaseController
         $session = session();
         if (!$session->get('isLoggedIn') || $session->get('role') !== 'restaurant') {
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
+        }
+
+        if (! $this->supportsArchive) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'Archive/restore is not available on this database schema']);
         }
 
         $item = $this->menuItemModel->withDeleted()->find($id);
