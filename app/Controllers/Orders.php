@@ -4,8 +4,10 @@ namespace App\Controllers;
 
 use App\Libraries\OrderFlowService;
 use App\Models\CustomerModel;
+use App\Models\DriverModel;
 use App\Models\OrderItemModel;
 use App\Models\OrderModel;
+use App\Models\OrderStatusLogModel;
 use App\Models\MenuItemModel;
 
 class Orders extends BaseController
@@ -14,12 +16,14 @@ class Orders extends BaseController
     protected $menuItemModel;
     protected $orderFlow;
     protected $orderItemModel;
+    protected $orderStatusLogModel;
 
     public function __construct()
     {
         $this->orderModel = new OrderModel();
         $this->menuItemModel = new MenuItemModel();
         $this->orderItemModel = new OrderItemModel();
+        $this->orderStatusLogModel = new OrderStatusLogModel();
         $this->orderFlow = new OrderFlowService();
     }
 
@@ -39,7 +43,8 @@ class Orders extends BaseController
         $builder = $this->orderModel->builder();
         $orders = $builder
             ->select('orders.*, d.name as driver_name, d.phone as driver_phone, c.name as customer_full_name, c.phone as customer_phone, c.email as customer_email, c.address as customer_address')
-            ->join('drivers d', 'd.id = orders.driver_id', 'left')
+            // Support both direct driver IDs and legacy mappings where order.driver_id stored drivers.user_id.
+            ->join('drivers d', '(d.id = orders.driver_id OR d.user_id = orders.driver_id)', 'left')
             ->join('customers c', 'c.id = orders.customer_id', 'left')
             ->where('orders.restaurant_id', $restaurantId)
             ->whereNotIn('orders.status', ['completed', 'cancelled'])
@@ -68,17 +73,84 @@ class Orders extends BaseController
                     'line_total' => (float) ($row['line_total'] ?? 0),
                 ];
             }
+
+            $driverLogNameByOrderId = [];
+            $driverLogIds = [];
+            $logRows = $this->orderStatusLogModel
+                ->whereIn('order_id', $orderIds)
+                ->where('changed_by_role', 'driver')
+                ->whereIn('to_status', ['assigned', 'on_the_way', 'delivered'])
+                ->orderBy('id', 'ASC')
+                ->findAll();
+
+            foreach ($logRows as $logRow) {
+                $orderId = (int) ($logRow['order_id'] ?? 0);
+                $changedById = (int) ($logRow['changed_by_id'] ?? 0);
+
+                if ($orderId <= 0 || $changedById <= 0) {
+                    continue;
+                }
+
+                $driverLogIds[$changedById] = true;
+                $driverLogNameByOrderId[$orderId] = $changedById;
+            }
+
+            $driverRefs = array_values(array_unique(array_filter(array_map(static function (array $order): int {
+                return (int) ($order['driver_id'] ?? 0);
+            }, $orders))));
+
+            if (!empty($driverLogIds)) {
+                $driverRefs = array_values(array_unique(array_merge($driverRefs, array_keys($driverLogIds))));
+            }
+
+            $driversByKey = [];
+            if (!empty($driverRefs)) {
+                $driverModel = new DriverModel();
+                $driverRows = $driverModel
+                    ->select('id, user_id, name')
+                    ->groupStart()
+                        ->whereIn('id', $driverRefs)
+                        ->orWhereIn('user_id', $driverRefs)
+                    ->groupEnd()
+                    ->findAll();
+
+                foreach ($driverRows as $driverRow) {
+                    $driverName = trim((string) ($driverRow['name'] ?? ''));
+                    if ($driverName === '') {
+                        continue;
+                    }
+
+                    $driverId = (int) ($driverRow['id'] ?? 0);
+                    $userId = (int) ($driverRow['user_id'] ?? 0);
+
+                    if ($driverId > 0) {
+                        $driversByKey[$driverId] = $driverName;
+                    }
+
+                    if ($userId > 0) {
+                        $driversByKey[$userId] = $driverName;
+                    }
+                }
+            }
         }
 
         foreach ($orders as &$order) {
             $id = (int) ($order['id'] ?? 0);
             $fallbackName = trim((string) ($order['customer_name'] ?? ''));
             $joinedName = trim((string) ($order['customer_full_name'] ?? ''));
+            $resolvedDriverName = trim((string) ($order['driver_name'] ?? ''));
+            if ($resolvedDriverName === '' && !empty($driversByKey[(int) ($order['driver_id'] ?? 0)])) {
+                $resolvedDriverName = (string) $driversByKey[(int) ($order['driver_id'] ?? 0)];
+            }
+            if ($resolvedDriverName === '' && !empty($driverLogNameByOrderId[$id]) && !empty($driversByKey[(int) $driverLogNameByOrderId[$id]])) {
+                $resolvedDriverName = (string) $driversByKey[(int) $driverLogNameByOrderId[$id]];
+            }
 
             $order['display_customer_name'] = $joinedName !== '' ? $joinedName : ($fallbackName !== '' ? $fallbackName : 'Customer');
             $order['display_customer_phone'] = trim((string) ($order['customer_phone'] ?? ''));
             $order['display_customer_email'] = trim((string) ($order['customer_email'] ?? ''));
             $order['display_customer_address'] = trim((string) ($order['delivery_address'] ?? $order['customer_address'] ?? ''));
+            $order['display_driver_name'] = $resolvedDriverName;
 
             $order['items_data'] = $itemsByOrderId[$id] ?? $this->parseOrderItems((string) ($order['items'] ?? ''));
         }

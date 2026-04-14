@@ -16,7 +16,7 @@ class App extends BaseConfig
      *
      * E.g., http://example.com/
      */
-    public string $baseURL = 'http://Localhost/FoodDash/';
+    public string $baseURL = 'http://localhost/FoodDash/';
 
     /**
      * Allowed Hostnames in the Site URL other than the hostname in the baseURL.
@@ -29,7 +29,7 @@ class App extends BaseConfig
      *
      * @var list<string>
      */
-    public array $allowedHostnames = ['localhost', '192.168.0.111','192.168.1.7', '192.168.0.109'];
+    public array $allowedHostnames = ['localhost', '192.168.0.111','192.168.1.4', '192.168.0.109'];
 
     /**
      * --------------------------------------------------------------------------

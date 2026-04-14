@@ -138,6 +138,22 @@ class OrderFlowService
             }
         }
 
+        if ($normalizedRole === 'driver' && $actorId !== null && $actorId > 0) {
+            $currentDriverId = (int) ($order['driver_id'] ?? 0);
+
+            if ($currentDriverId > 0 && $currentDriverId !== $actorId) {
+                return [
+                    'ok' => false,
+                    'message' => 'Order already assigned to another driver',
+                    'code' => 409,
+                ];
+            }
+
+            if ($currentDriverId === 0) {
+                $updateData['driver_id'] = $actorId;
+            }
+        }
+
         $this->orderModel->update($orderId, $updateData);
 
         $this->statusLogModel->insert([

@@ -58,11 +58,8 @@
                   <?php endif; ?>
                 </td>
                 <td>
-                  <?php if (!empty($order['driver_name'])): ?>
-                    <div class="fw-semibold"><?= esc($order['driver_name']) ?></div>
-                    <?php if (!empty($order['driver_phone'])): ?>
-                      <small class="text-muted"><?= esc($order['driver_phone']) ?></small>
-                    <?php endif; ?>
+                  <?php if (!empty($order['display_driver_name'] ?? $order['driver_name'])): ?>
+                    <div class="fw-semibold"><?= esc($order['display_driver_name'] ?? $order['driver_name']) ?></div>
                   <?php else: ?>
                     <small class="text-muted">Waiting for rider acceptance</small>
                   <?php endif; ?>
@@ -392,6 +389,27 @@
         // Ignore malformed messages and still refresh.
       }
       location.reload();
+    });
+  })();
+
+  // Fallback polling so rider/status updates still appear even if SSE is blocked.
+  (function setupAutoRefreshFallback() {
+    const REFRESH_MS = 10000;
+    let refreshTimer = null;
+
+    const tick = () => {
+      const modalOpen = document.querySelector('.modal.show') !== null;
+      if (document.visibilityState === 'visible' && !modalOpen) {
+        location.reload();
+      }
+    };
+
+    refreshTimer = window.setInterval(tick, REFRESH_MS);
+
+    window.addEventListener('beforeunload', () => {
+      if (refreshTimer !== null) {
+        window.clearInterval(refreshTimer);
+      }
     });
   })();
 </script>
