@@ -2,6 +2,7 @@
 
 namespace App\Filters;
 
+use App\Libraries\SecurityAuditService;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Filters\FilterInterface;
@@ -14,14 +15,17 @@ class AuthFilter implements FilterInterface
     public function before(RequestInterface $request, $arguments = null)
     {
         $session = session();
+        $security = new SecurityAuditService();
 
         if (! $session->get('isLoggedIn')) {
+            $security->recordUnauthorizedAccess($request, null, 'Unauthenticated access attempt to protected route');
             return redirect()->to('/login')->with('error', 'Please login to continue');
         }
 
         $last = $session->get('last_activity') ?? 0;
 
         if (time() - $last > $this->timeout) {
+            $security->logEvent($request, is_numeric($session->get('user_id')) ? (int) $session->get('user_id') : null, 'session_timeout', 'Session expired due to inactivity', 'low');
             $session->destroy();
             return redirect()->to('/login')->with('error', 'Session timed out. Please login again.');
         }

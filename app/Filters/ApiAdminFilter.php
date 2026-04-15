@@ -2,6 +2,7 @@
 
 namespace App\Filters;
 
+use App\Libraries\SecurityAuditService;
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -15,6 +16,10 @@ class ApiAdminFilter implements FilterInterface
         if ((bool) $session->get('isLoggedIn') && (string) $session->get('role') === 'admin') {
             return;
         }
+
+        $security = new SecurityAuditService();
+        $userId = is_numeric($session->get('user_id')) ? (int) $session->get('user_id') : null;
+        $security->recordUnauthorizedAccess($request, $userId, 'Unauthorized API admin endpoint access');
 
         return service('response')
             ->setJSON([

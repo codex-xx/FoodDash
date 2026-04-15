@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Libraries\ActivityLogger;
+use App\Libraries\SecurityAuditService;
 use App\Models\UserModel;
 use CodeIgniter\Controller;
 
@@ -19,13 +20,53 @@ class Auth extends BaseController
     // Show login form
     public function login()
     {
-        return view('auth/login');
+        $captchaRequired = $this->requiresCaptchaForSession();
+        $captchaQuestion = null;
+
+        if ($captchaRequired) {
+            $captcha = $this->ensureCaptchaChallenge();
+            $captchaQuestion = $captcha['question'];
+        } else {
+            session()->remove('login_captcha_answer');
+            session()->remove('login_captcha_question');
+        }
+
+        return view('auth/login', [
+            'captchaRequired' => $captchaRequired,
+            'captchaQuestion' => $captchaQuestion,
+        ]);
     }
 
     // Process login POST
     public function attempt()
     {
         $logger = new ActivityLogger();
+        $security = new SecurityAuditService();
+
+        if ($security->isRequestBlocked($this->request)) {
+            $security->logEvent(
+                $this->request,
+                null,
+                'intrusion_attempt',
+                'Blocked IP attempted to login',
+                'critical'
+            );
+
+            return redirect()->back()->withInput()->with('error', 'Too many suspicious attempts detected. Try again later.');
+        }
+
+        if ($this->requiresCaptchaForSession()) {
+            $captchaAnswer = trim((string) $this->request->getPost('captcha_answer'));
+            $expectedAnswer = (string) (session()->get('login_captcha_answer') ?? '');
+
+            if ($expectedAnswer === '' || $captchaAnswer === '' || ! hash_equals($expectedAnswer, $captchaAnswer)) {
+                $result = $security->recordFailedLogin($this->request, null, 'captcha_failed', (string) ($this->request->getPost('email') ?? ''));
+                $this->registerFailedAttemptForSession();
+                $this->appendSecurityWarning($result);
+
+                return redirect()->back()->withInput()->with('error', 'CAPTCHA verification failed.');
+            }
+        }
 
         $rules = [
             'email'    => 'required|valid_email',
@@ -35,6 +76,9 @@ class Auth extends BaseController
         if (! $this->validate($rules)) {
             $submittedEmail = (string) ($this->request->getPost('email') ?? '');
             $logger->logLoginAttempt($this->request, null, null, $submittedEmail, false, 'validation_failed');
+            $result = $security->recordFailedLogin($this->request, null, 'validation_failed', $submittedEmail);
+            $this->registerFailedAttemptForSession();
+            $this->appendSecurityWarning($result);
             return redirect()->back()->withInput()->with('error', $this->validator->getErrors());
         }
 
@@ -45,16 +89,25 @@ class Auth extends BaseController
 
         if (! $user) {
             $logger->logLoginAttempt($this->request, null, null, (string) $email, false, 'user_not_found');
+            $result = $security->recordFailedLogin($this->request, null, 'user_not_found', (string) $email);
+            $this->registerFailedAttemptForSession();
+            $this->appendSecurityWarning($result);
             return redirect()->back()->withInput()->with('error', 'Email not found');
         }
 
         if (! (int) $user['is_active']) {
             $logger->logLoginAttempt($this->request, (string) ($user['role'] ?? 'user'), (int) $user['id'], (string) $email, false, 'account_disabled');
+            $result = $security->recordFailedLogin($this->request, (int) $user['id'], 'account_disabled', (string) $email);
+            $this->registerFailedAttemptForSession();
+            $this->appendSecurityWarning($result);
             return redirect()->back()->withInput()->with('error', 'Account is disabled');
         }
 
         if (! password_verify($password, $user['password'])) {
             $logger->logLoginAttempt($this->request, (string) ($user['role'] ?? 'user'), (int) $user['id'], (string) $email, false, 'invalid_password');
+            $result = $security->recordFailedLogin($this->request, (int) $user['id'], 'invalid_password', (string) $email);
+            $this->registerFailedAttemptForSession();
+            $this->appendSecurityWarning($result);
             return redirect()->back()->withInput()->with('error', 'Incorrect email or password');
         }
 
@@ -87,6 +140,8 @@ class Auth extends BaseController
         }
 
         $logger->logLoginAttempt($this->request, $role, (int) $user['id'], (string) $email, true, null);
+        $security->recordSuccessfulLogin($this->request, (int) $user['id']);
+        $this->clearFailedAttemptSession();
         $logger->logUserActivity(
             $this->request,
             $role,
@@ -125,6 +180,8 @@ class Auth extends BaseController
         }
 
         $this->revokeWebSessionToken((string) ($session->get('session_jti') ?? ''));
+
+        $this->clearFailedAttemptSession();
 
         session()->destroy();
         return redirect()->to('/login')->with('success', 'Logged out');
@@ -212,6 +269,94 @@ class Auth extends BaseController
         } catch (\Throwable $e) {
             log_message('error', 'Failed to revoke web session token: ' . $e->getMessage());
         }
+    }
+
+    protected function ensureCaptchaChallenge(): array
+    {
+        $question = (string) (session()->get('login_captcha_question') ?? '');
+        $answer = (string) (session()->get('login_captcha_answer') ?? '');
+
+        if ($question !== '' && $answer !== '') {
+            return ['question' => $question, 'answer' => $answer];
+        }
+
+        $left = random_int(1, 9);
+        $right = random_int(1, 9);
+        $question = $left . ' + ' . $right . ' = ?';
+        $answer = (string) ($left + $right);
+
+        session()->set('login_captcha_question', $question);
+        session()->set('login_captcha_answer', $answer);
+
+        return ['question' => $question, 'answer' => $answer];
+    }
+
+    protected function appendSecurityWarning(array $result): void
+    {
+        if (! ($result['captcha_required'] ?? false) && ! ($result['alert_raised'] ?? false) && ! ($result['blocked'] ?? false)) {
+            return;
+        }
+
+        $messages = [];
+        if ($result['captcha_required'] ?? false) {
+            $messages[] = 'Additional verification is now required for this IP.';
+        }
+
+        if ($result['alert_raised'] ?? false) {
+            $messages[] = 'Security alert triggered and logged for admin review.';
+        }
+
+        if ($result['blocked'] ?? false) {
+            $messages[] = 'IP temporarily blocked due to suspicious retries.';
+        }
+
+        if ($messages !== []) {
+            session()->setFlashdata('security_warning', implode(' ', $messages));
+        }
+    }
+
+    protected function registerFailedAttemptForSession(): void
+    {
+        $now = time();
+        $window = 300;
+        $count = (int) (session()->get('login_failed_count') ?? 0);
+        $start = (int) (session()->get('login_failed_window_start') ?? 0);
+
+        if ($start === 0 || ($now - $start) > $window) {
+            $start = $now;
+            $count = 0;
+        }
+
+        $count++;
+        session()->set('login_failed_count', $count);
+        session()->set('login_failed_window_start', $start);
+    }
+
+    protected function requiresCaptchaForSession(): bool
+    {
+        $now = time();
+        $window = 300;
+        $threshold = 3;
+        $count = (int) (session()->get('login_failed_count') ?? 0);
+        $start = (int) (session()->get('login_failed_window_start') ?? 0);
+
+        if ($start === 0 || ($now - $start) > $window) {
+            session()->remove('login_failed_count');
+            session()->remove('login_failed_window_start');
+            session()->remove('login_captcha_answer');
+            session()->remove('login_captcha_question');
+            return false;
+        }
+
+        return $count >= $threshold;
+    }
+
+    protected function clearFailedAttemptSession(): void
+    {
+        session()->remove('login_failed_count');
+        session()->remove('login_failed_window_start');
+        session()->remove('login_captcha_answer');
+        session()->remove('login_captcha_question');
     }
 
     // Show forgot password form
