@@ -2,11 +2,13 @@
 
 namespace App\Controllers;
 
+use App\Libraries\SecurityAuditService;
 use App\Models\OrderModel;
 use App\Models\DriverModel;
 use App\Models\RestaurantModel;
 use App\Models\UserModel;
 use App\Models\MenuModel;
+use Dompdf\Dompdf;
 
 class Dashboard extends BaseController
 {
@@ -171,6 +173,10 @@ class Dashboard extends BaseController
         $hasAuthTokens = in_array('auth_tokens', $tables, true);
         $hasLoginActivities = in_array('login_activities', $tables, true);
         $hasUserActivities = in_array('user_activity_logs', $tables, true);
+        $hasAuditLogs = in_array('audit_logs', $tables, true);
+        $hasIntrusionAlerts = in_array('intrusion_alerts', $tables, true);
+        $hasBlockedIps = in_array('blocked_ips', $tables, true);
+        $security = new SecurityAuditService();
 
         $sessionStats = [
             'active_sessions' => 0,
@@ -254,17 +260,142 @@ class Dashboard extends BaseController
                 ->getResultArray();
         }
 
+        $recentAlerts = $hasIntrusionAlerts ? $security->recentAlerts(50) : [];
+        $activeBlocks = $hasBlockedIps ? $security->activeBlocks(50) : [];
+        $dailySummary = $security->buildReportSummary('daily');
+
         return $this->response->setJSON([
             'tables' => [
                 'auth_tokens' => $hasAuthTokens,
                 'login_activities' => $hasLoginActivities,
                 'user_activity_logs' => $hasUserActivities,
+                'audit_logs' => $hasAuditLogs,
+                'intrusion_alerts' => $hasIntrusionAlerts,
+                'blocked_ips' => $hasBlockedIps,
             ],
             'sessionStats' => $sessionStats,
+            'threatStats' => [
+                'failed_login_attempts' => (int) ($dailySummary['failed_login_attempts'] ?? 0),
+                'intrusion_attempts' => (int) ($dailySummary['intrusion_attempts'] ?? 0),
+                'blocked_ip_events' => (int) ($dailySummary['blocked_ip_events'] ?? 0),
+                'system_vulnerabilities_detected' => (int) ($dailySummary['system_vulnerabilities_detected'] ?? 0),
+            ],
             'recentSessions' => $recentSessions,
             'loginAttempts' => $loginAttempts,
             'accountActivities' => $accountActivities,
+            'recentAlerts' => $recentAlerts,
+            'activeBlocks' => $activeBlocks,
         ]);
+    }
+
+    public function adminSecurityReport()
+    {
+        $session = session();
+        if (! $session->get('isLoggedIn') || $session->get('role') !== 'admin') {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Access denied']);
+        }
+
+        $period = strtolower((string) $this->request->getGet('period'));
+        $format = strtolower((string) $this->request->getGet('format'));
+        if (! in_array($period, ['daily', 'weekly', 'monthly'], true)) {
+            $period = 'daily';
+        }
+
+        if (! in_array($format, ['json', 'csv', 'pdf'], true)) {
+            $format = 'json';
+        }
+
+        $security = new SecurityAuditService();
+        $summary = $security->buildReportSummary($period);
+
+        if ($format === 'json') {
+            return $this->response->setJSON($summary);
+        }
+
+        if ($format === 'csv') {
+            $filename = 'security_report_' . $period . '_' . date('Ymd_His') . '.csv';
+            $csv = $this->buildSecurityReportCsv($summary);
+
+            return $this->response
+                ->setHeader('Content-Type', 'text/csv; charset=UTF-8')
+                ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+                ->setBody($csv);
+        }
+
+        if (! class_exists(Dompdf::class)) {
+            return $this->response->setStatusCode(500)->setJSON([
+                'error' => 'PDF export dependency missing. Install dompdf/dompdf.',
+            ]);
+        }
+
+        $dompdf = new Dompdf();
+        $dompdf->loadHtml($this->buildSecurityReportHtml($summary));
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $filename = 'security_report_' . $period . '_' . date('Ymd_His') . '.pdf';
+        return $this->response
+            ->setHeader('Content-Type', 'application/pdf')
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+            ->setBody($dompdf->output());
+    }
+
+    protected function buildSecurityReportCsv(array $summary): string
+    {
+        $rows = [
+            ['metric', 'value'],
+            ['period', (string) ($summary['period'] ?? '')],
+            ['failed_login_attempts', (string) ($summary['failed_login_attempts'] ?? 0)],
+            ['intrusion_attempts', (string) ($summary['intrusion_attempts'] ?? 0)],
+            ['blocked_ip_events', (string) ($summary['blocked_ip_events'] ?? 0)],
+            ['system_vulnerabilities_detected', (string) ($summary['system_vulnerabilities_detected'] ?? 0)],
+            ['generated_at', (string) ($summary['generated_at'] ?? '')],
+        ];
+
+        $output = '';
+        foreach ($rows as $row) {
+            $escaped = array_map(static function ($value): string {
+                    $value = str_replace('"', '""', (string) $value);
+                    return '"' . $value . '"';
+            }, $row);
+            $output .= implode(',', $escaped) . "\n";
+        }
+
+        return $output;
+    }
+
+    protected function buildSecurityReportHtml(array $summary): string
+    {
+        $period = strtoupper((string) ($summary['period'] ?? 'daily'));
+        $generatedAt = (string) ($summary['generated_at'] ?? date('Y-m-d H:i:s'));
+
+        $safe = static function (string $value): string {
+            return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+        };
+
+        $failed = (int) ($summary['failed_login_attempts'] ?? 0);
+        $intrusions = (int) ($summary['intrusion_attempts'] ?? 0);
+        $blocked = (int) ($summary['blocked_ip_events'] ?? 0);
+        $vuln = (int) ($summary['system_vulnerabilities_detected'] ?? 0);
+
+        return '<html><head><style>'
+            . 'body{font-family:DejaVu Sans,Arial,sans-serif;padding:24px;color:#1c1c1c;}'
+            . 'h1{font-size:22px;margin:0 0 6px;}'
+            . 'p{margin:0 0 18px;color:#555;}'
+            . 'table{width:100%;border-collapse:collapse;}'
+            . 'th,td{border:1px solid #ddd;padding:10px;text-align:left;}'
+            . 'th{background:#f4f4f4;}'
+            . '</style></head><body>'
+            . '<h1>FoodDash Security Audit Report (' . $safe($period) . ')</h1>'
+            . '<p>Generated at: ' . $safe($generatedAt) . '</p>'
+            . '<table>'
+            . '<tr><th>Metric</th><th>Value</th></tr>'
+            . '<tr><td>Failed login attempts</td><td>' . $failed . '</td></tr>'
+            . '<tr><td>Detected intrusion attempts</td><td>' . $intrusions . '</td></tr>'
+            . '<tr><td>Blocked users/IP events</td><td>' . $blocked . '</td></tr>'
+            . '<tr><td>System vulnerabilities detected</td><td>' . $vuln . '</td></tr>'
+            . '</table>'
+            . '</body></html>';
     }
 
     public function adminOrdersData()

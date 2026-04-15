@@ -33,6 +33,7 @@ $routes->get('dashboard/admin/orders/history', 'Dashboard::adminOrdersHistory');
 $routes->get('dashboard/admin/data', 'Dashboard::adminData');
 $routes->get('dashboard/admin/security', 'Dashboard::adminSecurity');
 $routes->get('dashboard/admin/security/data', 'Dashboard::adminSecurityData');
+$routes->get('dashboard/admin/security/report', 'Dashboard::adminSecurityReport');
 $routes->get('dashboard/admin/chart-data', 'Dashboard::adminChartData');
 $routes->get('dashboard/admin/orders/data', 'Dashboard::adminOrdersData');
 $routes->get('dashboard/restaurant/data', 'Dashboard::restaurantData');

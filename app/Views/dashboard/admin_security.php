@@ -11,6 +11,8 @@
     </div>
     <div class="d-flex gap-2">
       <a href="<?= site_url('dashboard/admin') ?>" class="btn btn-sm btn-outline-secondary">Back to Dashboard</a>
+      <a href="<?= site_url('dashboard/admin/security/report?period=daily&format=csv') ?>" class="btn btn-sm btn-outline-success">Daily CSV</a>
+      <a href="<?= site_url('dashboard/admin/security/report?period=weekly&format=pdf') ?>" class="btn btn-sm btn-outline-danger">Weekly PDF</a>
       <button class="btn btn-sm btn-primary" id="refreshSecurityBtn">Refresh</button>
     </div>
   </div>
@@ -38,6 +40,41 @@
       <div class="card-body">
         <small class="text-muted d-block">Last Refresh</small>
         <h6 class="mb-0" id="lastRefreshText">Never</h6>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-3 mb-3">
+    <div class="card shadow-sm border-0">
+      <div class="card-body">
+        <small class="text-muted d-block">Failed Logins (24h)</small>
+        <h3 class="mb-0" id="failedLoginsCount">0</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mb-3">
+    <div class="card shadow-sm border-0">
+      <div class="card-body">
+        <small class="text-muted d-block">Intrusion Alerts (24h)</small>
+        <h3 class="mb-0" id="intrusionAlertsCount">0</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mb-3">
+    <div class="card shadow-sm border-0">
+      <div class="card-body">
+        <small class="text-muted d-block">Blocked IP Events (24h)</small>
+        <h3 class="mb-0" id="blockedIpsCount">0</h3>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 mb-3">
+    <div class="card shadow-sm border-0">
+      <div class="card-body">
+        <small class="text-muted d-block">Vulnerabilities (24h)</small>
+        <h3 class="mb-0" id="vulnerabilityCount">0</h3>
       </div>
     </div>
   </div>
@@ -115,6 +152,50 @@
     </div>
   </div>
 </div>
+
+<div class="row mb-4">
+  <div class="col-lg-6 mb-3">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body">
+        <h5 class="card-title">Recent Intrusion Alerts</h5>
+        <div class="table-responsive">
+          <table class="table table-striped table-hover table-sm align-middle" id="intrusionAlertsTable">
+            <thead class="table-light">
+              <tr>
+                <th>Type</th>
+                <th>Severity</th>
+                <th>Status</th>
+                <th>Count</th>
+                <th>Triggered At</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6 mb-3">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-body">
+        <h5 class="card-title">Active Blocked IP Entries</h5>
+        <div class="table-responsive">
+          <table class="table table-striped table-hover table-sm align-middle" id="blockedIpsTable">
+            <thead class="table-light">
+              <tr>
+                <th>IP Hash</th>
+                <th>Reason</th>
+                <th>Blocked At</th>
+                <th>Blocked Until</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -169,6 +250,9 @@
     if (!tables.auth_tokens) missing.push('auth_tokens');
     if (!tables.login_activities) missing.push('login_activities');
     if (!tables.user_activity_logs) missing.push('user_activity_logs');
+    if (!tables.audit_logs) missing.push('audit_logs');
+    if (!tables.intrusion_alerts) missing.push('intrusion_alerts');
+    if (!tables.blocked_ips) missing.push('blocked_ips');
 
     if (missing.length === 0) {
       warn.classList.add('d-none');
@@ -185,9 +269,14 @@
       .then(response => response.json())
       .then(data => {
         const stats = data.sessionStats || {};
+        const threatStats = data.threatStats || {};
         document.getElementById('activeSessionsCount').textContent = Number(stats.active_sessions || 0);
         document.getElementById('activeUsersCount').textContent = Number(stats.active_users || 0);
         document.getElementById('lastRefreshText').textContent = new Date().toLocaleString();
+        document.getElementById('failedLoginsCount').textContent = Number(threatStats.failed_login_attempts || 0);
+        document.getElementById('intrusionAlertsCount').textContent = Number(threatStats.intrusion_attempts || 0);
+        document.getElementById('blockedIpsCount').textContent = Number(threatStats.blocked_ip_events || 0);
+        document.getElementById('vulnerabilityCount').textContent = Number(threatStats.system_vulnerabilities_detected || 0);
 
         updateTablesWarning(data.tables || {});
 
@@ -222,6 +311,25 @@
             <td>${escapeHtml(row.created_at || '-')}</td>
           `;
         }, 5);
+
+        renderRows('#intrusionAlertsTable', data.recentAlerts || [], (row) => {
+          return `
+            <td>${escapeHtml(row.alert_type || '-')}</td>
+            <td><span class="badge ${row.severity === 'critical' ? 'bg-danger' : (row.severity === 'high' ? 'bg-warning text-dark' : 'bg-info text-dark')}">${escapeHtml(row.severity || '-')}</span></td>
+            <td>${escapeHtml(row.status || '-')}</td>
+            <td>${escapeHtml(row.trigger_count || 0)}</td>
+            <td>${escapeHtml(row.triggered_at || '-')}</td>
+          `;
+        }, 5);
+
+        renderRows('#blockedIpsTable', data.activeBlocks || [], (row) => {
+          return `
+            <td>${escapeHtml(row.ip_address_hash || '-')}</td>
+            <td>${escapeHtml(row.reason || '-')}</td>
+            <td>${escapeHtml(row.blocked_at || '-')}</td>
+            <td>${escapeHtml(row.blocked_until || 'manual')}</td>
+          `;
+        }, 4);
       })
       .catch(() => {
         alert('Failed to load security monitoring data.');
