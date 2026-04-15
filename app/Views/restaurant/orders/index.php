@@ -21,8 +21,9 @@
       <span class="badge bg-info">Accepted</span>
       <span class="badge bg-primary">Preparing</span>
       <span class="badge bg-secondary">Ready</span>
-      <span class="badge bg-dark">Assigned</span>
-      <span class="badge bg-primary">On the Way</span>
+      <span class="badge bg-primary">Picked Up</span>
+      <span class="badge bg-secondary">Arrived At Restaurant</span>
+      <span class="badge bg-primary">Out For Delivery</span>
       <span class="badge bg-success">Delivered</span>
       <span class="badge bg-danger">Cancelled</span>
     </div>
@@ -49,7 +50,7 @@
           </thead>
           <tbody>
             <?php foreach ($orders as $order): ?>
-              <tr>
+              <tr id="order-row-<?= (int) $order['id'] ?>" data-order-id="<?= (int) $order['id'] ?>">
                 <td><strong><?= $order['order_number'] ?></strong></td>
                 <td>
                   <div class="fw-semibold"><?= esc($order['display_customer_name'] ?? $order['customer_name']) ?></div>
@@ -57,22 +58,23 @@
                     <small class="text-muted d-block"><?= esc($order['display_customer_phone']) ?></small>
                   <?php endif; ?>
                 </td>
-                <td>
+                <td class="order-driver-cell">
                   <?php if (!empty($order['display_driver_name'] ?? $order['driver_name'])): ?>
                     <div class="fw-semibold"><?= esc($order['display_driver_name'] ?? $order['driver_name']) ?></div>
                   <?php else: ?>
-                    <small class="text-muted">Waiting for rider acceptance</small>
+                    <small class="text-muted">No driver accepts</small>
                   <?php endif; ?>
                 </td>
-                <td>
+                <td class="order-status-cell">
                   <?php
                     $statusClass = match ($order['status']) {
                       'pending' => 'warning',
                       'accepted' => 'info',
                       'preparing' => 'primary',
                       'ready' => 'secondary',
-                      'assigned' => 'dark',
-                      'on_the_way' => 'primary',
+                      'picked_up' => 'primary',
+                      'arrived_at_restaurant' => 'secondary',
+                      'out_for_delivery' => 'primary',
                       'delivered' => 'success',
                       'cancelled' => 'danger',
                       default => 'secondary'
@@ -80,7 +82,7 @@
                   ?>
                   <span class="badge bg-<?= $statusClass ?>"><?= ucwords(str_replace('_', ' ', $order['status'])) ?></span>
                 </td>
-                <td>
+                <td class="order-prep-cell">
                   <div class="input-group input-group-sm" style="max-width: 150px;">
                     <input type="number" class="form-control" 
                            id="prep_time_<?= $order['id'] ?>" 
@@ -100,7 +102,7 @@
                 </td>
                 <td>₱<?= number_format($order['total_amount'], 2) ?></td>
                 <td><?= date('M d, Y H:i', strtotime($order['created_at'])) ?></td>
-                <td>
+                <td class="order-actions-cell">
                   <button class="btn btn-sm btn-outline-secondary mb-1" type="button" onclick="showOrderDetails(<?= (int) $order['id'] ?>)">
                     <i class="bi bi-receipt"></i> View Details
                   </button>
@@ -189,11 +191,8 @@
         <input type="hidden" id="modal_order_id">
         <div class="mb-3">
           <label for="status_select" class="form-label">Select Status</label>
-          <select class="form-select" id="status_select">
-            <option value="accepted">Accepted</option>
-            <option value="preparing">Preparing</option>
-            <option value="ready">Ready</option>
-          </select>
+          <select class="form-select" id="status_select"></select>
+          <small class="text-muted d-none" id="status_help_text"></small>
         </div>
         <div class="mb-3">
           <label for="modal_prep_time" class="form-label">Estimated Preparation Time (minutes)</label>
@@ -236,6 +235,98 @@
   function textOrDash(value) {
     const text = (value ?? '').toString().trim();
     return text !== '' ? text : '-';
+  }
+
+  function statusBadgeHtml(status) {
+    const map = {
+      pending: '<span class="badge bg-warning">Pending</span>',
+      accepted: '<span class="badge bg-info">Accepted</span>',
+      preparing: '<span class="badge bg-primary">Preparing</span>',
+      ready: '<span class="badge bg-secondary">Ready</span>',
+      picked_up: '<span class="badge bg-primary">Picked Up</span>',
+      arrived_at_restaurant: '<span class="badge bg-secondary">Arrived At Restaurant</span>',
+      out_for_delivery: '<span class="badge bg-primary">Out For Delivery</span>',
+      on_the_way: '<span class="badge bg-primary">Out For Delivery</span>',
+      delivered: '<span class="badge bg-success">Delivered</span>',
+      cancelled: '<span class="badge bg-danger">Cancelled</span>'
+    };
+
+    return map[status] || '<span class="badge bg-secondary">' + textOrDash(status).replaceAll('_', ' ') + '</span>';
+  }
+
+  function getRestaurantStatusOptions(currentStatus) {
+    const status = (currentStatus || '').toString();
+
+    if (status === 'pending') {
+      return [{ value: 'accepted', label: 'Accepted' }];
+    }
+
+    if (status === 'accepted') {
+      return [{ value: 'preparing', label: 'Preparing' }];
+    }
+
+    if (status === 'preparing') {
+      return [{ value: 'ready', label: 'Ready' }];
+    }
+
+    return [];
+  }
+
+  function applyOrderPatch(order) {
+    if (!order || !order.id) {
+      return;
+    }
+
+    const row = document.getElementById(`order-row-${order.id}`);
+    if (!row) {
+      return;
+    }
+
+    const status = (order.status || '').toString();
+    const driverName = (order.driver_name || order.rider_name || '').toString().trim();
+    const driverCell = row.querySelector('.order-driver-cell');
+    const statusCell = row.querySelector('.order-status-cell');
+    const prepCell = row.querySelector('.order-prep-cell');
+    const prepInput = document.getElementById(`prep_time_${order.id}`);
+    const statusButton = row.querySelector('button[data-bs-target="#statusModal"]');
+
+    if (driverCell) {
+      driverCell.innerHTML = driverName
+        ? `<div class="fw-semibold">${driverName}</div>`
+        : '<small class="text-muted">No driver accepts</small>';
+    }
+
+    if (statusCell) {
+      statusCell.innerHTML = statusBadgeHtml(status);
+    }
+
+    if (statusButton) {
+      statusButton.setAttribute('data-current-status', status);
+    }
+
+    if (typeof order.estimated_preparation_time !== 'undefined' && prepInput) {
+      prepInput.value = order.estimated_preparation_time ?? '';
+      if (prepCell) {
+        const hint = prepCell.querySelector('small.text-muted');
+        if (hint) {
+          hint.textContent = order.estimated_preparation_time ? `${order.estimated_preparation_time} min` : '';
+          hint.classList.toggle('d-none', !order.estimated_preparation_time);
+        } else if (order.estimated_preparation_time) {
+          const newHint = document.createElement('small');
+          newHint.className = 'text-muted';
+          newHint.textContent = `${order.estimated_preparation_time} min`;
+          prepCell.appendChild(newHint);
+        }
+      }
+    }
+
+    if (status === 'delivered' || status === 'cancelled') {
+      row.remove();
+    }
+  }
+
+  function applyOrderPatchFromResponse(orderId, payload) {
+    applyOrderPatch(Object.assign({ id: Number(orderId) }, payload || {}));
   }
 
   function showOrderDetails(orderId) {
@@ -315,9 +406,45 @@
     const button = event.relatedTarget;
     const orderId = button.getAttribute('data-order-id');
     const currentStatus = button.getAttribute('data-current-status');
+    const statusSelect = document.getElementById('status_select');
+    const statusHelpText = document.getElementById('status_help_text');
+    const updateButton = statusModal.querySelector('button.btn.btn-primary[onclick="submitStatusUpdate()"]');
+    const statusOptions = getRestaurantStatusOptions(currentStatus);
     
     document.getElementById('modal_order_id').value = orderId;
-    document.getElementById('status_select').value = currentStatus;
+
+    statusSelect.innerHTML = '';
+    if (statusOptions.length > 0) {
+      statusOptions.forEach((optionData, index) => {
+        const option = document.createElement('option');
+        option.value = optionData.value;
+        option.textContent = optionData.label;
+        option.selected = index === 0;
+        statusSelect.appendChild(option);
+      });
+    } else {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = 'No restaurant updates available';
+      option.disabled = true;
+      option.selected = true;
+      statusSelect.appendChild(option);
+    }
+
+    const canEdit = statusOptions.length > 0;
+    if (updateButton) {
+      updateButton.disabled = !canEdit;
+    }
+
+    if (statusHelpText) {
+      if (canEdit) {
+        statusHelpText.classList.add('d-none');
+        statusHelpText.textContent = '';
+      } else {
+        statusHelpText.textContent = 'Restaurant status changes are only available while the order is pending, accepted, or preparing.';
+        statusHelpText.classList.remove('d-none');
+      }
+    }
     
     // Try to get prep time from the input field
     const prepTimeInput = document.getElementById('prep_time_' + orderId);
@@ -341,11 +468,10 @@
     }
     
     postOrderUpdate(orderId, formData)
-      .then(() => {
+      .then((json) => {
         const modal = bootstrap.Modal.getInstance(statusModal);
         modal.hide();
-        alert('Order status updated successfully!');
-        location.reload();
+        applyOrderPatchFromResponse(orderId, json.order || { status: json.status });
       })
       .catch(err => alert('Error: ' + err.message));
   }
@@ -363,9 +489,8 @@
     formData.append('estimated_preparation_time', prepTime);
     
     postOrderUpdate(orderId, formData)
-      .then(() => {
-        alert('Preparation time updated!');
-        location.reload();
+      .then((json) => {
+        applyOrderPatchFromResponse(orderId, json.order || { estimated_preparation_time: prepTime });
       })
       .catch(err => alert('Error: ' + err.message));
   }
@@ -385,32 +510,18 @@
         if (payload.last_id) {
           lastId = payload.last_id;
         }
+        if (Array.isArray(payload.orders)) {
+          payload.orders.forEach(applyOrderPatch);
+        }
       } catch (e) {
-        // Ignore malformed messages and still refresh.
+        // Ignore malformed messages.
       }
-      location.reload();
     });
   })();
 
   // Fallback polling so rider/status updates still appear even if SSE is blocked.
   (function setupAutoRefreshFallback() {
-    const REFRESH_MS = 10000;
-    let refreshTimer = null;
-
-    const tick = () => {
-      const modalOpen = document.querySelector('.modal.show') !== null;
-      if (document.visibilityState === 'visible' && !modalOpen) {
-        location.reload();
-      }
-    };
-
-    refreshTimer = window.setInterval(tick, REFRESH_MS);
-
-    window.addEventListener('beforeunload', () => {
-      if (refreshTimer !== null) {
-        window.clearInterval(refreshTimer);
-      }
-    });
+    // No full-page fallback refresh; the page updates in place.
   })();
 </script>
 <?= $this->endSection() ?>

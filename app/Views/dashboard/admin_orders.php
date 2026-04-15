@@ -131,7 +131,7 @@
             <td><strong>${order.order_number}</strong></td>
             <td>${order.customer_name || '-'}</td>
             <td>${order.restaurant_name || '-'}</td>
-            <td>${order.driver_name || 'Unassigned'}</td>
+            <td>${order.rider_name || order.driver_name || 'No driver accepts'}</td>
             <td>${statusBadge(order.status)}</td>
             <td>₱${parseFloat(order.total_amount || 0).toFixed(2)}</td>
             <td>${order.created_at ? new Date(order.created_at).toLocaleDateString() : '-'}</td>

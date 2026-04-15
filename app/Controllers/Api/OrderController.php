@@ -18,7 +18,7 @@ class OrderController extends ResourceController
     protected $orderModel;
     protected $orderFlow;
     protected $permissions;
-    private const RIDER_CONFIRMED_STATUSES = ['assigned', 'on_the_way', 'delivered'];
+    private const RIDER_CONFIRMED_STATUSES = ['picked_up', 'arrived_at_restaurant', 'out_for_delivery', 'delivered'];
 
     public function __construct()
     {
@@ -72,7 +72,7 @@ class OrderController extends ResourceController
         if ($driver) {
             $assignedToDriver = $this->orderModel
                 ->where('driver_id', (int) $driver['id'])
-                ->whereIn('status', ['accepted', 'preparing', 'ready', 'assigned', 'on_the_way'])
+                ->whereIn('status', ['accepted', 'preparing', 'ready', 'picked_up', 'arrived_at_restaurant', 'out_for_delivery'])
                 ->orderBy('created_at', 'DESC')
                 ->findAll();
 
@@ -443,10 +443,10 @@ class OrderController extends ResourceController
         $status = $this->request->getJSON()->status ?? $this->request->getPost('status');
         $status = $this->orderFlow->normalizeStatus((string) $status);
 
-        if (!in_array($status, ['assigned', 'on_the_way', 'delivered'], true)) {
+        if (!in_array($status, ['picked_up', 'arrived_at_restaurant', 'out_for_delivery', 'delivered'], true)) {
             return $this->respond([
                 'success' => false,
-                'message' => 'Invalid status for driver. Valid statuses: picked_up (or assigned), on_the_way, delivered'
+                'message' => 'Invalid status for driver. Valid statuses: picked_up, arrived_at_restaurant, out_for_delivery, delivered'
             ], 400);
         }
 
@@ -540,28 +540,22 @@ class OrderController extends ResourceController
             ], 400);
         }
 
-        if (in_array((string) $order['status'], ['on_the_way', 'delivered', 'cancelled'], true)) {
+        if (in_array((string) $order['status'], ['out_for_delivery', 'delivered', 'cancelled'], true)) {
             return $this->respond([
                 'success' => false,
                 'message' => 'Order cannot be accepted in current status'
             ], 400);
         }
 
-        if ((int) ($order['driver_id'] ?? 0) === 0) {
-            $this->orderModel->update((int) $id, ['driver_id' => (int) $driver['id']]);
-        }
-
-        if ((string) $order['status'] === 'assigned') {
-            $current = $this->orderModel->find($id);
-
+        if ((string) $order['status'] === 'accepted' && (int) ($order['driver_id'] ?? 0) === (int) $driver['id']) {
             return $this->respond([
                 'success' => true,
                 'message' => 'Order already accepted',
-                'data'    => $this->enrichOrderForDriver($current)
+                'data'    => $this->enrichOrderForDriver($order)
             ]);
         }
 
-        $result = $this->orderFlow->updateStatus((int) $id, 'assigned', 'driver', (int) $driver['id'], 'Driver accepted incoming request');
+        $result = $this->orderFlow->acceptOrder((int) $id, (int) $driver['id'], 'Driver accepted incoming request');
 
         if (!($result['ok'] ?? false)) {
             return $this->respond([
@@ -687,7 +681,7 @@ class OrderController extends ResourceController
             ], 403);
         }
 
-        $nonCancellable = ['assigned', 'on_the_way', 'delivered'];
+        $nonCancellable = ['picked_up', 'arrived_at_restaurant', 'out_for_delivery', 'delivered'];
         if (in_array($order['status'], $nonCancellable)) {
             return $this->respond([
                 'success' => false,

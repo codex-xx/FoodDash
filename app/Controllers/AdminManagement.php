@@ -277,7 +277,7 @@ class AdminManagement extends BaseController
             FROM orders o
             JOIN restaurants r ON r.id = o.restaurant_id
             WHERE o.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-            AND o.status = 'completed'
+            AND o.status = 'delivered'
             GROUP BY o.restaurant_id
             ORDER BY revenue DESC
         ")->getResultArray();

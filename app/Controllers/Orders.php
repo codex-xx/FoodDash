@@ -47,7 +47,7 @@ class Orders extends BaseController
             ->join('drivers d', '(d.id = orders.driver_id OR d.user_id = orders.driver_id)', 'left')
             ->join('customers c', 'c.id = orders.customer_id', 'left')
             ->where('orders.restaurant_id', $restaurantId)
-            ->whereNotIn('orders.status', ['completed', 'cancelled'])
+            ->whereNotIn('orders.status', ['completed', 'delivered', 'cancelled'])
             ->orderBy('orders.created_at', 'DESC')
             ->get()
             ->getResultArray();
@@ -79,7 +79,7 @@ class Orders extends BaseController
             $logRows = $this->orderStatusLogModel
                 ->whereIn('order_id', $orderIds)
                 ->where('changed_by_role', 'driver')
-                ->whereIn('to_status', ['assigned', 'on_the_way', 'delivered'])
+                ->whereIn('to_status', ['picked_up', 'arrived_at_restaurant', 'out_for_delivery', 'delivered'])
                 ->orderBy('id', 'ASC')
                 ->findAll();
 
@@ -306,20 +306,24 @@ class Orders extends BaseController
         $startDate = $this->request->getGet('start_date');
         $endDate = $this->request->getGet('end_date');
         
-        $builder = $this->orderModel->where('restaurant_id', $restaurantId);
-        
-        // Only show completed and cancelled orders
-        $builder->whereIn('status', ['delivered', 'cancelled']);
+        $builder = $this->orderModel->builder();
+        $builder
+            ->select('orders.*, COALESCE(d.name, "") as rider_name')
+            // Support both direct driver IDs and legacy mappings where order.driver_id stored drivers.user_id.
+            ->join('drivers d', '(d.id = orders.driver_id OR d.user_id = orders.driver_id)', 'left')
+            ->where('orders.restaurant_id', $restaurantId)
+            // Only show delivered and cancelled orders on history page.
+            ->whereIn('orders.status', ['delivered', 'cancelled']);
         
         // Apply date filtering if provided
         if (!empty($startDate)) {
-            $builder->where('created_at >=', $startDate . ' 00:00:00');
+            $builder->where('orders.created_at >=', $startDate . ' 00:00:00');
         }
         if (!empty($endDate)) {
-            $builder->where('created_at <=', $endDate . ' 23:59:59');
+            $builder->where('orders.created_at <=', $endDate . ' 23:59:59');
         }
         
-        $orders = $builder->orderBy('created_at', 'DESC')->findAll();
+        $orders = $builder->orderBy('orders.created_at', 'DESC')->get()->getResultArray();
 
         return view('restaurant/orders/history', ['orders' => $orders]);
     }
@@ -349,7 +353,7 @@ class Orders extends BaseController
             ->where('restaurant_id', $restaurantId)
             ->where('created_at >=', $todayStart)
             ->where('created_at <=', $todayEnd)
-            ->where('status', 'completed')
+                ->where('status', 'delivered')
             ->first()['total'] ?? 0;
 
         return $this->response->setJSON([

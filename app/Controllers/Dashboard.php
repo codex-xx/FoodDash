@@ -88,7 +88,7 @@ class Dashboard extends BaseController
             ->where('created_at <=', $todayEnd)
             ->countAllResults();
         $pendingOrders = $orderModel->where('status', 'pending')->countAllResults();
-        $activeDeliveries = $orderModel->whereIn('status', ['assigned', 'on_the_way'])->countAllResults();
+        $activeDeliveries = $orderModel->whereIn('status', ['picked_up', 'arrived_at_restaurant', 'out_for_delivery'])->countAllResults();
         $activeDrivers = $driverModel->where('is_active', 1)->countAllResults();
         $totalRestaurants = $restaurantModel->countAllResults();
         $pendingRestaurants = $restaurantModel->where('status', 'pending')->countAllResults();
@@ -156,13 +156,13 @@ class Dashboard extends BaseController
         $restaurantModel = new RestaurantModel();
 
         $builder = $orderModel->builder();
-        $builder->select('orders.id, order_number, customer_name, orders.restaurant_id, orders.driver_id, orders.status, orders.total_amount, orders.created_at, r.name as restaurant_name, d.name as driver_name')
+        $builder->select('orders.id, order_number, customer_name, orders.restaurant_id, orders.driver_id, orders.status, orders.total_amount, orders.created_at, r.name as restaurant_name, d.name as driver_name, d.name as rider_name')
             ->join('restaurants r', 'r.id = orders.restaurant_id', 'left')
-            ->join('drivers d', 'd.id = orders.driver_id', 'left')
+            ->join('drivers d', '(d.id = orders.driver_id OR d.user_id = orders.driver_id)', 'left')
             ->orderBy('orders.created_at', 'DESC');
 
         if ($scope === 'history') {
-            $builder->where('orders.status', 'delivered');
+            $builder->whereIn('orders.status', ['delivered', 'cancelled']);
         } elseif ($scope === 'active') {
             $builder->whereNotIn('orders.status', ['delivered', 'cancelled']);
         }
@@ -420,7 +420,7 @@ class Dashboard extends BaseController
         }
 
         $orderModel = new OrderModel();
-        $allowed = ['pending', 'accepted', 'preparing', 'ready', 'assigned', 'on_the_way', 'delivered', 'cancelled'];
+        $allowed = ['pending', 'accepted', 'preparing', 'ready', 'picked_up', 'arrived_at_restaurant', 'out_for_delivery', 'delivered', 'cancelled'];
 
         $status = $this->request->getPost('status');
         if (! in_array($status, $allowed)) {

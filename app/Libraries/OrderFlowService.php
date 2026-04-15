@@ -13,8 +13,9 @@ class OrderFlowService
     public const STATUS_ACCEPTED = 'accepted';
     public const STATUS_PREPARING = 'preparing';
     public const STATUS_READY = 'ready';
-    public const STATUS_ASSIGNED = 'assigned';
-    public const STATUS_ON_THE_WAY = 'on_the_way';
+    public const STATUS_ARRIVED_RESTAURANT = 'arrived_at_restaurant';
+    public const STATUS_PICKED_UP = 'picked_up';
+    public const STATUS_OUT_FOR_DELIVERY = 'out_for_delivery';
     public const STATUS_DELIVERED = 'delivered';
     public const STATUS_CANCELLED = 'cancelled';
 
@@ -38,8 +39,9 @@ class OrderFlowService
             self::STATUS_ACCEPTED,
             self::STATUS_PREPARING,
             self::STATUS_READY,
-            self::STATUS_ASSIGNED,
-            self::STATUS_ON_THE_WAY,
+            self::STATUS_ARRIVED_RESTAURANT,
+            self::STATUS_PICKED_UP,
+            self::STATUS_OUT_FOR_DELIVERY,
             self::STATUS_DELIVERED,
             self::STATUS_CANCELLED,
         ];
@@ -52,8 +54,10 @@ class OrderFlowService
         $map = [
             'confirmed' => self::STATUS_ACCEPTED,
             'ready_for_pickup' => self::STATUS_READY,
-            'picked_up' => self::STATUS_ASSIGNED,
-            'out_for_delivery' => self::STATUS_ON_THE_WAY,
+            'picked_up' => self::STATUS_PICKED_UP,
+            'arrived_at_restaurant' => self::STATUS_ARRIVED_RESTAURANT,
+            'out_for_delivery' => self::STATUS_OUT_FOR_DELIVERY,
+            'on_the_way' => self::STATUS_OUT_FOR_DELIVERY,
             'completed' => self::STATUS_DELIVERED,
         ];
 
@@ -181,8 +185,10 @@ class OrderFlowService
                 self::STATUS_READY,
             ],
             'driver' => [
-                self::STATUS_ASSIGNED,
-                self::STATUS_ON_THE_WAY,
+                self::STATUS_ACCEPTED,
+                self::STATUS_PICKED_UP,
+                self::STATUS_ARRIVED_RESTAURANT,
+                self::STATUS_OUT_FOR_DELIVERY,
                 self::STATUS_DELIVERED,
             ],
             'customer' => [
@@ -220,22 +226,59 @@ class OrderFlowService
 
         $this->orderModel->update($orderId, [
             'driver_id' => $driverId,
-            'status' => self::STATUS_ASSIGNED,
+            'status' => self::STATUS_PICKED_UP,
         ]);
 
         $this->statusLogModel->insert([
             'order_id' => $orderId,
             'from_status' => $this->normalizeStatus((string) ($order['status'] ?? self::STATUS_PENDING)),
-            'to_status' => self::STATUS_ASSIGNED,
+            'to_status' => self::STATUS_PICKED_UP,
             'changed_by_role' => $actorRole,
             'changed_by_id' => $actorId,
-            'notes' => 'Driver #' . $driverId . ' assigned manually',
+            'notes' => 'Driver #' . $driverId . ' picked up the order',
         ]);
 
         return [
             'ok' => true,
             'order' => $this->orderModel->find($orderId),
             'message' => 'Driver assigned',
+        ];
+    }
+
+    public function acceptOrder(int $orderId, int $driverId, ?string $notes = null): array
+    {
+        $order = $this->orderModel->find($orderId);
+        if (! $order) {
+            return ['ok' => false, 'message' => 'Order not found', 'code' => 404];
+        }
+
+        $currentStatus = $this->normalizeStatus((string) ($order['status'] ?? self::STATUS_PENDING));
+        if (! in_array($currentStatus, [self::STATUS_ACCEPTED, self::STATUS_PREPARING, self::STATUS_READY], true)) {
+            return ['ok' => false, 'message' => 'Order cannot be accepted in current status', 'code' => 400];
+        }
+
+        $currentDriverId = (int) ($order['driver_id'] ?? 0);
+        if ($currentDriverId > 0 && $currentDriverId !== $driverId) {
+            return ['ok' => false, 'message' => 'Order already assigned to another driver', 'code' => 409];
+        }
+
+        if ($currentDriverId === 0) {
+            $this->orderModel->update($orderId, ['driver_id' => $driverId]);
+        }
+
+        $this->statusLogModel->insert([
+            'order_id' => $orderId,
+            'from_status' => $currentStatus,
+            'to_status' => $currentStatus,
+            'changed_by_role' => 'driver',
+            'changed_by_id' => $driverId,
+            'notes' => $notes ?? 'Driver accepted incoming request',
+        ]);
+
+        return [
+            'ok' => true,
+            'order' => $this->orderModel->find($orderId),
+            'message' => 'Order accepted',
         ];
     }
 

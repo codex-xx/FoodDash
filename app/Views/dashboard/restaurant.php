@@ -211,6 +211,42 @@
   </div>
 </div>
 
+<div class="modal fade" id="recentOrderDetailsModal" tabindex="-1" aria-labelledby="recentOrderDetailsLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="recentOrderDetailsLabel">Recent Order Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <small class="text-muted d-block">Order #</small>
+          <div class="fw-semibold" id="recentOrderNumber">-</div>
+        </div>
+        <div class="mb-3">
+          <small class="text-muted d-block">Customer</small>
+          <div class="fw-semibold" id="recentOrderCustomer">-</div>
+        </div>
+        <div class="mb-3">
+          <small class="text-muted d-block">Status</small>
+          <div id="recentOrderStatus">-</div>
+        </div>
+        <div class="mb-3">
+          <small class="text-muted d-block">Amount</small>
+          <div class="fw-semibold" id="recentOrderAmount">-</div>
+        </div>
+        <div>
+          <small class="text-muted d-block">Created</small>
+          <div id="recentOrderCreatedAt">-</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
@@ -218,6 +254,7 @@
 <script>
   let orderRateChart = null;
   let popularFoodChart = null;
+  let recentOrdersById = {};
 
   function getStatusBadge(status) {
     const map = {
@@ -231,6 +268,47 @@
       cancelled: '<span class="badge bg-danger">Cancelled</span>'
     };
     return map[status] || '<span class="badge bg-secondary">' + status + '</span>';
+  }
+
+  function renderRecentOrders(recentOrders) {
+    const ordersTable = document.querySelector('#ordersTable tbody');
+    ordersTable.innerHTML = '';
+    recentOrdersById = {};
+
+    if (recentOrders.length > 0) {
+      document.getElementById('noOrders').classList.add('d-none');
+      recentOrders.forEach(order => {
+        recentOrdersById[String(order.id)] = order;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><strong>${order.order_number}</strong></td>
+          <td>${order.customer_name || '-'}</td>
+          <td>${getStatusBadge(order.status)}</td>
+          <td>P${parseFloat(order.total_amount || 0).toFixed(2)}</td>
+          <td><button class="btn btn-sm btn-outline-secondary" onclick="showRecentOrderDetails(${order.id})">View Details</button></td>
+        `;
+        ordersTable.appendChild(row);
+      });
+    } else {
+      document.getElementById('noOrders').classList.remove('d-none');
+    }
+  }
+
+  function showRecentOrderDetails(orderId) {
+    const order = recentOrdersById[String(orderId)];
+    if (!order) {
+      alert('Order details unavailable. Please refresh the page.');
+      return;
+    }
+
+    document.getElementById('recentOrderNumber').textContent = order.order_number || '-';
+    document.getElementById('recentOrderCustomer').textContent = order.customer_name || '-';
+    document.getElementById('recentOrderStatus').innerHTML = getStatusBadge(order.status);
+    document.getElementById('recentOrderAmount').textContent = 'P' + parseFloat(order.total_amount || 0).toFixed(2);
+    document.getElementById('recentOrderCreatedAt').textContent = order.created_at ? new Date(order.created_at).toLocaleString() : '-';
+
+    const modal = new bootstrap.Modal(document.getElementById('recentOrderDetailsModal'));
+    modal.show();
   }
 
   function initOrderRateChart(monthlyData) {
@@ -386,30 +464,6 @@
       .catch(err => console.error('Error loading chart data:', err));
   }
 
-  function updateOrderStatus(orderId) {
-    const newStatus = prompt('Enter new status (accepted, preparing, ready):');
-    if (!newStatus) return;
-
-    fetch(`<?= site_url('orders') ?>/${orderId}/status`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `status=${encodeURIComponent(newStatus)}`
-    })
-    .then(r => r.json())
-    .then(json => {
-      if (json.success) {
-        alert('Order status updated');
-      } else {
-        alert('Error: ' + (json.error || 'Unknown error'));
-      }
-      loadDashboard();
-    })
-    .catch(err => {
-      alert('Error updating status');
-      console.error(err);
-    });
-  }
-
   function loadDashboard() {
     fetch('<?= site_url('dashboard/restaurant/data') ?>')
       .then(r => r.json())
@@ -422,26 +476,8 @@
         $('#totalIncome').text('P' + income.toFixed(2));
         $('#totalExpense').text('P' + expense.toFixed(2));
 
-        const ordersTable = document.querySelector('#ordersTable tbody');
-        ordersTable.innerHTML = '';
-
         const recentOrders = json.recentOrders || [];
-        if (recentOrders.length > 0) {
-          document.getElementById('noOrders').classList.add('d-none');
-          recentOrders.forEach(order => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-              <td><strong>${order.order_number}</strong></td>
-              <td>${order.customer_name || '-'}</td>
-              <td>${getStatusBadge(order.status)}</td>
-              <td>P${parseFloat(order.total_amount || 0).toFixed(2)}</td>
-              <td><button class="btn btn-sm btn-outline-primary" onclick="updateOrderStatus(${order.id})">Update Status</button></td>
-            `;
-            ordersTable.appendChild(row);
-          });
-        } else {
-          document.getElementById('noOrders').classList.remove('d-none');
-        }
+        renderRecentOrders(recentOrders);
 
         const menuTable = document.querySelector('#menuTable tbody');
         menuTable.innerHTML = '';
@@ -465,6 +501,27 @@
         } else {
           document.getElementById('noMenu').classList.remove('d-none');
         }
+
+        loadRestaurantChartData();
+      })
+      .catch(err => console.error(err));
+  }
+
+  function refreshRestaurantLiveOrders() {
+    fetch('<?= site_url('dashboard/restaurant/data') ?>')
+      .then(r => r.json())
+      .then(json => {
+        const recentOrders = json.recentOrders || [];
+        renderRecentOrders(recentOrders);
+
+        const breakdown = json.metrics || {};
+        const dailyRevenue = Number(breakdown.dailyRevenue || 0);
+        const income = dailyRevenue * 0.8;
+        const expense = dailyRevenue * 0.2;
+
+        $('#totalRevenue').text('P' + dailyRevenue.toFixed(2));
+        $('#totalIncome').text('P' + income.toFixed(2));
+        $('#totalExpense').text('P' + expense.toFixed(2));
 
         loadRestaurantChartData();
       })
@@ -502,7 +559,7 @@
 
     const source = new EventSource('<?= site_url('api/orders/stream') ?>');
     source.addEventListener('order_update', function () {
-      loadDashboard();
+      refreshRestaurantLiveOrders();
     });
   })();
 </script>

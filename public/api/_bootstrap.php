@@ -171,7 +171,7 @@ function bind_dynamic_params(mysqli_stmt $stmt, string $types, array &$params): 
 
 function canonical_order_statuses(): array
 {
-    return ['pending', 'accepted', 'preparing', 'ready', 'assigned', 'on_the_way', 'delivered', 'cancelled'];
+    return ['pending', 'accepted', 'preparing', 'ready', 'picked_up', 'arrived_at_restaurant', 'out_for_delivery', 'delivered', 'cancelled'];
 }
 
 function normalize_order_status(string $status): string
@@ -181,8 +181,10 @@ function normalize_order_status(string $status): string
     $aliases = [
         'confirmed' => 'accepted',
         'ready_for_pickup' => 'ready',
-        'picked_up' => 'assigned',
-        'out_for_delivery' => 'on_the_way',
+        'picked_up' => 'picked_up',
+        'arrived_at_restaurant' => 'arrived_at_restaurant',
+        'out_for_delivery' => 'out_for_delivery',
+        'on_the_way' => 'out_for_delivery',
         'completed' => 'delivered',
     ];
 

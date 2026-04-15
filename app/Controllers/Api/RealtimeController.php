@@ -34,7 +34,8 @@ class RealtimeController extends Controller
                 $latestOrders = empty($orderIds)
                     ? []
                     : $orderModel
-                        ->select('id, order_number, status, restaurant_id, driver_id, updated_at')
+                        ->select('orders.id, orders.order_number, orders.status, orders.restaurant_id, orders.driver_id, orders.updated_at, d.name as driver_name, d.name as rider_name')
+                        ->join('drivers d', '(d.id = orders.driver_id OR d.user_id = orders.driver_id)', 'left')
                         ->whereIn('id', $orderIds)
                         ->findAll();
 

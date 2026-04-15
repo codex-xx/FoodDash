@@ -502,6 +502,75 @@
       .catch(err => console.error('Error loading chart data:', err));
   }
 
+  function refreshAdminLiveSummary() {
+    fetch('<?= site_url('dashboard/admin/data') ?>')
+      .then(r => r.json())
+      .then(json => {
+        const totalRev = Number(json.metrics.dailyRevenue || 0);
+        const income = totalRev * 0.8;
+        const expense = totalRev * 0.2;
+
+        $('#totalRevenue').text('₱' + totalRev.toFixed(2));
+        $('#totalIncome').text('₱' + income.toFixed(2));
+        $('#totalExpense').text('₱' + expense.toFixed(2));
+
+        activeDriversList = Array.isArray(json.activeDriversList) ? json.activeDriversList : [];
+
+        const pendingDriversBody = document.querySelector('#pendingDriversTable tbody');
+        const pendingDrivers = json.pendingDrivers || [];
+        const pendingDriversEmpty = document.getElementById('pendingDriversEmpty');
+        const pendingDriversTableWrap = document.getElementById('pendingDriversTableWrap');
+
+        pendingDriversBody.innerHTML = '';
+
+        if (pendingDrivers.length === 0) {
+          pendingDriversTableWrap.classList.add('d-none');
+          pendingDriversEmpty.classList.remove('d-none');
+        } else {
+          pendingDriversTableWrap.classList.remove('d-none');
+          pendingDriversEmpty.classList.add('d-none');
+
+          pendingDrivers.forEach(driver => {
+            const row = document.createElement('tr');
+            const appliedOn = driver.created_at ? new Date(driver.created_at).toLocaleDateString() : '-';
+            const vehicle = driver.vehicle_type || '-';
+
+            row.innerHTML = `
+              <td><strong>${driver.name || '-'}</strong></td>
+              <td>${driver.email || '-'}</td>
+              <td>${driver.phone || '-'}</td>
+              <td>${vehicle}</td>
+              <td>${appliedOn}</td>
+              <td>
+                <button class="btn btn-sm btn-success" onclick="approvePendingDriver(${driver.id})">Approve</button>
+                <button class="btn btn-sm btn-danger" onclick="rejectPendingDriver(${driver.id})">Reject</button>
+              </td>
+            `;
+            pendingDriversBody.appendChild(row);
+          });
+        }
+
+        fetch('<?= site_url('api/admin/revenue-summary') ?>')
+          .then(r => r.json())
+          .then(revData => {
+            const revBody = document.querySelector('#revenueTable tbody');
+            revBody.innerHTML = '';
+            (revData.revenueByRestaurant || []).forEach(rest => {
+              const row = document.createElement('tr');
+              row.innerHTML = `
+                <td>${rest.name}</td>
+                <td>${rest.orders}</td>
+                <td>₱${parseFloat(rest.revenue).toFixed(2)}</td>
+              `;
+              revBody.appendChild(row);
+            });
+          });
+
+        loadChartData();
+      })
+      .catch(err => console.error(err));
+  }
+
   function approvePendingDriver(driverId) {
     if (!confirm('Approve this driver?')) return;
 
@@ -563,7 +632,7 @@
 
     const source = new EventSource('<?= site_url('api/orders/stream') ?>');
     source.addEventListener('order_update', function () {
-      loadDashboard();
+      refreshAdminLiveSummary();
     });
   })();
 </script>

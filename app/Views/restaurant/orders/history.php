@@ -7,7 +7,7 @@
   <div class="col-12">
     <div>
       <h3 class="m-0">Order History</h3>
-      <small class="text-muted">View all completed and cancelled orders</small>
+      <small class="text-muted">View all delivered and cancelled orders</small>
     </div>
   </div>
 </div>
@@ -40,9 +40,9 @@
 <!-- Summary Cards -->
 <?php 
   $totalOrders = count($orders);
-  $completedOrders = count(array_filter($orders, fn($o) => $o['status'] === 'completed'));
+  $completedOrders = count(array_filter($orders, fn($o) => $o['status'] === 'delivered'));
   $cancelledOrders = count(array_filter($orders, fn($o) => $o['status'] === 'cancelled'));
-  $totalRevenue = array_sum(array_column(array_filter($orders, fn($o) => $o['status'] === 'completed'), 'total_amount'));
+  $totalRevenue = array_sum(array_column(array_filter($orders, fn($o) => $o['status'] === 'delivered'), 'total_amount'));
 ?>
 <div class="row mb-4">
   <div class="col-md-3">
@@ -56,7 +56,7 @@
   <div class="col-md-3">
     <div class="card shadow-sm">
       <div class="card-body">
-        <h6 class="text-muted mb-2">Completed</h6>
+        <h6 class="text-muted mb-2">Delivered</h6>
         <h3 class="mb-0 text-success"><?= $completedOrders ?></h3>
       </div>
     </div>
@@ -89,6 +89,7 @@
             <tr>
               <th>Order #</th>
               <th>Customer</th>
+              <th>Rider</th>
               <th>Status</th>
               <th>Prep Time</th>
               <th>Amount</th>
@@ -101,10 +102,11 @@
               <tr>
                 <td><strong><?= $order['order_number'] ?></strong></td>
                 <td><?= $order['customer_name'] ?></td>
+                <td><?= esc(trim((string) ($order['rider_name'] ?? '')) !== '' ? $order['rider_name'] : 'No driver accepts') ?></td>
                 <td>
                   <?php
                     $statusClass = match ($order['status']) {
-                      'completed' => 'success',
+                      'delivered' => 'success',
                       'cancelled' => 'danger',
                       default => 'secondary'
                     };
@@ -143,7 +145,7 @@
       <div class="text-center py-5 text-muted">
         <i class="bi bi-inbox" style="font-size: 3rem;"></i>
         <h5 class="mt-3">No order history found</h5>
-        <small>Completed and cancelled orders will appear here</small>
+        <small>Delivered and cancelled orders will appear here</small>
       </div>
     <?php endif; ?>
   </div>
@@ -206,7 +208,7 @@
     document.getElementById('detail_date').textContent = button.getAttribute('data-date');
     
     const status = button.getAttribute('data-status');
-    const statusClass = status === 'completed' ? 'success' : 'danger';
+    const statusClass = status === 'delivered' ? 'success' : 'danger';
     const statusText = status.charAt(0).toUpperCase() + status.slice(1);
     document.getElementById('detail_status_badge').innerHTML = `<span class="badge bg-${statusClass}">${statusText}</span>`;
   });

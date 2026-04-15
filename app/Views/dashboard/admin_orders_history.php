@@ -7,7 +7,7 @@
   <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>
       <h3 class="m-0">Delivered Orders</h3>
-      <small class="text-muted">Completed deliveries across all restaurants</small>
+      <small class="text-muted">Delivered and cancelled orders across all restaurants</small>
     </div>
     <div class="d-flex gap-2">
       <button class="btn btn-sm btn-primary" id="refreshHistoryBtn">Refresh Data</button>
@@ -21,12 +21,13 @@
       <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
         <div>
           <h5 class="card-title m-0">Delivery History</h5>
-          <small class="text-muted">Delivered orders across all restaurants</small>
+          <small class="text-muted">Delivered and cancelled orders across all restaurants</small>
         </div>
         <div class="d-flex gap-2">
           <select id="historyStatusFilter" class="form-select form-select-sm">
-            <option value="">Delivered only</option>
+            <option value="">All history</option>
             <option value="delivered">Delivered</option>
+            <option value="cancelled">Cancelled</option>
           </select>
           <input id="historySearch" type="search" class="form-control form-control-sm" placeholder="Search history">
         </div>
@@ -57,7 +58,8 @@
 <script>
   function statusBadge(status) {
     const map = {
-      delivered: '<span class="badge bg-success">Delivered</span>'
+      delivered: '<span class="badge bg-success">Delivered</span>',
+      cancelled: '<span class="badge bg-danger">Cancelled</span>'
     };
     return map[status] || '<span class="badge bg-secondary">' + status + '</span>';
   }
@@ -75,7 +77,7 @@
             <td><strong>${order.order_number}</strong></td>
             <td>${order.customer_name || '-'}</td>
             <td>${order.restaurant_name || '-'}</td>
-            <td>${order.driver_name || 'Unassigned'}</td>
+            <td>${order.rider_name || order.driver_name || 'No driver accepts'}</td>
             <td>${statusBadge(order.status)}</td>
             <td>₱${parseFloat(order.total_amount || 0).toFixed(2)}</td>
             <td>${order.created_at ? new Date(order.created_at).toLocaleDateString() : '-'}</td>
