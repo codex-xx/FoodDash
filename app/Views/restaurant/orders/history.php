@@ -129,6 +129,7 @@
                           data-order-id="<?= $order['id'] ?>"
                           data-order-number="<?= $order['order_number'] ?>"
                           data-customer="<?= htmlspecialchars($order['customer_name']) ?>"
+                      data-rider="<?= htmlspecialchars(trim((string) ($order['rider_name'] ?? '')) !== '' ? $order['rider_name'] : 'No rider assigned') ?>"
                           data-address="<?= htmlspecialchars($order['delivery_address'] ?? 'N/A') ?>"
                           data-status="<?= $order['status'] ?>"
                           data-amount="<?= $order['total_amount'] ?>"
@@ -169,6 +170,10 @@
           <p id="detail_customer"></p>
         </div>
         <div class="mb-3">
+          <label class="text-muted mb-1">Rider</label>
+          <p id="detail_rider"></p>
+        </div>
+        <div class="mb-3">
           <label class="text-muted mb-1">Delivery Address</label>
           <p id="detail_address"></p>
         </div>
@@ -203,6 +208,7 @@
     
     document.getElementById('detail_order_number').textContent = button.getAttribute('data-order-number');
     document.getElementById('detail_customer').textContent = button.getAttribute('data-customer');
+    document.getElementById('detail_rider').textContent = button.getAttribute('data-rider');
     document.getElementById('detail_address').textContent = button.getAttribute('data-address');
     document.getElementById('detail_amount').textContent = '₱' + parseFloat(button.getAttribute('data-amount')).toFixed(2);
     document.getElementById('detail_date').textContent = button.getAttribute('data-date');

@@ -221,12 +221,15 @@ class Dashboard extends BaseController
             ->where('status', 'delivered')
             ->first()['rev'];
 
-        // Recent orders
-        $recentOrders = $orderModel
-            ->where('restaurant_id', $restaurantId)
-            ->orderBy('created_at', 'DESC')
+        // Recent orders (include rider name for order details modal)
+        $recentOrders = $orderModel->builder()
+            ->select('orders.id, orders.order_number, orders.customer_name, orders.restaurant_id, orders.driver_id, orders.status, orders.total_amount, orders.created_at, d.name as driver_name, d.name as rider_name')
+            ->join('drivers d', '(d.id = orders.driver_id OR d.user_id = orders.driver_id)', 'left')
+            ->where('orders.restaurant_id', $restaurantId)
+            ->orderBy('orders.created_at', 'DESC')
             ->limit(10)
-            ->findAll();
+            ->get()
+            ->getResultArray();
 
         // Menu items
         $menuList = $menuItemModel

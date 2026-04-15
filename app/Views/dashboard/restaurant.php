@@ -228,6 +228,10 @@
           <div class="fw-semibold" id="recentOrderCustomer">-</div>
         </div>
         <div class="mb-3">
+          <small class="text-muted d-block">Rider</small>
+          <div class="fw-semibold" id="recentOrderRider">-</div>
+        </div>
+        <div class="mb-3">
           <small class="text-muted d-block">Status</small>
           <div id="recentOrderStatus">-</div>
         </div>
@@ -303,6 +307,7 @@
 
     document.getElementById('recentOrderNumber').textContent = order.order_number || '-';
     document.getElementById('recentOrderCustomer').textContent = order.customer_name || '-';
+    document.getElementById('recentOrderRider').textContent = (order.rider_name || order.driver_name || '-');
     document.getElementById('recentOrderStatus').innerHTML = getStatusBadge(order.status);
     document.getElementById('recentOrderAmount').textContent = 'P' + parseFloat(order.total_amount || 0).toFixed(2);
     document.getElementById('recentOrderCreatedAt').textContent = order.created_at ? new Date(order.created_at).toLocaleString() : '-';
