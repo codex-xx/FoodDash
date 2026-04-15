@@ -178,6 +178,28 @@ $routes->get('api/admin/backups', 'Api\AdminBackupController::index');
 $routes->post('api/admin/backups/run', 'Api\AdminBackupController::runBackup');
 $routes->post('api/admin/backups/restore', 'Api\AdminBackupController::restoreBackup');
 
+// CRUD Business Transaction System (Admin API)
+$routes->get('api/admin/business/users', 'Api\BusinessTransactionController::users');
+$routes->post('api/admin/business/users', 'Api\BusinessTransactionController::createUser');
+$routes->get('api/admin/business/users/(:num)', 'Api\BusinessTransactionController::showUser/$1');
+$routes->put('api/admin/business/users/(:num)', 'Api\BusinessTransactionController::updateUser/$1');
+$routes->post('api/admin/business/users/(:num)', 'Api\BusinessTransactionController::updateUser/$1');
+$routes->delete('api/admin/business/users/(:num)', 'Api\BusinessTransactionController::deleteUser/$1');
+
+$routes->get('api/admin/business/products', 'Api\BusinessTransactionController::products');
+$routes->post('api/admin/business/products', 'Api\BusinessTransactionController::createProduct');
+$routes->get('api/admin/business/products/(:num)', 'Api\BusinessTransactionController::showProduct/$1');
+$routes->put('api/admin/business/products/(:num)', 'Api\BusinessTransactionController::updateProduct/$1');
+$routes->post('api/admin/business/products/(:num)', 'Api\BusinessTransactionController::updateProduct/$1');
+$routes->delete('api/admin/business/products/(:num)', 'Api\BusinessTransactionController::deleteProduct/$1');
+
+$routes->get('api/admin/business/transactions', 'Api\BusinessTransactionController::transactions');
+$routes->post('api/admin/business/transactions', 'Api\BusinessTransactionController::createTransaction');
+$routes->get('api/admin/business/transactions/(:num)', 'Api\BusinessTransactionController::showTransaction/$1');
+$routes->put('api/admin/business/transactions/(:num)', 'Api\BusinessTransactionController::updateTransaction/$1');
+$routes->post('api/admin/business/transactions/(:num)', 'Api\BusinessTransactionController::updateTransaction/$1');
+$routes->delete('api/admin/business/transactions/(:num)', 'Api\BusinessTransactionController::deleteTransaction/$1');
+
 // Email Notification (Mobile)
 $routes->post('api/send-notification-email', 'Api\EmailNotificationController::sendNotification');
 $routes->get('api/test-email', 'Api\EmailNotificationController::testEmail');

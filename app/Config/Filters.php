@@ -139,6 +139,8 @@ class Filters extends BaseFilters
             'api/assign_driver',
             'api/admin/backups',
             'api/admin/backups/*',
+            'api/admin/business',
+            'api/admin/business/*',
         ]],
     ];
 }
