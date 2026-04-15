@@ -5,6 +5,7 @@ namespace App\Controllers\Api;
 use CodeIgniter\RESTful\ResourceController;
 use App\Models\CustomerModel;
 use App\Models\DriverModel;
+use App\Libraries\ActivityLogger;
 
 class ProfileController extends ResourceController
 {
@@ -74,6 +75,17 @@ class ProfileController extends ResourceController
 
             if (!empty($data)) {
                 $customerModel->update($customer['id'], $data);
+
+                $logger = new ActivityLogger();
+                $logger->logUserActivity(
+                    $this->request,
+                    'customer',
+                    (int) $customer['id'],
+                    'account_profile_updated',
+                    'customer',
+                    (int) $customer['id'],
+                    ['fields' => array_keys($data)]
+                );
             }
 
             $updatedCustomer = $customerModel->find($customer['id']);
@@ -109,6 +121,17 @@ class ProfileController extends ResourceController
 
             if (!empty($data)) {
                 $driverModel->update($driver['id'], $data);
+
+                $logger = new ActivityLogger();
+                $logger->logUserActivity(
+                    $this->request,
+                    'driver',
+                    (int) $driver['id'],
+                    'account_profile_updated',
+                    'driver',
+                    (int) $driver['id'],
+                    ['fields' => array_keys($data)]
+                );
             }
 
             $updatedDriver = $driverModel->find($driver['id']);
@@ -170,6 +193,17 @@ class ProfileController extends ResourceController
 
         if ($customer) {
             $customerModel->update($customer['id'], ['fcm_token' => $fcmToken]);
+
+            $logger = new ActivityLogger();
+            $logger->logUserActivity(
+                $this->request,
+                'customer',
+                (int) $customer['id'],
+                'account_fcm_token_updated',
+                'customer',
+                (int) $customer['id']
+            );
+
             return $this->respond([
                 'success' => true,
                 'message' => 'FCM token updated'
@@ -181,6 +215,17 @@ class ProfileController extends ResourceController
 
         if ($driver) {
             $driverModel->update($driver['id'], ['fcm_token' => $fcmToken]);
+
+            $logger = new ActivityLogger();
+            $logger->logUserActivity(
+                $this->request,
+                'driver',
+                (int) $driver['id'],
+                'account_fcm_token_updated',
+                'driver',
+                (int) $driver['id']
+            );
+
             return $this->respond([
                 'success' => true,
                 'message' => 'FCM token updated'

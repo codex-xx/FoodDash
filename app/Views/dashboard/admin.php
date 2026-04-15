@@ -9,7 +9,10 @@
       <h3 class="m-0">Admin Dashboard</h3>
       <small class="text-muted">System management and platform overview</small>
     </div>
-    <button class="btn btn-sm btn-primary" id="refreshBtn">Refresh Data</button>
+    <div class="d-flex gap-2">
+      <a href="<?= site_url('dashboard/admin/security') ?>" class="btn btn-sm btn-outline-dark">Security Monitor</a>
+      <button class="btn btn-sm btn-primary" id="refreshBtn">Refresh Data</button>
+    </div>
   </div>
 </div>
 

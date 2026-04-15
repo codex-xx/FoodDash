@@ -28,10 +28,51 @@ class AuthFilter implements FilterInterface
 
         // Refresh last activity
         $session->set('last_activity', time());
+
+        $this->refreshTrackedWebSession((string) ($session->get('session_jti') ?? ''));
     }
 
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)
     {
         // no-op
+    }
+
+    protected function refreshTrackedWebSession(string $jti): void
+    {
+        if ($jti === '' || ! $this->tableExists('auth_tokens')) {
+            return;
+        }
+
+        try {
+            $db = db_connect();
+            $idColumn = $db->fieldExists('jti', 'auth_tokens') ? 'jti' : 'jwt_id';
+
+            $row = $db->table('auth_tokens')
+                ->where($idColumn, $jti)
+                ->get()
+                ->getRowArray();
+
+            if (! $row) {
+                return;
+            }
+
+            $db->table('auth_tokens')
+                ->where('id', (int) $row['id'])
+                ->update([
+                    'last_seen_at' => date('Y-m-d H:i:s'),
+                    'expires_at' => date('Y-m-d H:i:s', time() + $this->timeout),
+                ]);
+        } catch (\Throwable $e) {
+            log_message('error', 'Failed to refresh tracked web session: ' . $e->getMessage());
+        }
+    }
+
+    protected function tableExists(string $table): bool
+    {
+        try {
+            return db_connect()->tableExists($table);
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 }

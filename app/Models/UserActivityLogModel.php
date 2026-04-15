@@ -4,9 +4,9 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class LoginActivityModel extends Model
+class UserActivityLogModel extends Model
 {
-	protected $table = 'login_activities';
+	protected $table = 'user_activity_logs';
 	protected $primaryKey = 'id';
 	protected $returnType = 'array';
 
@@ -15,19 +15,14 @@ class LoginActivityModel extends Model
 	protected $updatedField = 'updated_at';
 
 	protected $allowedFields = [
-		'actor_type',
-		'actor_id',
 		'user_type',
 		'user_id',
-		'email_hash',
-		'ip_address',
-		'user_agent',
-		'login_status',
-		'reason',
-		'success',
-		'failure_reason',
-		'login_at',
-		'event_meta_encrypted',
-		'event_meta_hash',
+		'activity_type',
+		'target_type',
+		'target_id',
+		'activity_meta_encrypted',
+		'activity_meta_hash',
+		'ip_hash',
+		'user_agent_hash',
 	];
 }

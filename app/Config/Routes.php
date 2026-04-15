@@ -31,6 +31,8 @@ $routes->get('dashboard/admin/orders/history', 'Dashboard::adminOrdersHistory');
 
 // Admin data endpoints
 $routes->get('dashboard/admin/data', 'Dashboard::adminData');
+$routes->get('dashboard/admin/security', 'Dashboard::adminSecurity');
+$routes->get('dashboard/admin/security/data', 'Dashboard::adminSecurityData');
 $routes->get('dashboard/admin/chart-data', 'Dashboard::adminChartData');
 $routes->get('dashboard/admin/orders/data', 'Dashboard::adminOrdersData');
 $routes->get('dashboard/restaurant/data', 'Dashboard::restaurantData');
@@ -122,6 +124,9 @@ $routes->post('api/verify-register-otp', 'Api\AuthController::verifyRegisterOtp'
 $routes->post('api/verify-login-otp', 'Api\AuthController::verifyLoginOtp');
 $routes->post('api/logout', 'Api\AuthController::logout');
 $routes->post('api/logout.php', 'Api\AuthController::logout');
+$routes->get('api/sessions', 'Api\SecurityController::sessions');
+$routes->post('api/sessions/revoke-others', 'Api\SecurityController::revokeOtherSessions');
+$routes->get('api/activity-logs', 'Api\SecurityController::activityLogs');
 
 // Menu & Restaurants (Public)
 $routes->get('api/restaurants', 'Api\MenuController::restaurants');

@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Libraries\ActivityLogger;
 use App\Models\UserModel;
 use CodeIgniter\Controller;
 
@@ -24,12 +25,16 @@ class Auth extends BaseController
     // Process login POST
     public function attempt()
     {
+        $logger = new ActivityLogger();
+
         $rules = [
             'email'    => 'required|valid_email',
             'password' => 'required|min_length[6]'
         ];
 
         if (! $this->validate($rules)) {
+            $submittedEmail = (string) ($this->request->getPost('email') ?? '');
+            $logger->logLoginAttempt($this->request, null, null, $submittedEmail, false, 'validation_failed');
             return redirect()->back()->withInput()->with('error', $this->validator->getErrors());
         }
 
@@ -39,14 +44,17 @@ class Auth extends BaseController
         $user = $this->userModel->where('email', $email)->first();
 
         if (! $user) {
+            $logger->logLoginAttempt($this->request, null, null, (string) $email, false, 'user_not_found');
             return redirect()->back()->withInput()->with('error', 'Email not found');
         }
 
         if (! (int) $user['is_active']) {
+            $logger->logLoginAttempt($this->request, (string) ($user['role'] ?? 'user'), (int) $user['id'], (string) $email, false, 'account_disabled');
             return redirect()->back()->withInput()->with('error', 'Account is disabled');
         }
 
         if (! password_verify($password, $user['password'])) {
+            $logger->logLoginAttempt($this->request, (string) ($user['role'] ?? 'user'), (int) $user['id'], (string) $email, false, 'invalid_password');
             return redirect()->back()->withInput()->with('error', 'Incorrect email or password');
         }
 
@@ -71,6 +79,24 @@ class Auth extends BaseController
 
         session()->set($sessionData);
 
+        $role = (string) ($user['role'] ?? 'user');
+
+        $sessionJti = $this->persistWebSessionToken((string) $role, (int) $user['id']);
+        if ($sessionJti !== null) {
+            session()->set('session_jti', $sessionJti);
+        }
+
+        $logger->logLoginAttempt($this->request, $role, (int) $user['id'], (string) $email, true, null);
+        $logger->logUserActivity(
+            $this->request,
+            $role,
+            (int) $user['id'],
+            'session_login',
+            'users',
+            (int) $user['id'],
+            ['auth_channel' => 'web']
+        );
+
         // Role-based redirect
         if ($user['role'] === 'admin') {
             return redirect()->to('/dashboard/admin');
@@ -81,8 +107,111 @@ class Auth extends BaseController
 
     public function logout()
     {
+        $session = session();
+        $userId = $session->get('user_id');
+        $role = (string) ($session->get('role') ?? 'user');
+
+        if (is_numeric($userId)) {
+            $logger = new ActivityLogger();
+            $logger->logUserActivity(
+                $this->request,
+                $role,
+                (int) $userId,
+                'session_logout',
+                'users',
+                (int) $userId,
+                ['auth_channel' => 'web']
+            );
+        }
+
+        $this->revokeWebSessionToken((string) ($session->get('session_jti') ?? ''));
+
         session()->destroy();
         return redirect()->to('/login')->with('success', 'Logged out');
+    }
+
+    protected function tableExists(string $table): bool
+    {
+        try {
+            return db_connect()->tableExists($table);
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    protected function persistWebSessionToken(string $userType, int $userId): ?string
+    {
+        if (! $this->tableExists('auth_tokens')) {
+            return null;
+        }
+
+        $sessionId = (string) session_id();
+        if ($sessionId === '') {
+            return null;
+        }
+
+        $jti = 'web_' . $sessionId;
+        $now = date('Y-m-d H:i:s');
+        $expiresAt = date('Y-m-d H:i:s', strtotime('+30 minutes'));
+
+        try {
+            $db = db_connect();
+            $table = $db->table('auth_tokens');
+
+            $idColumn = $db->fieldExists('jti', 'auth_tokens') ? 'jti' : 'jwt_id';
+            $typeColumn = $db->fieldExists('user_type', 'auth_tokens') ? 'user_type' : 'actor_type';
+            $userIdColumn = $db->fieldExists('user_id', 'auth_tokens') ? 'user_id' : 'actor_id';
+            $issuedColumn = $db->fieldExists('issued_at', 'auth_tokens') ? 'issued_at' : 'created_at';
+
+            $payload = [
+                $typeColumn => $userType,
+                $userIdColumn => $userId,
+                $idColumn => $jti,
+                'token_hash' => hash('sha256', $sessionId),
+                $issuedColumn => $now,
+                'expires_at' => $expiresAt,
+                'last_seen_at' => $now,
+                'ip_address' => $this->request->getIPAddress(),
+                'user_agent' => substr((string) $this->request->getUserAgent(), 0, 255),
+                'revoked_at' => null,
+            ];
+
+            $existing = $db->table('auth_tokens')
+                ->where($idColumn, $jti)
+                ->get()
+                ->getRowArray();
+
+            if ($existing) {
+                $table->where('id', (int) $existing['id'])->update($payload);
+            } else {
+                $table->insert($payload);
+            }
+
+            return $jti;
+        } catch (\Throwable $e) {
+            log_message('error', 'Failed to persist web session token: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    protected function revokeWebSessionToken(string $jti): void
+    {
+        if ($jti === '' || ! $this->tableExists('auth_tokens')) {
+            return;
+        }
+
+        try {
+            $db = db_connect();
+            $idColumn = $db->fieldExists('jti', 'auth_tokens') ? 'jti' : 'jwt_id';
+
+            $db->table('auth_tokens')
+                ->where($idColumn, $jti)
+                ->update([
+                    'revoked_at' => date('Y-m-d H:i:s'),
+                ]);
+        } catch (\Throwable $e) {
+            log_message('error', 'Failed to revoke web session token: ' . $e->getMessage());
+        }
     }
 
     // Show forgot password form

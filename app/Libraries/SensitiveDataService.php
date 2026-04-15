@@ -33,6 +33,16 @@ class SensitiveDataService
 		return hash_hmac('sha256', mb_strtolower($normalized), $this->hashPepper);
 	}
 
+	public function hashExact(?string $value): ?string
+	{
+		$normalized = $this->normalize($value);
+		if ($normalized === null) {
+			return null;
+		}
+
+		return hash_hmac('sha256', $normalized, $this->hashPepper);
+	}
+
 	public function encryptNullable(?string $value): ?string
 	{
 		$normalized = $this->normalize($value);

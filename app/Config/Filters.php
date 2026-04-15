@@ -131,6 +131,9 @@ class Filters extends BaseFilters
             'api/driver/location',
             'api/fcm-token',
             'api/logout',
+            'api/sessions',
+            'api/sessions/*',
+            'api/activity-logs',
         ]],
         'apiadmin' => ['before' => [
             'api/assign_driver',

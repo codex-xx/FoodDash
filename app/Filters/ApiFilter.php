@@ -7,6 +7,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Filters\FilterInterface;
 use App\Models\CustomerModel;
 use App\Models\DriverModel;
+use App\Models\AuthTokenModel;
 use App\Libraries\JwtService;
 
 class ApiFilter implements FilterInterface
@@ -44,9 +45,29 @@ class ApiFilter implements FilterInterface
         $userType = $claims['type'] ?? null;
         $userId = isset($claims['uid']) ? (int) $claims['uid'] : 0;
         $tokenVersion = isset($claims['v']) ? (int) $claims['v'] : 0;
+        $jti = isset($claims['jti']) ? (string) $claims['jti'] : '';
 
         if (!in_array($userType, ['customer', 'driver'], true) || $userId <= 0) {
             return $this->unauthorizedResponse('Invalid token payload');
+        }
+
+        if ($jti !== '' && $this->tableExists('auth_tokens')) {
+            $authTokenModel = new AuthTokenModel();
+            $session = $authTokenModel
+                ->where('jti', $jti)
+                ->where('user_type', $userType)
+                ->where('user_id', $userId)
+                ->first();
+
+            if (!$session || !empty($session['revoked_at'])) {
+                return $this->unauthorizedResponse('Session has been revoked');
+            }
+
+            if (!empty($session['expires_at']) && strtotime((string) $session['expires_at']) < time()) {
+                return $this->unauthorizedResponse('Session has expired');
+            }
+
+            $authTokenModel->update((int) $session['id'], ['last_seen_at' => date('Y-m-d H:i:s')]);
         }
 
         if ($userType === 'customer') {
@@ -100,5 +121,14 @@ class ApiFilter implements FilterInterface
                 'message' => $message
             ])
             ->setStatusCode(401);
+    }
+
+    protected function tableExists(string $table): bool
+    {
+        try {
+            return db_connect()->tableExists($table);
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 }

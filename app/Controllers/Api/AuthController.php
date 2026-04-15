@@ -6,10 +6,9 @@ use CodeIgniter\RESTful\ResourceController;
 use App\Models\CustomerModel;
 use App\Models\DriverModel;
 use App\Models\AuthTokenModel;
-use App\Models\LoginActivityModel;
 use App\Libraries\JwtService;
 use App\Libraries\EmailService;
-use App\Libraries\SensitiveDataService;
+use App\Libraries\ActivityLogger;
 
 class AuthController extends ResourceController
 {
@@ -89,6 +88,7 @@ class AuthController extends ResourceController
                 'token_hash' => hash('sha256', $token),
                 'issued_at' => $issuedAt,
                 'expires_at' => $expiresAt,
+                'last_seen_at' => $issuedAt,
                 'ip_address' => $this->request->getIPAddress(),
                 'user_agent' => substr((string) $this->request->getUserAgent(), 0, 255),
             ]);
@@ -121,27 +121,29 @@ class AuthController extends ResourceController
 
     protected function logLoginAttempt(?string $userType, ?int $userId, ?string $email, bool $success, ?string $reason = null): void
     {
-        if (! $this->tableExists('login_activities')) {
+        $logger = new ActivityLogger();
+        $logger->logLoginAttempt($this->request, $userType, $userId, $email, $success, $reason);
+    }
+
+    protected function logUserActivity(string $activityType, ?string $targetType = null, ?int $targetId = null, array $meta = []): void
+    {
+        $userType = $this->request->userType ?? null;
+        $userId = null;
+
+        if ($userType === 'customer' && isset($this->request->customer['id'])) {
+            $userId = (int) $this->request->customer['id'];
+        }
+
+        if ($userType === 'driver' && isset($this->request->driver['id'])) {
+            $userId = (int) $this->request->driver['id'];
+        }
+
+        if (! in_array($userType, ['customer', 'driver'], true) || $userId === null) {
             return;
         }
 
-        $sensitive = new SensitiveDataService();
-
-        try {
-            $model = new LoginActivityModel();
-            $model->insert([
-                'user_type' => $userType,
-                'user_id' => $userId,
-                'email_hash' => $sensitive->hashForLookup($email),
-                'ip_address' => $this->request->getIPAddress(),
-                'user_agent' => substr((string) $this->request->getUserAgent(), 0, 255),
-                'success' => $success ? 1 : 0,
-                'failure_reason' => $success ? null : ($reason ?? 'login_failed'),
-                'login_at' => date('Y-m-d H:i:s'),
-            ]);
-        } catch (\Throwable $e) {
-            log_message('error', 'Unable to write login activity: ' . $e->getMessage());
-        }
+        $logger = new ActivityLogger();
+        $logger->logUserActivity($this->request, $userType, $userId, $activityType, $targetType, $targetId, $meta);
     }
 
     protected function sendLoginOtp(string $email, string $name, string $otpCode): bool
@@ -705,6 +707,17 @@ class AuthController extends ResourceController
             $token = $this->issueAccessToken('customer', $customer);
             unset($customer['password']);
 
+            $logger = new ActivityLogger();
+            $logger->logUserActivity(
+                $this->request,
+                'customer',
+                (int) $customerId,
+                'account_created',
+                'customer',
+                (int) $customerId,
+                ['registration_method' => 'otp']
+            );
+
             return $this->respond([
                 'success' => true,
                 'message' => 'Registration successful',
@@ -879,6 +892,17 @@ class AuthController extends ResourceController
             unset($driver['password']);
             $driver = $this->stripDriverLocationFields($driver);
 
+            $logger = new ActivityLogger();
+            $logger->logUserActivity(
+                $this->request,
+                'driver',
+                (int) $driverId,
+                'account_created',
+                'driver',
+                (int) $driverId,
+                ['registration_method' => 'otp']
+            );
+
             // Send application received confirmation email
             try {
                 $emailService = new \App\Libraries\EmailService();
@@ -1013,6 +1037,7 @@ class AuthController extends ResourceController
             }
             $customerModel->update((int) $customer['id'], $updateData);
             $this->revokeCurrentToken();
+            $this->logUserActivity('session_logout', 'customer', (int) $customer['id']);
 
             return $this->respond([
                 'success' => true,
@@ -1029,6 +1054,7 @@ class AuthController extends ResourceController
             }
             $driverModel->update((int) $driver['id'], $updateData);
             $this->revokeCurrentToken();
+            $this->logUserActivity('session_logout', 'driver', (int) $driver['id']);
 
             return $this->respond([
                 'success' => true,
@@ -1078,6 +1104,7 @@ class AuthController extends ResourceController
                     ->first();
 
                 if (!$customer || !(int) ($customer['is_active'] ?? 0)) {
+                    $this->logLoginAttempt('customer', null, (string) $email, false, 'mfa_invalid_or_expired');
                     return $this->respond(['success' => false, 'message' => 'Invalid or expired login verification code'], 400);
                 }
 
@@ -1088,6 +1115,7 @@ class AuthController extends ResourceController
 
                 $customer = $customerModel->find((int) $customer['id']) ?? $customer;
                 $token = $this->issueAccessToken('customer', $customer);
+                $this->logLoginAttempt('customer', (int) $customer['id'], (string) $email, true, null);
                 unset($customer['password']);
 
                 return $this->respond([
@@ -1113,6 +1141,7 @@ class AuthController extends ResourceController
                 ->first();
 
             if (!$driver || !(int) ($driver['is_active'] ?? 0)) {
+                $this->logLoginAttempt('driver', null, (string) $email, false, 'mfa_invalid_or_expired');
                 return $this->respond(['success' => false, 'message' => 'Invalid or expired login verification code'], 400);
             }
 
@@ -1123,6 +1152,7 @@ class AuthController extends ResourceController
 
             $driver = $driverModel->find((int) $driver['id']) ?? $driver;
             $token = $this->issueAccessToken('driver', $driver);
+            $this->logLoginAttempt('driver', (int) $driver['id'], (string) $email, true, null);
             unset($driver['password']);
             $driver = $this->stripDriverLocationFields($driver);
 
@@ -1367,6 +1397,17 @@ class AuthController extends ResourceController
                 'reset_expires' => null,
                 'reset_code'    => null,
             ]);
+
+            $logger = new ActivityLogger();
+            $logger->logUserActivity(
+                $this->request,
+                'customer',
+                (int) $customer['id'],
+                'account_password_reset',
+                'customer',
+                (int) $customer['id'],
+                ['source' => 'reset_password']
+            );
 
             log_message('info', 'Password reset successful for: ' . $email);
 

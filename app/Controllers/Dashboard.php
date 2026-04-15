@@ -143,6 +143,130 @@ class Dashboard extends BaseController
         ]);
     }
 
+    public function adminSecurity()
+    {
+        $session = session();
+        if (! $session->get('isLoggedIn')) {
+            return redirect()->to('/login');
+        }
+
+        if ($session->get('role') !== 'admin') {
+            return redirect()->to('/login')->with('error', 'Unauthorized');
+        }
+
+        return view('dashboard/admin_security');
+    }
+
+    public function adminSecurityData()
+    {
+        $session = session();
+        if (! $session->get('isLoggedIn') || $session->get('role') !== 'admin') {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Access denied']);
+        }
+
+        $db = \Config\Database::connect();
+        $now = date('Y-m-d H:i:s');
+
+        $tables = array_map('strtolower', $db->listTables());
+        $hasAuthTokens = in_array('auth_tokens', $tables, true);
+        $hasLoginActivities = in_array('login_activities', $tables, true);
+        $hasUserActivities = in_array('user_activity_logs', $tables, true);
+
+        $sessionStats = [
+            'active_sessions' => 0,
+            'active_users' => 0,
+        ];
+
+        $recentSessions = [];
+        if ($hasAuthTokens) {
+            $typeColumn = $db->fieldExists('user_type', 'auth_tokens') ? 'user_type' : 'actor_type';
+            $userIdColumn = $db->fieldExists('user_id', 'auth_tokens') ? 'user_id' : 'actor_id';
+            $idColumn = $db->fieldExists('jti', 'auth_tokens') ? 'jti' : 'jwt_id';
+            $issuedColumn = $db->fieldExists('issued_at', 'auth_tokens') ? 'issued_at' : 'created_at';
+
+            $activeSessions = $db->table('auth_tokens')
+                ->where('revoked_at', null)
+                ->where('expires_at >', $now)
+                ->countAllResults();
+
+            $activeUsersRows = $db->table('auth_tokens')
+                ->select($typeColumn . ' as user_type, ' . $userIdColumn . ' as user_id')
+                ->where('revoked_at', null)
+                ->where('expires_at >', $now)
+                ->groupBy($typeColumn . ', ' . $userIdColumn)
+                ->get()
+                ->getResultArray();
+
+            $sessionStats['active_sessions'] = (int) $activeSessions;
+            $sessionStats['active_users'] = count($activeUsersRows);
+
+            $recentSessions = $db->table('auth_tokens')
+                ->select(
+                    $typeColumn . ' as user_type, '
+                    . $userIdColumn . ' as user_id, '
+                    . $idColumn . ' as jti, '
+                    . $issuedColumn . ' as issued_at, '
+                    . 'last_seen_at, expires_at, revoked_at'
+                )
+                ->orderBy('id', 'DESC')
+                ->limit(50)
+                ->get()
+                ->getResultArray();
+        }
+
+        $loginAttempts = [];
+        if ($hasLoginActivities) {
+            $typeColumn = $db->fieldExists('user_type', 'login_activities') ? 'user_type' : 'actor_type';
+            $userIdColumn = $db->fieldExists('user_id', 'login_activities') ? 'user_id' : 'actor_id';
+            $successColumn = $db->fieldExists('success', 'login_activities') ? 'success' : 'login_status';
+            $reasonColumn = $db->fieldExists('failure_reason', 'login_activities') ? 'failure_reason' : 'reason';
+            $timeColumn = $db->fieldExists('login_at', 'login_activities') ? 'login_at' : 'created_at';
+
+            $loginAttempts = $db->table('login_activities')
+                ->select(
+                    $typeColumn . ' as user_type, '
+                    . $userIdColumn . ' as user_id, '
+                    . $successColumn . ' as success, '
+                    . $reasonColumn . ' as failure_reason, '
+                    . $timeColumn . ' as login_at, '
+                    . 'created_at'
+                )
+                ->orderBy('id', 'DESC')
+                ->limit(50)
+                ->get()
+                ->getResultArray();
+
+            if ($successColumn === 'login_status') {
+                foreach ($loginAttempts as &$attempt) {
+                    $attempt['success'] = strtolower((string) ($attempt['success'] ?? '')) === 'success' ? 1 : 0;
+                }
+                unset($attempt);
+            }
+        }
+
+        $accountActivities = [];
+        if ($hasUserActivities) {
+            $accountActivities = $db->table('user_activity_logs')
+                ->select('user_type, user_id, activity_type, target_type, target_id, created_at')
+                ->orderBy('id', 'DESC')
+                ->limit(50)
+                ->get()
+                ->getResultArray();
+        }
+
+        return $this->response->setJSON([
+            'tables' => [
+                'auth_tokens' => $hasAuthTokens,
+                'login_activities' => $hasLoginActivities,
+                'user_activity_logs' => $hasUserActivities,
+            ],
+            'sessionStats' => $sessionStats,
+            'recentSessions' => $recentSessions,
+            'loginAttempts' => $loginAttempts,
+            'accountActivities' => $accountActivities,
+        ]);
+    }
+
     public function adminOrdersData()
     {
         $session = session();

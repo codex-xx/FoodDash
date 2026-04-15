@@ -15,12 +15,16 @@ class AuthTokenModel extends Model
 	protected $updatedField = 'updated_at';
 
 	protected $allowedFields = [
+		'actor_type',
+		'actor_id',
 		'user_type',
 		'user_id',
+		'jwt_id',
 		'jti',
 		'token_hash',
 		'issued_at',
 		'expires_at',
+		'last_seen_at',
 		'revoked_at',
 		'ip_address',
 		'user_agent',
