@@ -331,6 +331,7 @@
             }
         }
     </style>
+    <?= $this->renderSection('head') ?>
 </head>
 <body>
 

@@ -2,6 +2,10 @@
 
 <?php $this->setVar('pageTitle', 'Admin Dashboard — FoodDash'); ?>
 
+<?= $this->section('head') ?>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<?= $this->endSection() ?>
+
 <?= $this->section('content') ?>
 <div class="row mb-4">
   <div class="col-12 d-flex justify-content-between align-items-center">
@@ -152,6 +156,22 @@
   </div>
 </div>
 
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card shadow-sm border-0">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h5 class="card-title m-0">Restaurant Map</h5>
+            <small class="text-muted">All restaurants with saved map coordinates</small>
+          </div>
+        </div>
+        <div id="adminRestaurantMap" style="height: 430px; border-radius: 10px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Bottom Sections -->
 <div class="row mb-4">
   <div class="col-lg-6">
@@ -256,12 +276,66 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
 <script>
   let selectedOrderId = null;
   let activeDriversList = [];
   let orderRateChart = null;
   let popularFoodChart = null;
+  let adminRestaurantMap = null;
+  let adminRestaurantLayer = null;
+
+  function initAdminRestaurantMap() {
+    const mapEl = document.getElementById('adminRestaurantMap');
+    if (!mapEl || typeof L === 'undefined') return;
+
+    adminRestaurantMap = L.map('adminRestaurantMap').setView([14.5995, 120.9842], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(adminRestaurantMap);
+
+    adminRestaurantLayer = L.layerGroup().addTo(adminRestaurantMap);
+    loadAdminRestaurantMarkers();
+  }
+
+  function loadAdminRestaurantMarkers() {
+    if (!adminRestaurantMap || !adminRestaurantLayer) return;
+
+    fetch('<?= site_url('dashboard/admin/restaurant-locations') ?>')
+      .then(r => r.json())
+      .then(json => {
+        const rows = Array.isArray(json.restaurants) ? json.restaurants : [];
+        adminRestaurantLayer.clearLayers();
+
+        if (rows.length === 0) {
+          return;
+        }
+
+        const bounds = [];
+        rows.forEach(function (row) {
+          if (row.latitude === null || row.longitude === null) {
+            return;
+          }
+
+          const lat = Number(row.latitude);
+          const lng = Number(row.longitude);
+          const marker = L.marker([lat, lng]).addTo(adminRestaurantLayer);
+          marker.bindPopup(
+            '<strong>' + (row.name || 'Restaurant') + '</strong><br>' +
+            (row.address || 'No address') + '<br>' +
+            'Lat: ' + lat.toFixed(6) + ', Lng: ' + lng.toFixed(6)
+          );
+          bounds.push([lat, lng]);
+        });
+
+        if (bounds.length > 0) {
+          adminRestaurantMap.fitBounds(bounds, { padding: [30, 30] });
+        }
+      })
+      .catch(err => console.error('Failed to load restaurant markers:', err));
+  }
 
   function statusBadge(status) {
     const map = {
@@ -479,6 +553,7 @@
 
         // Fetch and load chart data (menu-based)
         loadChartData();
+        loadAdminRestaurantMarkers();
       })
       .catch(err => console.error(err));
   }
@@ -570,6 +645,7 @@
           });
 
         loadChartData();
+        loadAdminRestaurantMarkers();
       })
       .catch(err => console.error(err));
   }
@@ -616,6 +692,7 @@
   }
 
   $(document).ready(function () {
+    initAdminRestaurantMap();
     loadDashboard();
     setInterval(loadDashboard, 15000);
   });
