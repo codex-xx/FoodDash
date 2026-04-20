@@ -22,6 +22,7 @@ $hasPageWallpaper = $pageWallpaperRel !== null;
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FoodDash - Rider Registration</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <style>
         :root {
             --fd-mustard: #F2C200;
@@ -117,6 +118,12 @@ $hasPageWallpaper = $pageWallpaperRel !== null;
             display: flex;
             flex-direction: column;
             min-height: 0;
+        }
+
+        #restaurantMap {
+            height: 320px;
+            border: 1px solid var(--fd-border);
+            border-radius: 0.75rem;
         }
 
         .partner-topbar {
@@ -455,6 +462,26 @@ $hasPageWallpaper = $pageWallpaperRel !== null;
                                         <textarea class="form-control" id="restaurant_address" name="restaurant_address" rows="2" required></textarea>
                                     </div>
 
+                                    <div class="mb-3">
+                                        <label class="form-label">Pin Restaurant Location on Map</label>
+                                        <div class="form-check form-switch mb-2">
+                                            <input class="form-check-input" type="checkbox" role="switch" id="autoFillAddressFromMap" checked>
+                                            <label class="form-check-label" for="autoFillAddressFromMap">Auto-fill address from map</label>
+                                        </div>
+                                        <div id="restaurantMap"></div>
+                                        <small class="text-muted d-block mt-2">Click map to set location. Drag marker to fine-tune.</small>
+                                        <div class="row mt-2">
+                                            <div class="col-md-6 mb-2 mb-md-0">
+                                                <label for="restaurant_latitude" class="form-label">Latitude</label>
+                                                <input type="text" class="form-control" id="restaurant_latitude" name="restaurant_latitude" value="<?= old('restaurant_latitude') ?>" readonly>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="restaurant_longitude" class="form-label">Longitude</label>
+                                                <input type="text" class="form-control" id="restaurant_longitude" name="restaurant_longitude" value="<?= old('restaurant_longitude') ?>" readonly>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div class="row">
                                         <div class="col-md-6">
                                             <div class="mb-3">
@@ -587,6 +614,101 @@ $hasPageWallpaper = $pageWallpaperRel !== null;
         </div>
     </div>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        (function () {
+            var mapElement = document.getElementById('restaurantMap');
+            if (!mapElement || typeof L === 'undefined') {
+                return;
+            }
+
+            var latInput = document.getElementById('restaurant_latitude');
+            var lngInput = document.getElementById('restaurant_longitude');
+            var addressInput = document.getElementById('restaurant_address');
+            var autoFillToggle = document.getElementById('autoFillAddressFromMap');
+
+            var map = L.map('restaurantMap').setView([14.5995, 120.9842], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            var marker = null;
+
+            function updateInputs(lat, lng) {
+                latInput.value = Number(lat).toFixed(7);
+                lngInput.value = Number(lng).toFixed(7);
+            }
+
+            function fillAddressFromPoint(lat, lng) {
+                if (!addressInput) {
+                    return;
+                }
+
+                if (autoFillToggle && !autoFillToggle.checked) {
+                    return;
+                }
+
+                fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lng))
+                    .then(function (response) {
+                        return response.ok ? response.json() : null;
+                    })
+                    .then(function (result) {
+                        if (result && result.display_name) {
+                            addressInput.value = result.display_name;
+                        }
+                    })
+                    .catch(function () {
+                        // Keep manual address untouched when reverse lookup fails.
+                    });
+            }
+
+            function setMarker(lat, lng) {
+                if (!marker) {
+                    marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+                    marker.on('dragend', function (event) {
+                        var point = event.target.getLatLng();
+                        updateInputs(point.lat, point.lng);
+                        fillAddressFromPoint(point.lat, point.lng);
+                    });
+                } else {
+                    marker.setLatLng([lat, lng]);
+                }
+
+                updateInputs(lat, lng);
+            }
+
+            map.on('click', function (event) {
+                setMarker(event.latlng.lat, event.latlng.lng);
+                fillAddressFromPoint(event.latlng.lat, event.latlng.lng);
+            });
+
+            if (latInput.value !== '' && lngInput.value !== '') {
+                var oldLat = parseFloat(latInput.value);
+                var oldLng = parseFloat(lngInput.value);
+                if (!isNaN(oldLat) && !isNaN(oldLng)) {
+                    map.setView([oldLat, oldLng], 16);
+                    setMarker(oldLat, oldLng);
+                }
+            } else if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function (position) {
+                    var currentLat = position.coords.latitude;
+                    var currentLng = position.coords.longitude;
+                    map.setView([currentLat, currentLng], 15);
+                    setMarker(currentLat, currentLng);
+                });
+            }
+
+            var restaurantTab = document.getElementById('restaurant-tab');
+            if (restaurantTab) {
+                restaurantTab.addEventListener('shown.bs.tab', function () {
+                    setTimeout(function () {
+                        map.invalidateSize();
+                    }, 100);
+                });
+            }
+        })();
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
