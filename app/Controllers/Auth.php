@@ -557,6 +557,8 @@ class Auth extends BaseController
                 'restaurant_name'   => 'required|min_length[3]',
                 'restaurant_phone' => 'required|min_length[10]',
                 'restaurant_address' => 'required',
+                'restaurant_latitude' => 'permit_empty|numeric',
+                'restaurant_longitude' => 'permit_empty|numeric',
                 'owner_name'        => 'required|min_length[3]',
                 'owner_email'       => 'required|valid_email',
                 'owner_phone'       => 'required|min_length[10]',
@@ -590,10 +592,14 @@ class Auth extends BaseController
 
             // Create restaurant record
             $restaurantModel = new \App\Models\RestaurantModel();
+            $restaurantLatitude = $this->request->getPost('restaurant_latitude');
+            $restaurantLongitude = $this->request->getPost('restaurant_longitude');
             $restaurantData = [
                 'user_id'    => $userId,
                 'name'       => $this->request->getPost('restaurant_name'),
                 'address'    => $this->request->getPost('restaurant_address'),
+                'latitude'   => ($restaurantLatitude === '' || $restaurantLatitude === null) ? null : (float) $restaurantLatitude,
+                'longitude'  => ($restaurantLongitude === '' || $restaurantLongitude === null) ? null : (float) $restaurantLongitude,
                 'status'     => 'pending',
                 'is_active'  => 0,
             ];

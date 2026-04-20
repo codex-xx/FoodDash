@@ -669,6 +669,89 @@ class Dashboard extends BaseController
         ]);
     }
 
+    public function restaurantLocation()
+    {
+        $session = session();
+        if (! $session->get('isLoggedIn') || $session->get('role') !== 'restaurant') {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Access denied']);
+        }
+
+        $restaurantId = (int) $session->get('restaurant_id');
+        $restaurant = (new RestaurantModel())
+            ->select('id, name, address, latitude, longitude')
+            ->find($restaurantId);
+
+        if (! $restaurant) {
+            return $this->response->setStatusCode(404)->setJSON(['error' => 'Restaurant not found']);
+        }
+
+        return $this->response->setJSON([
+            'id' => (int) $restaurant['id'],
+            'name' => (string) ($restaurant['name'] ?? ''),
+            'address' => (string) ($restaurant['address'] ?? ''),
+            'latitude' => $restaurant['latitude'] !== null ? (float) $restaurant['latitude'] : null,
+            'longitude' => $restaurant['longitude'] !== null ? (float) $restaurant['longitude'] : null,
+        ]);
+    }
+
+    public function updateRestaurantLocation()
+    {
+        $session = session();
+        if (! $session->get('isLoggedIn') || $session->get('role') !== 'restaurant') {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Access denied']);
+        }
+
+        $lat = $this->request->getPost('latitude');
+        $lng = $this->request->getPost('longitude');
+
+        if ($lat === null || $lng === null || ! is_numeric($lat) || ! is_numeric($lng)) {
+            return $this->response->setStatusCode(422)->setJSON(['error' => 'Invalid coordinates']);
+        }
+
+        $restaurantId = (int) $session->get('restaurant_id');
+        $ok = (new RestaurantModel())->update($restaurantId, [
+            'latitude' => (float) $lat,
+            'longitude' => (float) $lng,
+        ]);
+
+        if (! $ok) {
+            return $this->response->setStatusCode(500)->setJSON(['error' => 'Failed to update location']);
+        }
+
+        return $this->response->setJSON([
+            'success' => true,
+            'latitude' => (float) $lat,
+            'longitude' => (float) $lng,
+            'csrfHash' => csrf_hash(),
+        ]);
+    }
+
+    public function adminRestaurantLocations()
+    {
+        $session = session();
+        if (! $session->get('isLoggedIn') || $session->get('role') !== 'admin') {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Access denied']);
+        }
+
+        $rows = (new RestaurantModel())
+            ->select('id, name, address, latitude, longitude')
+            ->where('latitude IS NOT NULL', null, false)
+            ->where('longitude IS NOT NULL', null, false)
+            ->findAll();
+
+        $restaurants = array_map(static function (array $row): array {
+            return [
+                'id' => (int) $row['id'],
+                'name' => (string) ($row['name'] ?? ''),
+                'address' => (string) ($row['address'] ?? ''),
+                'latitude' => (float) $row['latitude'],
+                'longitude' => (float) $row['longitude'],
+            ];
+        }, $rows);
+
+        return $this->response->setJSON(['restaurants' => $restaurants]);
+    }
+
     // Update order status (AJAX)
     public function updateOrderStatus($id)
     {

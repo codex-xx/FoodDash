@@ -36,8 +36,11 @@ $routes->get('dashboard/admin/security/data', 'Dashboard::adminSecurityData');
 $routes->get('dashboard/admin/security/report', 'Dashboard::adminSecurityReport');
 $routes->get('dashboard/admin/chart-data', 'Dashboard::adminChartData');
 $routes->get('dashboard/admin/orders/data', 'Dashboard::adminOrdersData');
+$routes->get('dashboard/admin/restaurant-locations', 'Dashboard::adminRestaurantLocations');
 $routes->get('dashboard/restaurant/data', 'Dashboard::restaurantData');
 $routes->get('dashboard/restaurant/chart-data', 'Dashboard::restaurantChartData');
+$routes->get('dashboard/restaurant/location', 'Dashboard::restaurantLocation');
+$routes->post('dashboard/restaurant/location', 'Dashboard::updateRestaurantLocation');
 $routes->post('dashboard/order/(:num)/status', 'Dashboard::updateOrderStatus/$1');
 
 // Menu Items (Restaurant)
