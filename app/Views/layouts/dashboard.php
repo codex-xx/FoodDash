@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= esc($pageTitle ?? 'Dashboard - FoodDash') ?></title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root {
@@ -19,7 +22,8 @@
             --fd-primary: var(--fd-mustard);
             --fd-primary-dark: var(--fd-charcoal);
             --fd-accent: var(--fd-slate);
-            --fd-border: rgba(58, 63, 69, 0.18);
+            --fd-border: rgba(36, 28, 12, 0.38);
+            --fd-border-strong: rgba(36, 28, 12, 0.56);
             --fd-white: #FFFFFF;
             --fd-black: #000000;
             --fd-bg: #F6F3EE;
@@ -27,8 +31,19 @@
 
         body {
             padding-top: 56px;
-            background: linear-gradient(180deg, #FFFFFF 0%, var(--fd-bg) 55%, rgba(207, 198, 186, 0.55) 100%);
+            font-family: 'Manrope', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background:
+                radial-gradient(circle at 88% 8%, rgba(242, 194, 0, 0.2), transparent 36%),
+                radial-gradient(circle at 8% 82%, rgba(58, 63, 69, 0.08), transparent 34%),
+                linear-gradient(180deg, #FFFFFF 0%, var(--fd-bg) 52%, rgba(207, 198, 186, 0.6) 100%);
             color: #212529;
+        }
+
+        h1, h2, h3, h4, h5, h6,
+        .card-title,
+        .navbar-brand {
+            font-family: 'Sora', 'Manrope', sans-serif;
+            letter-spacing: 0.01em;
         }
 
         .fd-shell {
@@ -36,8 +51,23 @@
             min-height: calc(100vh - 56px);
         }
 
+        body.role-admin {
+            --fd-accent-role: #2F6FED;
+            --fd-accent-role-soft: rgba(47, 111, 237, 0.14);
+        }
+
+        body.role-restaurant {
+            --fd-accent-role: #C56A00;
+            --fd-accent-role-soft: rgba(197, 106, 0, 0.14);
+        }
+
+        body.role-default {
+            --fd-accent-role: #3A3F45;
+            --fd-accent-role-soft: rgba(58, 63, 69, 0.12);
+        }
+
         .navbar-dashboard {
-            background: linear-gradient(90deg, var(--fd-espresso), var(--fd-charcoal));
+            background: linear-gradient(90deg, var(--fd-espresso), var(--fd-charcoal), var(--fd-accent-role));
             box-shadow: 0 2px 6px rgba(15, 23, 42, 0.35);
         }
 
@@ -76,6 +106,11 @@
             min-width: 0;
             margin-left: 0;
             padding: 1.5rem 1.75rem 2.5rem;
+        }
+
+        .fd-content h3.m-0 {
+            font-weight: 800;
+            color: var(--fd-espresso);
         }
 
         @media (max-width: 991.98px) {
@@ -135,10 +170,10 @@
         }
 
         .fd-nav-link.active {
-            background: rgba(36, 28, 12, 0.06);
+            background: var(--fd-accent-role-soft);
             color: var(--fd-espresso) !important;
             font-weight: 600;
-            border-left: 3px solid var(--fd-primary);
+            border-left: 4px solid var(--fd-accent-role);
         }
 
         .fd-sidebar small.text-muted {
@@ -187,22 +222,49 @@
         }
 
         .summary-card {
-            border: 1px solid var(--fd-border);
-            border-top-width: 3px;
+            border: 2px solid var(--fd-border-strong);
+            border-top: 4px solid var(--fd-accent-role);
             border-radius: .85rem;
             background: linear-gradient(180deg, #FFFFFF, rgba(243, 211, 154, 0.12));
-            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
         }
 
         .summary-card .card-body {
             padding: 1rem .75rem 1rem;
         }
 
+        .card,
         .card.shadow-sm {
             border-radius: .9rem;
-            border: 1px solid var(--fd-border);
-            background-color: rgba(255, 255, 255, 0.92);
+            border: 2px solid var(--fd-border-strong);
+            background-color: rgba(255, 255, 255, 0.97);
             transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+        }
+
+        .fd-content .card .card-title {
+            font-weight: 700;
+            color: var(--fd-espresso);
+        }
+
+        .fd-content .card .card-body {
+            border-top: 3px solid var(--fd-accent-role-soft);
+        }
+
+        .fd-content .table-responsive,
+        .fd-content .modal-content,
+        .fd-content .list-group,
+        .fd-content .alert,
+        .fd-content .form-control,
+        .fd-content .form-select,
+        .fd-content .input-group-text {
+            border: 2px solid var(--fd-border);
+            border-radius: .8rem;
+            background-color: rgba(255, 255, 255, 0.96);
+        }
+
+        .fd-content .card .card-header,
+        .fd-content .card .card-footer {
+            border-color: var(--fd-border);
         }
 
         .table thead th {
@@ -239,6 +301,19 @@
             transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease, border-color .18s ease;
         }
 
+        .fd-content .btn-outline-primary {
+            border-width: 2px;
+            border-color: var(--fd-accent-role);
+            color: var(--fd-accent-role);
+        }
+
+        .fd-content .btn-outline-primary:hover,
+        .fd-content .btn-outline-primary:focus {
+            background-color: var(--fd-accent-role);
+            border-color: var(--fd-accent-role);
+            color: #fff;
+        }
+
         .fd-content .btn {
             white-space: nowrap;
         }
@@ -260,7 +335,7 @@
             .fd-content .card.shadow-sm:hover {
                 transform: translateY(-4px);
                 box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
-                border-color: rgba(58, 63, 69, 0.28);
+                border-color: rgba(36, 28, 12, 0.72);
             }
 
             .fd-content .summary-card:hover {
@@ -333,7 +408,7 @@
     </style>
     <?= $this->renderSection('head') ?>
 </head>
-<body>
+<body class="<?= session('role') === 'admin' ? 'role-admin' : (session('role') === 'restaurant' ? 'role-restaurant' : 'role-default') ?>">
 
 <nav class="navbar navbar-expand-lg navbar-dark navbar-dashboard fixed-top">
     <div class="container-fluid">
