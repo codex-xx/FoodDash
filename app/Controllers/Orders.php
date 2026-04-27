@@ -151,6 +151,7 @@ class Orders extends BaseController
             $order['display_customer_email'] = trim((string) ($order['customer_email'] ?? ''));
             $order['display_customer_address'] = trim((string) ($order['delivery_address'] ?? $order['customer_address'] ?? ''));
             $order['display_driver_name'] = $resolvedDriverName;
+            $order['display_payment_type'] = $this->resolveDisplayPaymentType($order);
 
             $order['items_data'] = $itemsByOrderId[$id] ?? $this->parseOrderItems((string) ($order['items'] ?? ''));
         }
@@ -187,6 +188,41 @@ class Orders extends BaseController
         }
 
         return $normalized;
+    }
+
+    private function resolveDisplayPaymentType(array $order): string
+    {
+        $rawMethod = trim((string) ($order['payment_method'] ?? $order['payment_type'] ?? ''));
+        $method = strtolower($rawMethod);
+        $status = strtolower(trim((string) ($order['payment_status'] ?? '')));
+
+        $codValues = ['cod', 'cash_on_delivery', 'cash on delivery', 'cash', '1'];
+        $onlineValues = ['online', 'online_payment', 'online payment', 'gcash', 'paymaya', 'maya', 'card', 'credit_card', 'debit_card', '2'];
+
+        if (in_array($method, $codValues, true)) {
+            return 'Cash on Delivery (COD)';
+        }
+
+        if (in_array($method, $onlineValues, true)) {
+            return 'Online Payment';
+        }
+
+        if ($method !== '') {
+            // Any non-empty non-COD method is treated as online to avoid unknown labels.
+            return 'Online Payment';
+        }
+
+        if ($status !== '') {
+            if (in_array($status, ['cod', 'cash_on_delivery', 'cash on delivery', 'unpaid'], true)) {
+                return 'Cash on Delivery (COD)';
+            }
+
+            if (in_array($status, ['paid', 'confirmed', 'success', 'succeeded', 'completed', 'pending', 'failed', 'cancelled', 'canceled'], true)) {
+                return 'Online Payment';
+            }
+        }
+
+        return '-';
     }
 
     /**

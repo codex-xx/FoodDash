@@ -152,6 +152,7 @@
               <h6 class="mb-2">Delivery Info</h6>
               <div><strong>Order #:</strong> <span id="detail_order_number">-</span></div>
               <div><strong>Status:</strong> <span id="detail_order_status">-</span></div>
+              <div><strong>Payment Type:</strong> <span id="detail_payment_type">-</span></div>
               <div><strong>Address:</strong> <span id="detail_delivery_address">-</span></div>
             </div>
           </div>
@@ -216,6 +217,7 @@
       'id' => (int) ($order['id'] ?? 0),
       'order_number' => (string) ($order['order_number'] ?? ''),
       'status' => (string) ($order['status'] ?? ''),
+      'payment_type_label' => (string) ($order['display_payment_type'] ?? '-'),
       'customer_name' => (string) ($order['display_customer_name'] ?? $order['customer_name'] ?? ''),
       'customer_phone' => (string) ($order['display_customer_phone'] ?? ''),
       'customer_email' => (string) ($order['display_customer_email'] ?? ''),
@@ -341,6 +343,7 @@
     document.getElementById('detail_customer_email').textContent = textOrDash(order.customer_email);
     document.getElementById('detail_order_number').textContent = textOrDash(order.order_number);
     document.getElementById('detail_order_status').textContent = textOrDash(order.status).replaceAll('_', ' ');
+    document.getElementById('detail_payment_type').textContent = textOrDash(order.payment_type_label);
     document.getElementById('detail_delivery_address').textContent = textOrDash(order.delivery_address);
 
     const tbody = document.querySelector('#detail_items_table tbody');
