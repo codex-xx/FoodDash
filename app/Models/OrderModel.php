@@ -26,6 +26,9 @@ class OrderModel extends Model
         'delivery_address',
         'items',
         'notes',
+        'payment_method',
+        'payment_status',
+        'payment_reference',
         'estimated_preparation_time',
     ];
 
