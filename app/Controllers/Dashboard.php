@@ -535,18 +535,38 @@ class Dashboard extends BaseController
             log_message('error', 'adminChartData popular menu query failed: {message}', ['message' => $e->getMessage()]);
         }
 
-        // Get monthly orders for the current year
-        $monthlyOrders = [];
-        for ($month = 1; $month <= 12; $month++) {
-            $startDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-01 00:00:00';
-            $endDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . cal_days_in_month(CAL_GREGORIAN, $month, date('Y')) . ' 23:59:59';
+        // Support timeframe: year (monthly), month (daily last 30), week (daily last 7)
+        $timeframe = strtolower((string) $this->request->getGet('timeframe')) ?: 'year';
+        $orderRateLabels = [];
+        $orderRateData = [];
 
-            $count = $orderModel
-                ->where('created_at >=', $startDate)
-                ->where('created_at <=', $endDate)
-                ->countAllResults();
+        if ($timeframe === 'week') {
+            // last 7 days
+            for ($i = 6; $i >= 0; $i--) {
+                $day = strtotime("-{$i} days");
+                $startDate = date('Y-m-d', $day) . ' 00:00:00';
+                $endDate = date('Y-m-d', $day) . ' 23:59:59';
+                $orderRateLabels[] = date('D', $day);
+                $orderRateData[] = $orderModel->where('created_at >=', $startDate)->where('created_at <=', $endDate)->countAllResults();
+            }
+        } elseif ($timeframe === 'month') {
+            // last 30 days
+            for ($i = 29; $i >= 0; $i--) {
+                $day = strtotime("-{$i} days");
+                $startDate = date('Y-m-d', $day) . ' 00:00:00';
+                $endDate = date('Y-m-d', $day) . ' 23:59:59';
+                $orderRateLabels[] = date('M j', $day);
+                $orderRateData[] = $orderModel->where('created_at >=', $startDate)->where('created_at <=', $endDate)->countAllResults();
+            }
+        } else {
+            // default: year (monthly)
+            for ($month = 1; $month <= 12; $month++) {
+                $startDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-01 00:00:00';
+                $endDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . cal_days_in_month(CAL_GREGORIAN, $month, date('Y')) . ' 23:59:59';
 
-            $monthlyOrders[] = $count;
+                $orderRateLabels[] = date('M', mktime(0, 0, 0, $month, 1));
+                $orderRateData[] = $orderModel->where('created_at >=', $startDate)->where('created_at <=', $endDate)->countAllResults();
+            }
         }
 
         // Get order status breakdown for today
@@ -579,7 +599,13 @@ class Dashboard extends BaseController
 
         return $this->response->setJSON([
             'popularMenus' => $popularMenus,
-            'monthlyOrders' => $monthlyOrders,
+            'orderRate' => [
+                'timeframe' => $timeframe,
+                'labels' => $orderRateLabels,
+                'data' => $orderRateData,
+            ],
+            // legacy key for backward compatibility
+            'monthlyOrders' => $timeframe === 'year' ? $orderRateData : [],
             'orderBreakdown' => [
                 'completed' => $completed,
                 'delivered' => $delivered,
@@ -617,17 +643,33 @@ class Dashboard extends BaseController
             log_message('error', 'restaurantChartData popular menu query failed: {message}', ['message' => $e->getMessage()]);
         }
 
-        $monthlyOrders = [];
-        for ($month = 1; $month <= 12; $month++) {
-            $startDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-01 00:00:00';
-            $endDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . cal_days_in_month(CAL_GREGORIAN, $month, date('Y')) . ' 23:59:59';
+        $timeframe = strtolower((string) $this->request->getGet('timeframe')) ?: 'year';
+        $orderRateLabels = [];
+        $orderRateData = [];
 
-            $count = $orderModel
-                ->where('created_at >=', $startDate)
-                ->where('created_at <=', $endDate)
-                ->countAllResults();
-
-            $monthlyOrders[] = $count;
+        if ($timeframe === 'week') {
+            for ($i = 6; $i >= 0; $i--) {
+                $day = strtotime("-{$i} days");
+                $startDate = date('Y-m-d', $day) . ' 00:00:00';
+                $endDate = date('Y-m-d', $day) . ' 23:59:59';
+                $orderRateLabels[] = date('D', $day);
+                $orderRateData[] = $orderModel->where('created_at >=', $startDate)->where('created_at <=', $endDate)->countAllResults();
+            }
+        } elseif ($timeframe === 'month') {
+            for ($i = 29; $i >= 0; $i--) {
+                $day = strtotime("-{$i} days");
+                $startDate = date('Y-m-d', $day) . ' 00:00:00';
+                $endDate = date('Y-m-d', $day) . ' 23:59:59';
+                $orderRateLabels[] = date('M j', $day);
+                $orderRateData[] = $orderModel->where('created_at >=', $startDate)->where('created_at <=', $endDate)->countAllResults();
+            }
+        } else {
+            for ($month = 1; $month <= 12; $month++) {
+                $startDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-01 00:00:00';
+                $endDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . cal_days_in_month(CAL_GREGORIAN, $month, date('Y')) . ' 23:59:59';
+                $orderRateLabels[] = date('M', mktime(0, 0, 0, $month, 1));
+                $orderRateData[] = $orderModel->where('created_at >=', $startDate)->where('created_at <=', $endDate)->countAllResults();
+            }
         }
 
         $todayStart = date('Y-m-d') . ' 00:00:00';
@@ -659,7 +701,12 @@ class Dashboard extends BaseController
 
         return $this->response->setJSON([
             'popularMenus' => $popularMenus,
-            'monthlyOrders' => $monthlyOrders,
+            'orderRate' => [
+                'timeframe' => $timeframe,
+                'labels' => $orderRateLabels,
+                'data' => $orderRateData,
+            ],
+            'monthlyOrders' => $timeframe === 'year' ? $orderRateData : [],
             'orderBreakdown' => [
                 'completed' => $completed,
                 'delivered' => $delivered,

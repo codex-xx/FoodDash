@@ -79,9 +79,10 @@
             <h5 class="card-title m-0">Order Rate</h5>
             <small class="text-muted">Total orders by month</small>
           </div>
-          <select class="form-select form-select-sm" style="width: auto;">
-            <option>This Year</option>
-            <option>Last Year</option>
+          <select id="orderRateTimeframe" class="form-select form-select-sm" style="width: auto;">
+            <option value="year">Year</option>
+            <option value="month">Last 30 days</option>
+            <option value="week">Last 7 days</option>
           </select>
         </div>
         <canvas id="orderRateChart" style="max-height: 300px;"></canvas>
@@ -277,12 +278,12 @@
     return map[status] || '<span class="badge bg-secondary">' + status + '</span>';
   }
 
-  function initOrderRateChart(monthlyData) {
+  function initOrderRateChart(labels, data) {
     const ctx = document.getElementById('orderRateChart');
     if (!ctx) return;
 
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const chartData = months.map((month, idx) => monthlyData[idx] || 0);
+    const chartLabels = Array.isArray(labels) && labels.length ? labels : [];
+    const chartData = Array.isArray(data) ? data : [];
 
     if (orderRateChart) {
       orderRateChart.destroy();
@@ -291,7 +292,7 @@
     orderRateChart = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: months,
+        labels: chartLabels,
         datasets: [{
           label: 'Orders',
           data: chartData,
@@ -309,12 +310,8 @@
       options: {
         responsive: true,
         maintainAspectRatio: true,
-        plugins: {
-          legend: { display: false }
-        },
-        scales: {
-          y: { beginAtZero: true }
-        }
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
       }
     });
   }
@@ -483,8 +480,8 @@
       .catch(err => console.error(err));
   }
 
-  function loadChartData() {
-    fetch('<?= site_url('dashboard/admin/chart-data') ?>')
+  function loadChartData(timeframe = 'year') {
+    fetch('<?= site_url('dashboard/admin/chart-data') ?>' + '?timeframe=' + encodeURIComponent(timeframe))
       .then(r => r.json())
       .then(json => {
         // Update order statistics with real data
@@ -494,9 +491,13 @@
         $('#ordersCanceled').text(breakdown.cancelled || 0);
         $('#ordersPending').text(breakdown.pending || 0);
 
-        // Initialize order rate chart with real monthly data
-        const monthlyData = json.monthlyOrders || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        initOrderRateChart(monthlyData);
+        if (json.orderRate && Array.isArray(json.orderRate.labels) && Array.isArray(json.orderRate.data)) {
+          initOrderRateChart(json.orderRate.labels, json.orderRate.data);
+        } else {
+          const monthlyData = json.monthlyOrders || [0,0,0,0,0,0,0,0,0,0,0,0];
+          const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          initOrderRateChart(months, monthlyData);
+        }
 
         // Initialize popular food chart with real menu items data
         const popularMenus = json.popularMenus || [];
@@ -618,6 +619,11 @@
   $(document).ready(function () {
     loadDashboard();
     setInterval(loadDashboard, 15000);
+
+    const tfSelect = document.getElementById('orderRateTimeframe');
+    if (tfSelect) {
+      tfSelect.addEventListener('change', () => loadChartData(tfSelect.value));
+    }
   });
 
   document.addEventListener('visibilitychange', function () {
