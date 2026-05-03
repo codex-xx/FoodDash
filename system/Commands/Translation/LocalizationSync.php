@@ -43,7 +43,7 @@ class LocalizationSync extends BaseCommand
     public function run(array $params)
     {
         $optionTargetLocale = '';
-        $optionLocale       = $params['locale'] ?? Locale::getDefault();
+        $optionLocale       = $params['locale'] ?? (class_exists('\Locale') ? \Locale::getDefault() : 'en');
         $this->languagePath = APPPATH . 'Language';
 
         if (isset($params['target']) && $params['target'] !== '') {

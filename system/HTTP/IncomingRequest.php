@@ -320,7 +320,9 @@ class IncomingRequest extends Request
         }
 
         $this->locale = $locale;
-        Locale::setDefault($locale);
+        if (class_exists('\Locale')) {
+            \Locale::setDefault($locale);
+        }
 
         return $this;
     }

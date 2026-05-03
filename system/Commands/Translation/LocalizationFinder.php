@@ -57,7 +57,7 @@ class LocalizationFinder extends BaseCommand
         $this->showNew      = array_key_exists('show-new', $params);
         $optionLocale       = $params['locale'] ?? null;
         $optionDir          = $params['dir'] ?? null;
-        $currentLocale      = Locale::getDefault();
+        $currentLocale      = class_exists('\Locale') ? \Locale::getDefault() : 'en';
         $currentDir         = APPPATH;
         $this->languagePath = $currentDir . 'Language';
 

@@ -139,7 +139,7 @@ if (! function_exists('format_number')) {
     {
         // If locale is not passed, get from the default locale that is set from our config file
         // or set by HTTP content negotiation.
-        $locale ??= Locale::getDefault();
+        $locale ??= class_exists('\Locale') ? \Locale::getDefault() : 'en';
 
         // Type can be any of the NumberFormatter options, but provide a default.
         $type = (int) ($options['type'] ?? NumberFormatter::DECIMAL);

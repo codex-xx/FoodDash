@@ -309,7 +309,7 @@ class CLIRequest extends Request
      */
     public function getLocale(): string
     {
-        return Locale::getDefault();
+        return class_exists('\Locale') ? \Locale::getDefault() : 'en';
     }
 
     /**

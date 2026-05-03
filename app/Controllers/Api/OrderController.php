@@ -18,6 +18,7 @@ class OrderController extends ResourceController
     protected $orderModel;
     protected $orderFlow;
     protected $permissions;
+    private ?array $ordersTableColumns = null;
     private const RIDER_CONFIRMED_STATUSES = ['picked_up', 'arrived_at_restaurant', 'out_for_delivery', 'delivered'];
 
     public function __construct()
@@ -41,24 +42,8 @@ class OrderController extends ResourceController
                 ->orderBy('created_at', 'DESC')
                 ->findAll();
 
-            // Add restaurant and driver info
-            $restaurantModel = new RestaurantModel();
-            $driverModel = new DriverModel();
-
             foreach ($orders as &$order) {
-                $restaurant = $restaurantModel->find($order['restaurant_id']);
-                $order['restaurant'] = $restaurant;
-
-                if ($order['driver_id'] && $this->canExposeDriverToCustomer($order)) {
-                    $driver = $driverModel->find($order['driver_id']);
-                    $order['driver'] = $driver ? [
-                        'id'    => $driver['id'],
-                        'name'  => $driver['name'],
-                        'phone' => $driver['phone'],
-                    ] : null;
-                } else {
-                    $order['driver'] = null;
-                }
+                $order = $this->enrichOrderForDriver($order);
             }
 
             return $this->respond([
@@ -222,11 +207,14 @@ class OrderController extends ResourceController
         // Generate order number
         $orderNumber = 'ORD-' . strtoupper(uniqid());
 
-        // Build the data array from the received JSON object
-        $totalAmount = (float) ($input['total_amount'] ?? $input['totalAmount'] ?? 0);
+        // Build the data array from the received JSON object.
+        $totalAmount = $this->resolveOrderTotalAmount($input, $items);
         $sizeCategory = $this->orderFlow->getSizeCategory($totalAmount);
         $deliveryTypeId = $this->orderFlow->resolveDeliveryTypeId($sizeCategory);
         $deliveryAddress = $input['delivery_address'] ?? $input['deliveryAddress'] ?? $customer['address'];
+        $paymentMethod = $input['payment_method'] ?? $input['paymentMethod'] ?? $input['payment_type'] ?? $input['paymentType'] ?? null;
+        $paymentStatus = $input['payment_status'] ?? $input['paymentStatus'] ?? null;
+        $paymentReference = $input['payment_reference'] ?? $input['paymentReference'] ?? null;
 
         $data = [
             'order_number'     => $orderNumber,
@@ -242,6 +230,19 @@ class OrderController extends ResourceController
             'notes'            => $input['notes'] ?? $input['special_instructions'] ?? null,
         ];
 
+        // Keep checkout backward compatible with databases that have not migrated payment columns yet.
+        if ($this->ordersTableHasColumn('payment_method')) {
+            $data['payment_method'] = $paymentMethod;
+        }
+
+        if ($this->ordersTableHasColumn('payment_status')) {
+            $data['payment_status'] = $paymentStatus;
+        }
+
+        if ($this->ordersTableHasColumn('payment_reference')) {
+            $data['payment_reference'] = $paymentReference;
+        }
+
         $orderId = $this->orderModel->insert($data);
 
         if (!$orderId) {
@@ -255,7 +256,12 @@ class OrderController extends ResourceController
         foreach ($items as $item) {
             $itemData = is_object($item) ? (array) $item : (array) $item;
             $qty = max(1, (int) ($itemData['quantity'] ?? 1));
-            $unit = (float) ($itemData['price'] ?? 0);
+            $unit = $this->normalizeMoney(
+                $itemData['price']
+                ?? $itemData['unit_price']
+                ?? $itemData['unitPrice']
+                ?? 0
+            );
 
             $orderItemModel->insert([
                 'order_id' => $orderId,
@@ -604,9 +610,12 @@ class OrderController extends ResourceController
         if (!empty($order['driver_id']) && $this->canExposeDriverToCustomer($order)) {
             $driver = $driverModel->find((int) $order['driver_id']);
             $order['driver'] = $driver ? [
-                'id'    => $driver['id'],
-                'name'  => $driver['name'],
-                'phone' => $driver['phone'],
+                'id'             => $driver['id'],
+                'name'           => $driver['name'],
+                'phone'          => $driver['phone'],
+                'vehicle_type'    => $driver['vehicle_type'] ?? null,
+                'vehicle_number'  => $driver['vehicle_number'] ?? null,
+                'vehicle'        => trim((string) (($driver['vehicle_type'] ?? '') . ' ' . ($driver['vehicle_number'] ?? ''))),
             ] : null;
         } else {
             $order['driver'] = null;
@@ -624,8 +633,104 @@ class OrderController extends ResourceController
 
         $order['customer_phone'] = $order['customer']['phone'] ?? null;
         $order['customer_address'] = $order['customer']['address'] ?? ($order['delivery_address'] ?? null);
+        $order['payment_method_label'] = $this->resolvePaymentMethodLabel($order);
+        $order['display_payment_method'] = $order['payment_method_label'];
 
         return $order;
+    }
+
+    private function resolvePaymentMethodLabel(array $order): string
+    {
+        $rawMethod = trim((string) ($order['payment_method'] ?? $order['payment_type'] ?? ''));
+        $normalizedMethod = strtolower($rawMethod);
+        $status = strtolower(trim((string) ($order['payment_status'] ?? '')));
+
+        if ($normalizedMethod !== '') {
+            if (in_array($normalizedMethod, ['cod', 'cash_on_delivery', 'cash on delivery', 'cash'], true)) {
+                return 'Cash on Delivery';
+            }
+
+            return ucwords(str_replace(['_', '-'], ' ', $rawMethod));
+        }
+
+        if (in_array($status, ['cod', 'cash_on_delivery', 'cash on delivery', 'unpaid'], true)) {
+            return 'Cash on Delivery';
+        }
+
+        if ($status !== '') {
+            return ucwords(str_replace(['_', '-'], ' ', $status));
+        }
+
+        return '-';
+    }
+
+    private function resolveOrderTotalAmount(array $input, array $items): float
+    {
+        $explicitTotal = $this->normalizeMoney(
+            $input['total_amount']
+            ?? $input['totalAmount']
+            ?? $input['order_total']
+            ?? $input['orderTotal']
+            ?? $input['grand_total']
+            ?? $input['grandTotal']
+            ?? $input['amount']
+            ?? $input['payment_amount']
+            ?? $input['paymentAmount']
+            ?? 0
+        );
+
+        if ($explicitTotal > 0) {
+            return $explicitTotal;
+        }
+
+        $itemsTotal = 0.0;
+        foreach ($items as $item) {
+            $row = is_object($item) ? (array) $item : (array) $item;
+            $qty = max(1, (int) ($row['quantity'] ?? 1));
+
+            $lineTotal = $this->normalizeMoney($row['line_total'] ?? $row['lineTotal'] ?? 0);
+            if ($lineTotal > 0) {
+                $itemsTotal += $lineTotal;
+                continue;
+            }
+
+            $unitPrice = $this->normalizeMoney($row['unit_price'] ?? $row['unitPrice'] ?? $row['price'] ?? 0);
+            $itemsTotal += ($unitPrice * $qty);
+        }
+
+        $feeTotal =
+            $this->normalizeMoney($input['delivery_fee'] ?? $input['deliveryFee'] ?? 0)
+            + $this->normalizeMoney($input['shipping_fee'] ?? $input['shippingFee'] ?? 0)
+            + $this->normalizeMoney($input['service_fee'] ?? $input['serviceFee'] ?? 0)
+            + $this->normalizeMoney($input['platform_fee'] ?? $input['platformFee'] ?? 0)
+            + $this->normalizeMoney($input['tax'] ?? $input['tax_amount'] ?? $input['taxAmount'] ?? 0);
+
+        return round(max(0, $itemsTotal + $feeTotal), 2);
+    }
+
+    private function normalizeMoney($value): float
+    {
+        if (is_int($value) || is_float($value)) {
+            return round((float) $value, 2);
+        }
+
+        if (is_string($value)) {
+            $normalized = preg_replace('/[^0-9.,-]/', '', $value);
+            if ($normalized === null || $normalized === '') {
+                return 0.0;
+            }
+
+            // Handle formats like 1,234.56 or 1234,56.
+            if (str_contains($normalized, ',') && str_contains($normalized, '.')) {
+                $normalized = str_replace(',', '', $normalized);
+            } elseif (str_contains($normalized, ',')) {
+                $normalized = str_replace(',', '.', $normalized);
+            }
+
+            return round((float) $normalized, 2);
+        }
+
+        return 0.0;
     }
 
     private function parseOrderItems($items): array
@@ -641,6 +746,17 @@ class OrderController extends ResourceController
         $decoded = json_decode($items, true);
 
         return is_array($decoded) ? $decoded : [];
+    }
+
+    private function ordersTableHasColumn(string $column): bool
+    {
+        if ($this->ordersTableColumns === null) {
+            $db = \Config\Database::connect();
+            $fieldNames = $db->getFieldNames('orders');
+            $this->ordersTableColumns = array_fill_keys($fieldNames, true);
+        }
+
+        return !empty($this->ordersTableColumns[$column]);
     }
 
     private function canExposeDriverToCustomer(array $order): bool

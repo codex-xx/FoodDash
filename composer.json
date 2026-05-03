@@ -14,7 +14,7 @@
         "ext-intl": "*",
         "ext-mbstring": "*",
         "dompdf/dompdf": "^2.0",
-        "firebase/php-jwt": "^6.10",
+        "firebase/php-jwt": "^7.0",
         "laminas/laminas-escaper": "^2.18",
         "psr/log": "^3.0"
     },
