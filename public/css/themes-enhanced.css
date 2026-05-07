@@ -574,6 +574,36 @@ html[data-theme="light"] .fd-sidebar .text-muted {
   opacity: 1 !important;
 }
 
+/* Sidebar should remain dark and have light text in light mode for contrast */
+html[data-theme="light"] .fd-sidebar {
+  background: linear-gradient(180deg, #0B2423, #0F3B39, #123737) !important;
+  color: #FFFFFF !important;
+}
+
+html[data-theme="light"] .fd-sidebar .fd-nav-link,
+html[data-theme="light"] .fd-sidebar .fd-nav-label,
+html[data-theme="light"] .fd-sidebar .fd-nav-icon,
+html[data-theme="light"] .fd-sidebar small,
+html[data-theme="light"] .fd-sidebar .text-muted {
+  color: #FFFFFF !important;
+  opacity: 1 !important;
+}
+
+/* Make the logout button clearly visible */
+html[data-theme="light"] .fd-sidebar .btn,
+html[data-theme="light"] .fd-sidebar .btn-outline-danger,
+html[data-theme="light"] .fd-sidebar .logout-btn {
+  color: #FFFFFF !important;
+  border-color: rgba(255,255,255,0.18) !important;
+  background: transparent !important;
+  opacity: 1 !important;
+}
+
+/* Ensure nav icons (emoji or svg) are visible */
+html[data-theme="light"] .fd-sidebar .fd-nav-icon {
+  filter: brightness(1.6) contrast(1.1) !important;
+}
+
 /* Ensure small/muted text across light-mode pages is not too faint */
 html[data-theme="light"] .text-muted,
 html[data-theme="light"] small,
