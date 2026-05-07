@@ -115,6 +115,76 @@ class RestaurantOwnersSeeder extends Seeder
             $menuModel->insert($item);
         }
 
+        // Laurel's Kitchen
+        $laurelUser = $userModel->where('email', 'vesterlaurel@gmail.com')->first();
+        if (! $laurelUser) {
+            return;
+        }
+
+        $laurelRestaurant = $restaurantModel->where('user_id', $laurelUser['id'])->first();
+        if (! $laurelRestaurant) {
+            return;
+        }
+
+        $laurelItems = [
+            [
+                'name' => 'Basic Catering',
+                'description' => 'Classic soy-vinegar braised chicken served with steamed rice.',
+                'price' => 139.00,
+                'category' => 'rice meals',
+                'image_url' => 'uploads/menu/basic_catering.png',
+                'availability' => 1,
+            ],
+            [
+                'name' => 'Bulk Fried Chicken',
+                'description' => 'Sizzling chopped pork with onions, chili, and calamansi.',
+                'price' => 179.00,
+                'category' => 'rice meals',
+                'image_url' => 'uploads/menu/bulk_fried_chicken.png',
+                'availability' => 1,
+            ],
+            [
+                'name' => 'Bulk Roast Beef',
+                'description' => 'Tender beef in rich peanut sauce with bagoong on the side.',
+                'price' => 229.00,
+                'category' => 'rice meals',
+                'image_url' => 'uploads/menu/bulk_roast_beef.png',
+                'availability' => 1,
+            ],
+            [
+                'name' => 'Bulk Spaghetti',
+                'description' => 'Crispy spring rolls with sweet chili dipping sauce.',
+                'price' => 109.00,
+                'category' => 'snacks',
+                'image_url' => 'uploads/menu/bulk_spaghetti.png',
+                'availability' => 1,
+            ],
+            [
+                'name' => 'Spaghetti Bolognese',
+                'description' => 'Mixed shaved ice dessert with leche flan, ube, and ice cream.',
+                'price' => 99.00,
+                'category' => 'desserts',
+                'image_url' => 'uploads/menu/spaghetti_bolognese.png',
+                'availability' => 1,
+            ],
+        ];
+
+        foreach ($laurelItems as $item) {
+            $existingItem = $menuModel
+                ->where('restaurant_id', $laurelRestaurant['id'])
+                ->where('name', $item['name'])
+                ->first();
+
+            $item['restaurant_id'] = $laurelRestaurant['id'];
+
+            if ($existingItem) {
+                $menuModel->update($existingItem['id'], $item);
+                continue;
+            }
+
+            $menuModel->insert($item);
+        }
+
         // General
         $owner2User = $userModel->where('email', 'owner2@example.com')->first();
         if (! $owner2User) {
