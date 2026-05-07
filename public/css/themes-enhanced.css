@@ -694,3 +694,16 @@ html[data-theme="dark"] .status-green {
   box-shadow: 0 1px 0 rgba(0,0,0,0.04) inset !important;
 }
 
+/* Ensure .status-green wins in Light Mode (higher specificity) */
+html[data-theme="light"] .status-green,
+html[data-theme="light"] .badge.status-green,
+html[data-theme="light"] .menu-status-pill.status-green,
+html[data-theme="light"] .order-status-pill.status-green,
+html[data-theme="light"] .status-filter .badge.status-green {
+  background-color: var(--bs-success, #16a34a) !important;
+  color: #ffffff !important;
+  border-color: rgba(0,0,0,0.08) !important;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04) inset !important;
+  opacity: 1 !important;
+}
+
