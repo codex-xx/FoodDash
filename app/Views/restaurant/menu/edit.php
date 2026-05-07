@@ -6,7 +6,10 @@
 <div class="row">
   <div class="col-lg-6 offset-lg-3">
     <div class="mb-4">
-      <h3 class="m-0">Edit Menu Item</h3>
+      <div class="d-flex align-items-center justify-content-between gap-2">
+        <h3 class="m-0">Edit Menu Item</h3>
+        <a href="<?= site_url('menu') ?>" class="btn btn-sm btn-outline-secondary">Back</a>
+      </div>
       <small class="text-muted">Update your menu item details</small>
     </div>
 
