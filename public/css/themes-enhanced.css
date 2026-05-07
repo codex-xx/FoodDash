@@ -478,6 +478,89 @@ html[data-theme="dark"] .fd-sidebar {
 /* Avoid forcing full-page repaints. Rely on attribute-based CSS variables
    and targeted component rules above to update styles efficiently. */
 
+/* ===================================
+   STRONG VISIBILITY OVERRIDES (GLOBAL)
+   Ensure no faded or low-contrast text remains across dashboards
+   =================================== */
+
+/* Force readable text color and full opacity for all dashboard content */
+.fd-content, .fd-content *, .fd-shell, .fd-shell * , main, main * {
+  color: var(--color-text-primary) !important;
+  opacity: 1 !important;
+  filter: none !important;
+  -webkit-font-smoothing: antialiased !important;
+  text-rendering: optimizeLegibility !important;
+}
+
+/* Make muted text more legible (not too faint) */
+.text-muted, .muted, .fd-sidebar .text-muted, small {
+  color: var(--color-text-tertiary) !important;
+  opacity: 1 !important;
+}
+
+/* Stronger weights for headings and important labels */
+h1, h2, h3, h4, h5, h6, .card-title, .navbar-brand {
+  color: var(--color-text-primary) !important;
+  font-weight: 700 !important;
+}
+
+/* Table rows and cells: ensure contrast and remove faint backgrounds */
+.fd-content .table tbody tr, .fd-content .table tbody td,
+.table tbody tr, .table tbody td {
+  color: var(--color-text-primary) !important;
+  background-color: transparent !important;
+  opacity: 1 !important;
+}
+
+/* Menu descriptions and small helper text should be legible */
+.menu-description-text, .help-text, .form-text {
+  color: var(--color-text-secondary) !important;
+  opacity: 1 !important;
+}
+
+/* Make role/status badges strongly visible */
+.role-pill, .status-pill, .menu-status-pill, .menu-category-badge {
+  opacity: 1 !important;
+  color: var(--color-badge-text) !important;
+  background-color: var(--color-badge-bg) !important;
+  border-color: var(--color-badge-border) !important;
+  font-weight: 700 !important;
+}
+
+/* ===================================
+   NAVBAR / BRAND LOGO ADJUSTMENTS
+   Lighten logo image in light mode for better visibility
+   =================================== */
+
+/* Default: ensure SVG/logo inherit text color */
+.navbar-brand, .navbar-brand * {
+  color: var(--color-text-primary) !important;
+}
+
+/* If the brand is an image, increase brightness in light theme */
+.navbar-brand img {
+  transition: filter 0.12s linear, opacity 0.12s linear !important;
+  filter: none !important;
+}
+
+html[data-theme="light"] .navbar-brand img {
+  filter: brightness(1.45) saturate(1.05) !important;
+}
+
+html[data-theme="dark"] .navbar-brand img {
+  filter: none !important;
+}
+
+/* For inline SVG logos, force a lighter fill in light mode */
+.navbar-brand svg * { fill: currentColor !important; }
+html[data-theme="light"] .navbar-brand { color: var(--fd-accent-secondary) !important; }
+
+/* Remove faint shadows or overlays that make text hard to read */
+.fd-content .card, .fd-content .card-header, .fd-content .card-body {
+  box-shadow: none !important;
+}
+
+
 /* ===== Accessibility fixes: make badges and status pills fully visible ===== */
 /* Apply across dashboard, restaurant and auth pages */
 .fd-content .badge,
