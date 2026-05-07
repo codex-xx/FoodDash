@@ -262,6 +262,23 @@
   let popularFoodChart = null;
   let recentOrdersById = {};
 
+  function getActiveTheme() {
+    const html = document.documentElement;
+    const attrTheme = html.getAttribute('data-theme') || html.getAttribute('data-current-theme');
+    if (attrTheme === 'dark' || attrTheme === 'light') {
+      return attrTheme;
+    }
+    try {
+      const saved = localStorage.getItem('fooddash-theme-preference');
+      if (saved === 'dark' || saved === 'light') {
+        return saved;
+      }
+    } catch (e) {
+      // ignore localStorage read errors
+    }
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+
   /**
    * Register charts with global theme manager
    */
@@ -335,6 +352,7 @@
   function initOrderRateChart(labels, data) {
     const ctx = document.getElementById('orderRateChart');
     if (!ctx) return;
+    const isDark = getActiveTheme() === 'dark';
 
     const chartLabels = Array.isArray(labels) && labels.length ? labels : [];
     const chartData = Array.isArray(data) ? data : [];
@@ -350,13 +368,13 @@
         datasets: [{
           label: 'Orders',
           data: chartData,
-          borderColor: 'var(--bs-primary)',
-          backgroundColor: 'rgba(13, 110, 253, 0.05)',
+          borderColor: isDark ? '#FFFFFF' : '#0D6EFD',
+          backgroundColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(13, 110, 253, 0.08)',
           borderWidth: 2,
           fill: true,
           tension: 0.4,
-          pointBackgroundColor: 'var(--bs-primary)',
-          pointBorderColor: 'white',
+          pointBackgroundColor: isDark ? '#FFFFFF' : '#0D6EFD',
+          pointBorderColor: isDark ? '#0A0A0A' : '#FFFFFF',
           pointBorderWidth: 2,
           pointRadius: 5
         }]
@@ -364,8 +382,22 @@
       options: {
         responsive: true,
         maintainAspectRatio: true,
+        animation: {
+          duration: 260,
+          easing: 'easeOutCubic'
+        },
         plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true } }
+        scales: {
+          x: {
+            ticks: { color: isDark ? '#FFFFFF' : '#241C0C' },
+            grid: { color: isDark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.06)' }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { color: isDark ? '#FFFFFF' : '#241C0C' },
+            grid: { color: isDark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.06)' }
+          }
+        }
       }
     });
 
@@ -572,7 +604,7 @@
 
   // Update existing Chart.js instances immediately when theme changes
   window.addEventListener('themechange', (e) => {
-    const theme = e.detail && e.detail.theme ? e.detail.theme : (document.documentElement.getAttribute('data-theme') || 'light');
+    const theme = e.detail && e.detail.theme ? e.detail.theme : getActiveTheme();
     const isDark = theme === 'dark';
 
     try {
@@ -586,13 +618,13 @@
         }
         if (orderRateChart.data && orderRateChart.data.datasets) {
           orderRateChart.data.datasets.forEach((ds) => {
-            ds.borderColor = isDark ? (ds.borderColor || '#F2C200') : (ds.borderColor || 'var(--bs-primary)');
-            ds.backgroundColor = ds.backgroundColor || 'transparent';
-            if (ds.pointBackgroundColor) ds.pointBackgroundColor = isDark ? '#FFFFFF' : ds.pointBackgroundColor;
-            if (ds.pointBorderColor) ds.pointBorderColor = isDark ? '#FFFFFF' : ds.pointBorderColor;
+            ds.borderColor = isDark ? '#FFFFFF' : '#0D6EFD';
+            ds.backgroundColor = isDark ? 'rgba(255,255,255,0.10)' : 'rgba(13, 110, 253, 0.08)';
+            ds.pointBackgroundColor = isDark ? '#FFFFFF' : '#0D6EFD';
+            ds.pointBorderColor = isDark ? '#0A0A0A' : '#FFFFFF';
           });
         }
-        orderRateChart.update('none');
+        orderRateChart.update();
       }
 
       if (popularFoodChart) {
@@ -613,10 +645,23 @@
             }
           });
         }
-        popularFoodChart.update('none');
+        popularFoodChart.update();
       }
     } catch (err) {
       console.warn('Theme update for charts failed:', err);
+    }
+  });
+
+  // Ensure chart colors are correct on refresh even if theme event is not fired yet.
+  window.addEventListener('load', () => {
+    try {
+      const theme = getActiveTheme();
+      const event = new CustomEvent('themechange', {
+        detail: { theme: theme, isDark: theme === 'dark' }
+      });
+      window.dispatchEvent(event);
+    } catch (e) {
+      // ignore
     }
   });
 
