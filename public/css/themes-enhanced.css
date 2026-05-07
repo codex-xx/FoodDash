@@ -553,7 +553,34 @@ html[data-theme="dark"] .navbar-brand img {
 
 /* For inline SVG logos, force a lighter fill in light mode */
 .navbar-brand svg * { fill: currentColor !important; }
-html[data-theme="light"] .navbar-brand { color: var(--fd-accent-secondary) !important; }
+html[data-theme="light"] .navbar-brand { color: #ffffff !important; }
+html[data-theme="light"] .navbar-brand strong { color: #ffffff !important; }
+
+/* Make the "Signed in as" and other navbar/sidebar text visible in light mode */
+html[data-theme="light"] .navbar .nav-item small,
+html[data-theme="light"] .navbar .nav-item,
+html[data-theme="light"] .navbar .nav-link,
+html[data-theme="light"] .navbar .nav-text,
+html[data-theme="light"] .text-white-50 {
+  color: var(--color-text-primary) !important;
+  opacity: 1 !important;
+}
+
+/* Sidebar links and labels in light mode should be readable */
+html[data-theme="light"] .fd-sidebar .fd-nav-link,
+html[data-theme="light"] .fd-sidebar .fd-nav-label,
+html[data-theme="light"] .fd-sidebar .text-muted {
+  color: var(--color-text-primary) !important;
+  opacity: 1 !important;
+}
+
+/* Ensure small/muted text across light-mode pages is not too faint */
+html[data-theme="light"] .text-muted,
+html[data-theme="light"] small,
+html[data-theme="light"] .muted {
+  color: var(--color-text-tertiary) !important;
+  opacity: 1 !important;
+}
 
 /* Remove faint shadows or overlays that make text hard to read */
 .fd-content .card, .fd-content .card-header, .fd-content .card-body {
