@@ -115,6 +115,48 @@ class RestaurantOwnersSeeder extends Seeder
             $menuModel->insert($item);
         }
 
+        // Laurel's Kitchen
+        $laurelUser = $userModel->where('email', 'vesterlaurel@gmail.com')->first();
+        if ($laurelUser) {
+            $laurelRestaurant = $restaurantModel->where('user_id', $laurelUser['id'])->first();
+            if ($laurelRestaurant) {
+                $laurelItems = [
+                    [
+                        'name' => 'Classic Cheeseburger',
+                        'description' => 'Juicy beef patty with cheese, lettuce, and tomato on a toasted bun.',
+                        'price' => 12.50,
+                        'category' => 'Main Course',
+                        'image_url' => 'uploads/menu/classic_cheeseburger.png',
+                        'availability' => 1,
+                    ],
+                    [
+                        'name' => 'Spaghetti Bolognese',
+                        'description' => 'Al dente spaghetti with a rich and hearty meat sauce.',
+                        'price' => 14.00,
+                        'category' => 'Main Course',
+                        'image_url' => 'uploads/menu/spaghetti_bolognese.png',
+                        'availability' => 1,
+                    ],
+                ];
+
+                foreach ($laurelItems as $item) {
+                    $existingItem = $menuModel
+                        ->where('restaurant_id', $laurelRestaurant['id'])
+                        ->where('name', $item['name'])
+                        ->first();
+
+                    $item['restaurant_id'] = $laurelRestaurant['id'];
+
+                    if ($existingItem) {
+                        $menuModel->update($existingItem['id'], $item);
+                        continue;
+                    }
+
+                    $menuModel->insert($item);
+                }
+            }
+        }
+
         // General
         $owner2User = $userModel->where('email', 'owner2@example.com')->first();
         if (! $owner2User) {
