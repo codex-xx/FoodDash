@@ -5,10 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= esc($pageTitle ?? 'Dashboard - FoodDash') ?></title>
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+        <!-- Early theme application script: reads localStorage or cookie and sets html[data-theme] before CSS loads -->
+        <script>
+            (function(){
+                try {
+                    var key = 'fooddash-theme-preference';
+                    var theme = null;
+                    try { theme = localStorage.getItem(key); } catch(e){}
+                    if (!theme) {
+                        try {
+                            var parts = document.cookie.split(';').map(function(p){return p.trim();});
+                            for (var i=0;i<parts.length;i++){
+                                if (parts[i].indexOf(key+'=')===0){ theme = parts[i].substring((key+'=').length); break; }
+                            }
+                        } catch(e){}
+                    }
+                    if (theme === 'dark' || theme === 'light') {
+                        document.documentElement.setAttribute('data-theme', theme);
+                        document.documentElement.dataset.theme = theme;
+                    }
+                } catch(e){}
+            })();
+        </script>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <!-- Load enhanced theme CSS first for highest priority -->
+        <link href="<?= base_url('css/themes-enhanced.css') ?>" rel="stylesheet">
+        <link href="<?= base_url('css/themes-comprehensive.css') ?>" rel="stylesheet">
+        <link href="<?= base_url('css/themes.css') ?>" rel="stylesheet">
     <style>
         :root {
             /* Palette from provided image */
@@ -109,7 +135,7 @@
 
         .fd-content h3.m-0 {
             font-weight: 800;
-            color: var(--fd-espresso);
+            color: var(--color-text-primary);
         }
 
         .fd-page-header {
@@ -118,6 +144,12 @@
             border-radius: .85rem;
             background: linear-gradient(120deg, rgba(255, 255, 255, 0.96), rgba(243, 211, 154, 0.14));
             padding: 1rem 1.25rem;
+            color: var(--color-text-primary);
+        }
+
+        html[data-theme="dark"] .fd-page-header {
+            border-color: rgba(255, 255, 255, 0.1);
+            background: linear-gradient(120deg, rgba(26, 26, 26, 0.96), rgba(242, 194, 0, 0.08));
         }
 
         .fd-stat-card {
@@ -126,6 +158,12 @@
             background: rgba(255, 255, 255, 0.92);
             padding: .9rem 1rem;
             height: 100%;
+            color: var(--color-text-primary);
+        }
+
+        html[data-theme="dark"] .fd-stat-card {
+            background: rgba(26, 26, 26, 0.92);
+            border-color: rgba(255, 255, 255, 0.1);
         }
 
         .fd-stat-label {
@@ -137,11 +175,19 @@
             margin-bottom: .2rem;
         }
 
+        html[data-theme="dark"] .fd-stat-label {
+            color: #B0B0B0;
+        }
+
         .fd-stat-value {
             font-size: 1.45rem;
             margin: 0;
             color: #1F2937;
             font-weight: 800;
+        }
+
+        html[data-theme="dark"] .fd-stat-value {
+            color: #FFFFFF;
         }
 
         @media (max-width: 991.98px) {
@@ -188,11 +234,12 @@
             display: flex;
             align-items: center;
             gap: .5rem;
-            color: rgba(255, 255, 255, 0.88);
+            color: #FFFFFF !important;
             border-radius: .65rem;
             padding: .6rem .85rem;
             font-size: .9rem;
             transition: background-color .2s ease, color .2s ease, transform .2s ease, box-shadow .2s ease;
+            text-decoration: none;
         }
 
         .fd-nav-link:hover {
@@ -478,6 +525,37 @@
                 transition: none;
             }
         }
+
+        /* Theme Toggle Button Styles */
+        #theme-toggle-btn {
+            font-size: 1.2rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            transition: all 0.08s linear;
+        }
+
+        #theme-toggle-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.9);
+        }
+
+        #theme-toggle-btn .theme-toggle-icon {
+            display: inline-block;
+            transition: none;
+        }
+
+        #theme-toggle-btn:active .theme-toggle-icon {
+            transform: none;
+        }
+
+        /* Smooth transition for theme changes on all elements */
+        html {
+            transition: background-color 0.08s linear, color 0.08s linear;
+        }
+
+        body {
+            transition: background 0.08s linear, color 0.08s linear;
+        }
     </style>
     <?= $this->renderSection('head') ?>
 </head>
@@ -497,6 +575,12 @@
             <ul class="navbar-nav mb-2 mb-lg-0">
                 <li class="nav-item me-3 d-flex align-items-center text-white-50">
                     <small>Signed in as&nbsp;<strong><?= esc(session('email') ?? 'User') ?></strong></small>
+                </li>
+                <li class="nav-item ms-2">
+                    <button type="button" id="theme-toggle-btn" class="btn btn-outline-light d-flex align-items-center gap-2" aria-pressed="false" aria-label="Toggle theme">
+                        <span class="theme-toggle-icon">🌙</span>
+                        <span class="theme-toggle-label d-none d-md-inline">Dark Mode</span>
+                    </button>
                 </li>
             </ul>
         </div>
@@ -610,8 +694,10 @@
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="<?= base_url('js/theme-manager-v3.js') ?>"></script>
 <script>
     $(function () {
+        // Sidebar toggle
         $('#fdSidebarToggle').on('click', function () {
             $('#fdSidebar').toggleClass('show');
             const expanded = $('#fdSidebar').hasClass('show');
@@ -631,6 +717,30 @@
                 $('#fdSidebarToggle').attr('aria-expanded', 'false');
             }
         });
+
+        // Theme toggle handler - simplified and robust
+        $('#theme-toggle-btn').on('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (window.themeManagerV3) {
+                const newTheme = window.themeManagerV3.toggle();
+                console.log('Theme toggled to:', newTheme);
+            } else if (window.globalThemeManager) {
+                window.globalThemeManager.toggle();
+            }
+        });
+
+        // Listen for theme changes
+        window.addEventListener('themechange', (e) => {
+            console.log('themechange event received:', e.detail.theme);
+            
+            if (window.themeManagerV3) {
+                window.themeManagerV3.updateButton(e.detail.theme);
+            }
+        });
+
+        console.log('[Dashboard] jQuery ready - Theme manager available');
     });
 </script>
 

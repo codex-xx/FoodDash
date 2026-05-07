@@ -262,6 +262,20 @@
   let popularFoodChart = null;
   let recentOrdersById = {};
 
+  /**
+   * Register charts with global theme manager
+   */
+  function registerChartsWithTheme() {
+    if (window.globalThemeManager) {
+      if (orderRateChart) {
+        window.globalThemeManager.registerChart('orderRateChart', orderRateChart);
+      }
+      if (popularFoodChart) {
+        window.globalThemeManager.registerChart('popularFoodChart', popularFoodChart);
+      }
+    }
+  }
+
   function getStatusBadge(status) {
     const map = {
       pending: '<span class="badge bg-warning">Pending</span>',
@@ -354,6 +368,9 @@
         scales: { y: { beginAtZero: true } }
       }
     });
+
+    // Register with theme manager
+    registerChartsWithTheme();
   }
 
   function initPopularFoodChart(foodData) {
@@ -440,6 +457,9 @@
       `;
       legendDiv.appendChild(legendItem);
     });
+
+    // Register with theme manager
+    registerChartsWithTheme();
   }
 
   function loadRestaurantChartData(timeframe = 'year') {
@@ -549,6 +569,56 @@
       popularFoodChart.resize();
     }
   }
+
+  // Update existing Chart.js instances immediately when theme changes
+  window.addEventListener('themechange', (e) => {
+    const theme = e.detail && e.detail.theme ? e.detail.theme : (document.documentElement.getAttribute('data-theme') || 'light');
+    const isDark = theme === 'dark';
+
+    try {
+      if (orderRateChart) {
+        if (orderRateChart.options && orderRateChart.options.scales) {
+          Object.keys(orderRateChart.options.scales).forEach((s) => {
+            const scale = orderRateChart.options.scales[s];
+            if (scale.ticks) scale.ticks.color = isDark ? '#FFFFFF' : '#241C0C';
+            if (scale.grid) scale.grid.color = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.05)';
+          });
+        }
+        if (orderRateChart.data && orderRateChart.data.datasets) {
+          orderRateChart.data.datasets.forEach((ds) => {
+            ds.borderColor = isDark ? (ds.borderColor || '#F2C200') : (ds.borderColor || 'var(--bs-primary)');
+            ds.backgroundColor = ds.backgroundColor || 'transparent';
+            if (ds.pointBackgroundColor) ds.pointBackgroundColor = isDark ? '#FFFFFF' : ds.pointBackgroundColor;
+            if (ds.pointBorderColor) ds.pointBorderColor = isDark ? '#FFFFFF' : ds.pointBorderColor;
+          });
+        }
+        orderRateChart.update('none');
+      }
+
+      if (popularFoodChart) {
+        if (popularFoodChart.options) {
+          if (popularFoodChart.options.plugins && popularFoodChart.options.plugins.legend) {
+            popularFoodChart.options.plugins.legend.labels = popularFoodChart.options.plugins.legend.labels || {};
+            popularFoodChart.options.plugins.legend.labels.color = isDark ? '#FFFFFF' : '#241C0C';
+          }
+          if (popularFoodChart.options.plugins && popularFoodChart.options.plugins.tooltip) {
+            popularFoodChart.options.plugins.tooltip.titleColor = isDark ? '#FFFFFF' : '#241C0C';
+            popularFoodChart.options.plugins.tooltip.bodyColor = isDark ? '#FFFFFF' : '#241C0C';
+          }
+        }
+        if (popularFoodChart.data && popularFoodChart.data.datasets) {
+          popularFoodChart.data.datasets.forEach((ds) => {
+            if (!ds.backgroundColor || ds.backgroundColor.length === 0) {
+              ds.backgroundColor = isDark ? ['#FFD700', '#FF8A65', '#4FC3F7', '#81C784', '#BA68C8'] : ds.backgroundColor;
+            }
+          });
+        }
+        popularFoodChart.update('none');
+      }
+    } catch (err) {
+      console.warn('Theme update for charts failed:', err);
+    }
+  });
 
   $('#refreshBtn').on('click', loadDashboard);
 

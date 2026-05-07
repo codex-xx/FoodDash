@@ -264,6 +264,20 @@
   let orderRateChart = null;
   let popularFoodChart = null;
 
+  /**
+   * Register charts with global theme manager
+   */
+  function registerChartsWithTheme() {
+    if (window.globalThemeManager) {
+      if (orderRateChart) {
+        window.globalThemeManager.registerChart('orderRateChart', orderRateChart);
+      }
+      if (popularFoodChart) {
+        window.globalThemeManager.registerChart('popularFoodChart', popularFoodChart);
+      }
+    }
+  }
+
   function statusBadge(status) {
     const map = {
       pending: '<span class="badge bg-warning">Pending</span>',
@@ -298,6 +312,117 @@
           data: chartData,
           borderColor: 'var(--bs-primary)',
           backgroundColor: 'rgba(13, 110, 253, 0.05)',
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: 'var(--bs-primary)',
+          pointBorderColor: 'white',
+          pointBorderWidth: 2,
+          pointRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+
+    // Register with theme manager
+    registerChartsWithTheme();
+  }
+
+  function initPopularFoodChart(foodData) {
+    const ctx = document.getElementById('popularFoodChart');
+    if (!ctx) return;
+
+    const emptyState = document.getElementById('popularFoodEmptyState');
+    const legendDiv = document.getElementById('popularFoodLegend');
+    const validFoods = foodData.filter(f => Number(f.order_count || 0) > 0).slice(0, 5);
+
+    if (popularFoodChart) {
+      popularFoodChart.destroy();
+    }
+
+    if (validFoods.length === 0) {
+      emptyState.classList.remove('d-none');
+      legendDiv.innerHTML = '<div class="text-center text-muted py-4"><small>No orders for now</small></div>';
+
+      popularFoodChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['No orders'],
+          datasets: [{
+            data: [1],
+            backgroundColor: ['#e9ecef'],
+            borderColor: 'white',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '65%',
+          plugins: {
+            legend: { display: false },
+            tooltip: { enabled: false }
+          }
+        }
+      });
+
+      registerChartsWithTheme();
+      return;
+    }
+
+    emptyState.classList.add('d-none');
+
+    const colors = ['#FFC107', '#DC3545', '#28A745', '#17A2B8', '#6F42C1'];
+    const labels = validFoods.map(f => f.name);
+    const data = validFoods.map(f => Number(f.order_count || 0));
+
+    popularFoodChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: colors.slice(0, labels.length),
+          borderColor: 'white',
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+
+    // Show legend with percentages
+    const totalOrders = data.reduce((a, b) => a + b, 0);
+    legendDiv.innerHTML = '';
+    
+    validFoods.forEach((item, idx) => {
+      const percentage = Math.round((item.order_count / totalOrders) * 100);
+      const legendItem = document.createElement('div');
+      legendItem.className = 'mb-2 d-flex align-items-center justify-content-between';
+      legendItem.innerHTML = `
+        <div class="d-flex align-items-center">
+          <span style="width: 12px; height: 12px; background-color: ${colors[idx]}; border-radius: 2px; display: inline-block; margin-right: 8px;"></span>
+          <small><strong>${item.name}</strong> (${percentage}%)</small>
+        </div>
+        <small class="text-muted">${item.order_count} orders</small>
+      `;
+      legendDiv.appendChild(legendItem);
+    });
+
+    // Register with theme manager
+    registerChartsWithTheme();
+  }
           borderWidth: 2,
           fill: true,
           tension: 0.4,
@@ -644,5 +769,55 @@
       refreshAdminLiveSummary();
     });
   })();
+
+  // Update existing Chart.js instances immediately when theme changes
+  window.addEventListener('themechange', (e) => {
+    const theme = e.detail && e.detail.theme ? e.detail.theme : (document.documentElement.getAttribute('data-theme') || 'light');
+    const isDark = theme === 'dark';
+
+    try {
+      if (orderRateChart) {
+        if (orderRateChart.options && orderRateChart.options.scales) {
+          Object.keys(orderRateChart.options.scales).forEach((s) => {
+            const scale = orderRateChart.options.scales[s];
+            if (scale.ticks) scale.ticks.color = isDark ? '#FFFFFF' : '#241C0C';
+            if (scale.grid) scale.grid.color = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.05)';
+          });
+        }
+        if (orderRateChart.data && orderRateChart.data.datasets) {
+          orderRateChart.data.datasets.forEach((ds) => {
+            ds.borderColor = isDark ? (ds.borderColor || '#F2C200') : (ds.borderColor || 'var(--bs-primary)');
+            ds.backgroundColor = ds.backgroundColor || 'transparent';
+            if (ds.pointBackgroundColor) ds.pointBackgroundColor = isDark ? '#FFFFFF' : ds.pointBackgroundColor;
+            if (ds.pointBorderColor) ds.pointBorderColor = isDark ? '#FFFFFF' : ds.pointBorderColor;
+          });
+        }
+        orderRateChart.update('none');
+      }
+
+      if (popularFoodChart) {
+        if (popularFoodChart.options) {
+          if (popularFoodChart.options.plugins && popularFoodChart.options.plugins.legend) {
+            popularFoodChart.options.plugins.legend.labels = popularFoodChart.options.plugins.legend.labels || {};
+            popularFoodChart.options.plugins.legend.labels.color = isDark ? '#FFFFFF' : '#241C0C';
+          }
+          if (popularFoodChart.options.plugins && popularFoodChart.options.plugins.tooltip) {
+            popularFoodChart.options.plugins.tooltip.titleColor = isDark ? '#FFFFFF' : '#241C0C';
+            popularFoodChart.options.plugins.tooltip.bodyColor = isDark ? '#FFFFFF' : '#241C0C';
+          }
+        }
+        if (popularFoodChart.data && popularFoodChart.data.datasets) {
+          popularFoodChart.data.datasets.forEach((ds) => {
+            if (!ds.backgroundColor || ds.backgroundColor.length === 0) {
+              ds.backgroundColor = isDark ? ['#FFD700', '#FF8A65', '#4FC3F7', '#81C784', '#BA68C8'] : ds.backgroundColor;
+            }
+          });
+        }
+        popularFoodChart.update('none');
+      }
+    } catch (err) {
+      console.warn('Theme update for charts failed:', err);
+    }
+  });
 </script>
 <?= $this->endSection() ?>

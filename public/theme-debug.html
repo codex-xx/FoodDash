@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodDash Theme Manager v3 Debug Console</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/themes-comprehensive.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 2rem;
+            font-family: monospace;
+            background: var(--color-bg-primary);
+            color: var(--color-text-primary);
+        }
+        .console {
+            background: var(--color-bg-secondary);
+            border: 2px solid var(--color-border);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin: 1rem 0;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 0.85rem;
+        }
+        .log-entry {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        .log-entry.info { color: #3B82F6; }
+        .log-entry.success { color: #22C55E; }
+        .log-entry.error { color: #EF4444; }
+        .log-entry.warn { color: #F59E0B; }
+        .test-section {
+            background: var(--color-card-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+        .status-ok {
+            background: #22C55E;
+            color: white;
+        }
+        .status-error {
+            background: #EF4444;
+            color: white;
+        }
+        .status-pending {
+            background: #F59E0B;
+            color: white;
+        }
+        .btn-group-test {
+            margin: 1rem 0;
+        }
+        .theme-swatch {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border-radius: 4px;
+            margin: 0 0.5rem;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="test-section">
+        <h1>🎨 Theme Manager v3 Debug Console</h1>
+        <p><code>FoodDash Theme Manager v3.0 - Robust & Reliable</code></p>
+    </div>
+
+    <div class="test-section">
+        <h2>🔧 Theme Controls</h2>
+        <div class="btn-group-test">
+            <button class="btn btn-primary btn-lg" onclick="testToggle()">🌙 Toggle Theme</button>
+            <button class="btn btn-secondary btn-lg" onclick="setLightTheme()">☀️ Set Light</button>
+            <button class="btn btn-dark btn-lg" onclick="setDarkTheme()">🌙 Set Dark</button>
+            <button class="btn btn-warning btn-lg" onclick="checkStatus()">✓ Check Status</button>
+            <button class="btn btn-info btn-lg" onclick="testPersistence()">💾 Test Persistence</button>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Current Status</h2>
+        <div id="status-display">
+            <p><strong>Theme:</strong> <span id="current-theme-display">—</span> <span class="status-badge status-pending">Loading...</span></p>
+            <p><strong>data-theme Attribute:</strong> <span id="data-theme-display">—</span></p>
+            <p><strong>Saved Preference:</strong> <span id="saved-pref-display">—</span></p>
+            <p><strong>Manager Initialized:</strong> <span id="manager-init-display">—</span></p>
+            <p><strong>Manager Available:</strong> <span id="manager-available-display">—</span></p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎨 Color Variables</h2>
+        <div id="color-display">
+            <p>
+                <strong>Background:</strong>
+                <span class="theme-swatch" id="swatch-bg"></span>
+                <code id="color-bg">—</code>
+            </p>
+            <p>
+                <strong>Text:</strong>
+                <span class="theme-swatch" id="swatch-text"></span>
+                <code id="color-text">—</code>
+            </p>
+            <p>
+                <strong>Border:</strong>
+                <span class="theme-swatch" id="swatch-border"></span>
+                <code id="color-border">—</code>
+            </p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>📝 Event Log</h2>
+        <div class="console" id="event-log">
+            <div class="log-entry info">[INIT] Debug console started</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🧪 Test Results</h2>
+        <div id="test-results">
+            <p id="test-summary">Waiting for tests...</p>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/theme-manager-v3.js"></script>
+<script>
+// ============================================
+// Debug Console
+// ============================================
+
+const eventLog = [];
+
+function log(message, type = 'info') {
+    const timestamp = new Date().toLocaleTimeString();
+    const entry = `[${timestamp}] ${message}`;
+    eventLog.push({ message: entry, type });
+    
+    const logEl = document.getElementById('event-log');
+    const entryEl = document.createElement('div');
+    entryEl.className = `log-entry ${type}`;
+    entryEl.textContent = entry;
+    logEl.appendChild(entryEl);
+    logEl.scrollTop = logEl.scrollHeight;
+    
+    console.log(`[${type.toUpperCase()}]`, message);
+}
+
+function updateStatus() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const computedStyle = getComputedStyle(document.documentElement);
+    
+    // Update theme display
+    const currentTheme = window.themeManagerV3?.currentTheme || 'unknown';
+    document.getElementById('current-theme-display').textContent = currentTheme.toUpperCase();
+    
+    // Update attribute display
+    const dataTheme = document.documentElement.getAttribute('data-theme') || 'not set';
+    document.getElementById('data-theme-display').textContent = dataTheme;
+    
+    // Update saved preference
+    const savedPref = localStorage.getItem('fooddash-theme-preference') || 'none';
+    document.getElementById('saved-pref-display').textContent = savedPref;
+    
+    // Update manager status
+    const isInit = window.themeManagerV3?.isInitialized || false;
+    document.getElementById('manager-init-display').innerHTML = 
+        isInit ? '<span class="status-badge status-ok">✓ YES</span>' : 
+               '<span class="status-badge status-error">✗ NO</span>';
+    
+    const isAvail = !!window.themeManagerV3;
+    document.getElementById('manager-available-display').innerHTML = 
+        isAvail ? '<span class="status-badge status-ok">✓ YES</span>' : 
+                '<span class="status-badge status-error">✗ NO</span>';
+    
+    // Update colors
+    const bgColor = computedStyle.getPropertyValue('--color-bg-primary').trim();
+    const textColor = computedStyle.getPropertyValue('--color-text-primary').trim();
+    const borderColor = computedStyle.getPropertyValue('--color-border').trim();
+    
+    document.getElementById('color-bg').textContent = bgColor || 'not found';
+    document.getElementById('color-text').textContent = textColor || 'not found';
+    document.getElementById('color-border').textContent = borderColor || 'not found';
+    
+    // Update swatches
+    if (bgColor) document.getElementById('swatch-bg').style.backgroundColor = bgColor;
+    if (textColor) document.getElementById('swatch-text').style.backgroundColor = textColor;
+    if (borderColor) document.getElementById('swatch-border').style.backgroundColor = borderColor;
+}
+
+function testToggle() {
+    log('Testing theme toggle...', 'info');
+    
+    if (!window.themeManagerV3) {
+        log('✗ FAILED: themeManagerV3 not available', 'error');
+        return;
+    }
+    
+    try {
+        const before = window.themeManagerV3.currentTheme;
+        const newTheme = window.themeManagerV3.toggle();
+        const after = window.themeManagerV3.currentTheme;
+        
+        log(`✓ Theme toggled: ${before} → ${after}`, 'success');
+        updateStatus();
+    } catch (e) {
+        log(`✗ Toggle error: ${e.message}`, 'error');
+    }
+}
+
+function setLightTheme() {
+    log('Setting light theme...', 'info');
+    
+    if (!window.themeManagerV3) {
+        log('✗ FAILED: themeManagerV3 not available', 'error');
+        return;
+    }
+    
+    try {
+        window.themeManagerV3.setTheme('light', true);
+        log('✓ Light theme set', 'success');
+        updateStatus();
+    } catch (e) {
+        log(`✗ Error: ${e.message}`, 'error');
+    }
+}
+
+function setDarkTheme() {
+    log('Setting dark theme...', 'info');
+    
+    if (!window.themeManagerV3) {
+        log('✗ FAILED: themeManagerV3 not available', 'error');
+        return;
+    }
+    
+    try {
+        window.themeManagerV3.setTheme('dark', true);
+        log('✓ Dark theme set', 'success');
+        updateStatus();
+    } catch (e) {
+        log(`✗ Error: ${e.message}`, 'error');
+    }
+}
+
+function checkStatus() {
+    log('Checking system status...', 'info');
+    
+    const checks = {
+        'themeManagerV3 available': !!window.themeManagerV3,
+        'globalThemeManager available': !!window.globalThemeManager,
+        'localStorage working': (() => {
+            try {
+                localStorage.setItem('test', 'true');
+                localStorage.removeItem('test');
+                return true;
+            } catch {
+                return false;
+            }
+        })(),
+        'CSS variables available': (() => {
+            const style = getComputedStyle(document.documentElement);
+            return !!style.getPropertyValue('--color-bg-primary');
+        })(),
+        'data-theme attribute set': !!document.documentElement.getAttribute('data-theme')
+    };
+    
+    let allPass = true;
+    for (const [check, result] of Object.entries(checks)) {
+        const icon = result ? '✓' : '✗';
+        const type = result ? 'success' : 'error';
+        log(`${icon} ${check}`, type);
+        if (!result) allPass = false;
+    }
+    
+    if (allPass) {
+        log('✓ All checks passed!', 'success');
+    } else {
+        log('✗ Some checks failed', 'error');
+    }
+    
+    updateStatus();
+}
+
+function testPersistence() {
+    log('Testing persistence...', 'info');
+    
+    try {
+        const currentTheme = window.themeManagerV3?.currentTheme || 'light';
+        const testTheme = currentTheme === 'light' ? 'dark' : 'light';
+        
+        window.themeManagerV3.setTheme(testTheme, true);
+        const saved = localStorage.getItem('fooddash-theme-preference');
+        
+        if (saved === testTheme) {
+            log(`✓ Persistence working: saved "${saved}"`, 'success');
+        } else {
+            log(`✗ Persistence failed: expected "${testTheme}", got "${saved}"`, 'error');
+        }
+        
+        updateStatus();
+    } catch (e) {
+        log(`✗ Persistence error: ${e.message}`, 'error');
+    }
+}
+
+// ============================================
+// Event Listeners
+// ============================================
+
+window.addEventListener('themechange', (e) => {
+    log(`🔄 themechange event: ${e.detail.prevTheme} → ${e.detail.theme}`, 'warn');
+    updateStatus();
+});
+
+// ============================================
+// Initialize
+// ============================================
+
+$(function() {
+    log('Document ready - initializing tests', 'info');
+    
+    // Wait for theme manager to initialize
+    setTimeout(() => {
+        if (window.themeManagerV3?.isInitialized) {
+            log('✓ Theme manager initialized', 'success');
+        } else {
+            log('⚠ Theme manager not yet initialized', 'warn');
+        }
+        
+        updateStatus();
+        checkStatus();
+    }, 500);
+});
+
+// Auto-update every 2 seconds
+setInterval(updateStatus, 2000);
+</script>
+</body>
+</html>

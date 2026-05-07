@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theme Synchronization & Visibility Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/themes-enhanced.css" rel="stylesheet">
+    <link href="css/themes-comprehensive.css" rel="stylesheet">
+    <style>
+        body {
+            background: var(--color-bg-primary);
+            color: var(--color-text-primary);
+            transition: background 0.08s linear, color 0.08s linear;
+        }
+        .test-panel {
+            background: var(--color-card-bg);
+            border: 1px solid var(--color-border);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+        .component-test {
+            border-left: 4px solid var(--fd-accent-primary);
+            padding: 1rem;
+            margin: 0.5rem 0;
+            background: var(--color-bg-secondary);
+            border-radius: 0.5rem;
+        }
+        .badge-test {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            margin: 0.25rem;
+            border-radius: 999px;
+            font-weight: bold;
+        }
+        code {
+            background: var(--color-bg-secondary);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            color: var(--fd-accent-primary);
+        }
+        .timer {
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+            margin: 1rem 0;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            vertical-align: middle;
+        }
+        .status-ok { background: var(--fd-accent-success); }
+        .status-error { background: var(--fd-accent-danger); }
+    </style>
+</head>
+<body>
+<div class="container mt-5">
+    <div class="test-panel">
+        <h1>🔄 Theme Synchronization & Visibility Test</h1>
+        <p class="lead">Comprehensive test of theme switching, component synchronization, and text visibility</p>
+        <button class="btn btn-primary btn-lg" onclick="toggleTheme()">
+            <span id="toggle-icon">🌙</span> Toggle Theme
+        </button>
+        <button class="btn btn-secondary btn-lg ms-2" onclick="runFullTest()">Run Full Test</button>
+    </div>
+
+    <!-- Product Card Test -->
+    <div class="test-panel">
+        <h2>🛒 Product Card Visibility Test</h2>
+        <p>Test product cards with dynamic badge colors and text visibility</p>
+        
+        <div class="row">
+            <div class="col-md-6 col-lg-4">
+                <div class="menu-product-card p-3" style="border: 1px solid var(--color-border); border-radius: 0.75rem;">
+                    <div class="menu-image-wrap mb-2" style="background: var(--color-bg-secondary); height: 120px; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center;">
+                        <span class="menu-item-placeholder">🥤 Image</span>
+                    </div>
+                    <h6 class="menu-item-name fw-semibold mb-2">Iced Coffee</h6>
+                    <div class="mb-2">
+                        <span class="menu-category-badge">DRINKS</span>
+                    </div>
+                    <p class="menu-description-text small mb-2">Cold, refreshing coffee with ice and cream. Perfect for hot days.</p>
+                    <div class="menu-price-block p-2">
+                        <strong class="menu-price-block">$4.99</strong>
+                        <span class="menu-status-pill available p-1 ms-2">Available</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-4">
+                <div class="menu-product-card p-3" style="border: 1px solid var(--color-border); border-radius: 0.75rem;">
+                    <div class="menu-image-wrap mb-2" style="background: var(--color-bg-secondary); height: 120px; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center;">
+                        <span class="menu-item-placeholder">🍔 Image</span>
+                    </div>
+                    <h6 class="menu-item-name fw-semibold mb-2">Classic Burger</h6>
+                    <div class="mb-2">
+                        <span class="menu-category-badge">FOOD</span>
+                    </div>
+                    <p class="menu-description-text small mb-2">Juicy hamburger with lettuce, tomato, and our special sauce.</p>
+                    <div class="menu-price-block p-2">
+                        <strong class="menu-price-block">$8.99</strong>
+                        <span class="menu-status-pill available p-1 ms-2">Available</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="menu-product-card p-3" style="border: 1px solid var(--color-border); border-radius: 0.75rem;">
+                    <div class="menu-image-wrap mb-2" style="background: var(--color-bg-secondary); height: 120px; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center;">
+                        <span class="menu-item-placeholder">🍰 Image</span>
+                    </div>
+                    <h6 class="menu-item-name fw-semibold mb-2">Chocolate Cake</h6>
+                    <div class="mb-2">
+                        <span class="menu-category-badge">DESSERTS</span>
+                    </div>
+                    <p class="menu-description-text small mb-2">Rich chocolate cake with frosting. Great for any occasion.</p>
+                    <div class="menu-price-block p-2">
+                        <strong class="menu-price-block">$6.49</strong>
+                        <span class="menu-status-pill unavailable p-1 ms-2">Unavailable</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Component Synchronization Test -->
+    <div class="test-panel">
+        <h2>🔗 Component Synchronization Test</h2>
+        <p>All components should change theme simultaneously</p>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="component-test">
+                    <strong>Card Component</strong>
+                    <div class="card mt-2">
+                        <div class="card-header">Card Header</div>
+                        <div class="card-body">
+                            <h5 class="card-title">Card Title</h5>
+                            <p>This is a card body text. It should switch theme instantly.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="component-test">
+                    <strong>Form Elements</strong>
+                    <input type="text" class="form-control mb-2" placeholder="Text input field">
+                    <select class="form-select">
+                        <option>Select option</option>
+                        <option selected>Option 2</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="component-test">
+                    <strong>Buttons</strong>
+                    <div>
+                        <button class="btn btn-primary me-2 mb-2">Primary</button>
+                        <button class="btn btn-success me-2 mb-2">Success</button>
+                        <button class="btn btn-danger mb-2">Danger</button>
+                    </div>
+                </div>
+
+                <div class="component-test">
+                    <strong>Badges</strong>
+                    <div>
+                        <span class="badge bg-primary me-2 mb-2">Primary</span>
+                        <span class="badge bg-success me-2 mb-2">Success</span>
+                        <span class="badge bg-danger mb-2">Danger</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Performance Monitoring -->
+    <div class="test-panel">
+        <h2>⚡ Performance Monitoring</h2>
+        <div id="performance-results"></div>
+    </div>
+
+    <!-- Test Results -->
+    <div class="test-panel">
+        <h2>✓ Test Results</h2>
+        <div id="test-results"></div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="js/theme-manager-v3.js"></script>
+<script>
+// Test utilities
+const results = [];
+
+function log(message, type = 'info') {
+    console.log(`[TEST] ${message}`);
+    const timestamp = new Date().getTime();
+    results.push({ message, type, timestamp });
+}
+
+function toggleTheme() {
+    if (!window.themeManagerV3) {
+        alert('Theme manager not loaded');
+        return;
+    }
+    
+    const before = performance.now();
+    const newTheme = window.themeManagerV3.toggle();
+    const after = performance.now();
+    const duration = (after - before).toFixed(2);
+    
+    log(`✓ Theme toggled to ${newTheme} (${duration}ms)`, 'success');
+    updateToggleButton();
+    checkComponentSync();
+}
+
+function updateToggleButton() {
+    const theme = window.themeManagerV3?.currentTheme || 'light';
+    const isDark = theme === 'dark';
+    const icon = document.getElementById('toggle-icon');
+    if (icon) {
+        icon.textContent = isDark ? '☀️' : '🌙';
+    }
+}
+
+function checkComponentSync() {
+    log('Checking component synchronization...', 'info');
+    
+    const theme = window.themeManagerV3?.currentTheme || 'light';
+    const isDark = theme === 'dark';
+    
+    // Check specific components
+    const components = [
+        { selector: '.menu-product-card', name: 'Product Cards' },
+        { selector: '.menu-category-badge', name: 'Category Badges (DRINKS)' },
+        { selector: '.card', name: 'Card Components' },
+        { selector: '.btn-primary', name: 'Buttons' },
+        { selector: '.badge', name: 'Badges' },
+        { selector: '.form-control', name: 'Form Controls' }
+    ];
+    
+    let allSynced = true;
+    components.forEach(comp => {
+        const elements = document.querySelectorAll(comp.selector);
+        if (elements.length > 0) {
+            const styles = window.getComputedStyle(elements[0]);
+            const bgColor = styles.backgroundColor;
+            const textColor = styles.color;
+            
+            // Verify colors match theme expectations
+            const isLight = bgColor.includes('255, 255, 255') || bgColor.includes('rgb(255');
+            const isDarkBg = bgColor.includes('0, 0, 0') || bgColor.includes('rgb(0');
+            
+            const matches = (isDark && isDarkBg) || (!isDark && isLight);
+            
+            if (matches) {
+                log(`✓ ${comp.name}: Synchronized`, 'success');
+            } else {
+                log(`✗ ${comp.name}: NOT synchronized (bg: ${bgColor})`, 'error');
+                allSynced = false;
+            }
+        }
+    });
+    
+    if (allSynced) {
+        log('✓ All components synchronized!', 'success');
+    } else {
+        log('✗ Some components not synchronized', 'error');
+    }
+}
+
+function testVisibility() {
+    log('Testing text visibility...', 'info');
+    
+    const elements = document.querySelectorAll(
+        '.menu-item-name, .menu-category-badge, .menu-description-text, ' +
+        '.menu-price-block, h1, h2, h3, p, label'
+    );
+    
+    let visibilityIssues = 0;
+    elements.forEach(el => {
+        const styles = window.getComputedStyle(el);
+        const bgColor = styles.backgroundColor;
+        const textColor = styles.color;
+        
+        // Simple contrast check (both should not be very similar)
+        if (textColor === bgColor) {
+            visibilityIssues++;
+        }
+    });
+    
+    if (visibilityIssues === 0) {
+        log(`✓ Text visibility: All elements readable (${elements.length} elements)`, 'success');
+    } else {
+        log(`⚠ Text visibility: ${visibilityIssues} elements may have contrast issues`, 'error');
+    }
+}
+
+function testPerformance() {
+    log('Running performance test...', 'info');
+    
+    const iterations = 5;
+    const times = [];
+    
+    for (let i = 0; i < iterations; i++) {
+        const before = performance.now();
+        if (i % 2 === 0) {
+            window.themeManagerV3.setTheme('light', false);
+        } else {
+            window.themeManagerV3.setTheme('dark', false);
+        }
+        const after = performance.now();
+        times.push(after - before);
+    }
+    
+    const avg = (times.reduce((a, b) => a + b) / times.length).toFixed(2);
+    const max = Math.max(...times).toFixed(2);
+    const min = Math.min(...times).toFixed(2);
+    
+    log(`✓ Performance: Avg ${avg}ms, Min ${min}ms, Max ${max}ms`, 'success');
+    
+    // Display detailed performance
+    const perfDiv = document.getElementById('performance-results');
+    perfDiv.innerHTML = `
+        <p><strong>Theme Switch Times (${iterations} iterations):</strong></p>
+        <ul>
+            <li>Average: <strong>${avg}ms</strong></li>
+            <li>Min: <strong>${min}ms</strong></li>
+            <li>Max: <strong>${max}ms</strong></li>
+            <li>All Times: ${times.map(t => t.toFixed(2) + 'ms').join(', ')}</li>
+        </ul>
+        <p><strong>Status:</strong> ${avg < 100 ? '✓ Excellent' : avg < 300 ? '⚠ Good' : '✗ Slow'}</p>
+    `;
+}
+
+function runFullTest() {
+    results.length = 0;
+    log('Starting full synchronization test...', 'info');
+    
+    setTimeout(() => {
+        checkComponentSync();
+        testVisibility();
+        testPerformance();
+        
+        // Display results
+        const resultsDiv = document.getElementById('test-results');
+        let html = '<table class="table table-sm"><tbody>';
+        results.forEach(r => {
+            const icon = r.type === 'success' ? '✓' : r.type === 'error' ? '✗' : 'ℹ';
+            const color = r.type === 'success' ? 'success' : r.type === 'error' ? 'danger' : 'info';
+            html += `<tr class="table-${color}"><td>${icon} ${r.message}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        resultsDiv.innerHTML = html;
+    }, 100);
+}
+
+// Initialize on page load
+$(function() {
+    console.log('[TEST PAGE] Initialized');
+    
+    // Wait for theme manager to be ready
+    setTimeout(() => {
+        if (window.themeManagerV3?.isInitialized) {
+            log('✓ Theme manager ready', 'success');
+            updateToggleButton();
+        } else {
+            log('✗ Theme manager not initialized', 'error');
+        }
+    }, 500);
+});
+
+// Listen for theme changes
+window.addEventListener('themechange', (e) => {
+    console.log('[TEST PAGE] Theme changed to:', e.detail.theme);
+    updateToggleButton();
+});
+</script>
+</body>
+</html>
