@@ -13,29 +13,36 @@
         :root {
             /* Palette from provided image */
             --fd-mustard: #F2C200;
+            --fd-mustard-soft: rgba(242, 194, 0, 0.18);
             --fd-sand: #F3D39A;
             --fd-espresso: #241C0C;
             --fd-slate: #6B7C87;
             --fd-stone: #CFC6BA;
             --fd-charcoal: #3A3F45;
+            --fd-teal-900: #0B2423;
+            --fd-teal-850: #0F2F2E;
+            --fd-teal-800: #123737;
+            --fd-teal-700: #1C4B4A;
+            --fd-teal-soft: rgba(18, 55, 55, 0.12);
 
             --fd-primary: var(--fd-mustard);
-            --fd-primary-dark: var(--fd-charcoal);
-            --fd-accent: var(--fd-slate);
-            --fd-border: rgba(36, 28, 12, 0.38);
-            --fd-border-strong: rgba(36, 28, 12, 0.56);
+            --fd-primary-dark: #C49300;
+            --fd-accent: var(--fd-teal-700);
+            --fd-border: rgba(15, 23, 42, 0.14);
+            --fd-border-strong: rgba(15, 23, 42, 0.22);
             --fd-white: #FFFFFF;
             --fd-black: #000000;
-            --fd-bg: #F6F3EE;
+            --fd-bg: #F6F4EF;
+            --fd-surface: rgba(255, 255, 255, 0.94);
         }
 
         body {
             padding-top: 56px;
             font-family: 'Manrope', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background:
-                radial-gradient(circle at 88% 8%, rgba(242, 194, 0, 0.2), transparent 36%),
-                radial-gradient(circle at 8% 82%, rgba(58, 63, 69, 0.08), transparent 34%),
-                linear-gradient(180deg, #FFFFFF 0%, var(--fd-bg) 52%, rgba(207, 198, 186, 0.6) 100%);
+                radial-gradient(circle at 88% 8%, rgba(242, 194, 0, 0.16), transparent 38%),
+                radial-gradient(circle at 8% 82%, rgba(18, 55, 55, 0.08), transparent 40%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, var(--fd-bg) 55%, rgba(243, 211, 154, 0.18) 100%);
             color: #212529;
         }
 
@@ -51,23 +58,15 @@
             min-height: calc(100vh - 56px);
         }
 
-        body.role-admin {
-            --fd-accent-role: #2F6FED;
-            --fd-accent-role-soft: rgba(47, 111, 237, 0.14);
-        }
-
-        body.role-restaurant {
-            --fd-accent-role: #C56A00;
-            --fd-accent-role-soft: rgba(197, 106, 0, 0.14);
-        }
-
+        body.role-admin,
+        body.role-restaurant,
         body.role-default {
-            --fd-accent-role: #3A3F45;
-            --fd-accent-role-soft: rgba(58, 63, 69, 0.12);
+            --fd-accent-role: var(--fd-primary);
+            --fd-accent-role-soft: var(--fd-mustard-soft);
         }
 
         .navbar-dashboard {
-            background: linear-gradient(90deg, var(--fd-espresso), var(--fd-charcoal), var(--fd-accent-role));
+            background: linear-gradient(90deg, var(--fd-teal-900), var(--fd-teal-800), rgba(242, 194, 0, 0.6));
             box-shadow: 0 2px 6px rgba(15, 23, 42, 0.35);
         }
 
@@ -96,9 +95,9 @@
             left: 0;
             flex: 0 0 250px;
             overflow-y: auto;
-            background: linear-gradient(180deg, #FFFFFF, rgba(243, 211, 154, 0.35));
-            border-right: 1px solid var(--fd-border);
-            box-shadow: 2px 0 8px rgba(15, 23, 42, 0.06);
+            background: linear-gradient(180deg, var(--fd-teal-850), var(--fd-teal-800) 55%, var(--fd-teal-900) 100%);
+            border-right: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 2px 0 12px rgba(15, 23, 42, 0.22);
         }
 
         .fd-content {
@@ -111,6 +110,38 @@
         .fd-content h3.m-0 {
             font-weight: 800;
             color: var(--fd-espresso);
+        }
+
+        .fd-page-header {
+            border: 1px solid rgba(58, 63, 69, 0.14);
+            border-left: 4px solid var(--fd-primary);
+            border-radius: .85rem;
+            background: linear-gradient(120deg, rgba(255, 255, 255, 0.96), rgba(243, 211, 154, 0.14));
+            padding: 1rem 1.25rem;
+        }
+
+        .fd-stat-card {
+            border: 1px solid rgba(58, 63, 69, 0.16);
+            border-radius: .75rem;
+            background: rgba(255, 255, 255, 0.92);
+            padding: .9rem 1rem;
+            height: 100%;
+        }
+
+        .fd-stat-label {
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            font-size: .72rem;
+            color: #6B7280;
+            display: block;
+            margin-bottom: .2rem;
+        }
+
+        .fd-stat-value {
+            font-size: 1.45rem;
+            margin: 0;
+            color: #1F2937;
+            font-weight: 800;
         }
 
         @media (max-width: 991.98px) {
@@ -157,27 +188,49 @@
             display: flex;
             align-items: center;
             gap: .5rem;
-            color: rgba(36, 28, 12, 0.78);
-            border-radius: .5rem;
-            padding: .45rem .9rem;
+            color: rgba(255, 255, 255, 0.88);
+            border-radius: .65rem;
+            padding: .6rem .85rem;
             font-size: .9rem;
             transition: background-color .2s ease, color .2s ease, transform .2s ease, box-shadow .2s ease;
         }
 
         .fd-nav-link:hover {
-            background-color: rgba(242, 194, 0, 0.18);
-            color: var(--fd-espresso);
+            background-color: rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.98);
         }
 
         .fd-nav-link.active {
-            background: var(--fd-accent-role-soft);
-            color: var(--fd-espresso) !important;
-            font-weight: 600;
-            border-left: 4px solid var(--fd-accent-role);
+            background: linear-gradient(90deg, rgba(242, 194, 0, 0.95), rgba(242, 194, 0, 0.72));
+            color: #102423 !important;
+            font-weight: 700;
+            border-left: 0;
+        }
+
+        .fd-nav-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+            flex: 0 0 34px;
+        }
+
+        .fd-nav-link.active .fd-nav-icon {
+            background: rgba(16, 36, 35, 0.18);
+            box-shadow: inset 0 0 0 1px rgba(16, 36, 35, 0.2);
+        }
+
+        .fd-nav-label {
+            display: inline-block;
+            line-height: 1.2;
         }
 
         .fd-sidebar small.text-muted {
-            color: rgba(58, 63, 69, 0.65) !important;
+            color: rgba(255, 255, 255, 0.6) !important;
             letter-spacing: .08em;
             font-size: .72rem;
         }
@@ -200,11 +253,27 @@
             border-color: #D1D5DB;
         }
 
+        .btn-outline-dark {
+            color: #6B7280;
+            border-color: #D1D5DB;
+        }
+
         .btn-outline-secondary:hover,
         .btn-outline-secondary:focus {
             background-color: #D1D5DB;
             color: #111827;
             border-color: #D1D5DB;
+        }
+
+        .btn-outline-dark:hover,
+        .btn-outline-dark:focus {
+            background-color: #D1D5DB;
+            color: #111827;
+            border-color: #D1D5DB;
+        }
+
+        .bg-light {
+            background-color: rgba(255, 255, 255, 0.72) !important;
         }
 
         .page-item.active .page-link {
@@ -225,7 +294,7 @@
             border: 2px solid var(--fd-border-strong);
             border-top: 4px solid var(--fd-accent-role);
             border-radius: .85rem;
-            background: linear-gradient(180deg, #FFFFFF, rgba(243, 211, 154, 0.12));
+            background: linear-gradient(180deg, var(--fd-surface), rgba(243, 211, 154, 0.12));
             box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
         }
 
@@ -237,8 +306,12 @@
         .card.shadow-sm {
             border-radius: .9rem;
             border: 2px solid var(--fd-border-strong);
-            background-color: rgba(255, 255, 255, 0.97);
+            background-color: var(--fd-surface);
             transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+        }
+
+        .fd-content .card.border-0 {
+            border: 2px solid var(--fd-border-strong) !important;
         }
 
         .fd-content .card .card-title {
@@ -259,7 +332,7 @@
         .fd-content .input-group-text {
             border: 2px solid var(--fd-border);
             border-radius: .8rem;
-            background-color: rgba(255, 255, 255, 0.96);
+            background-color: rgba(255, 255, 255, 0.92);
         }
 
         .fd-content .card .card-header,
@@ -444,27 +517,32 @@
             <ul class="nav nav-pills flex-column gap-1">
                 <li class="nav-item">
                     <a href="<?= site_url('dashboard/admin') ?>" class="nav-link fd-nav-link <?= (uri_string() === 'dashboard/admin') ? 'active' : '' ?>">
-                        Dashboard
+                        <span class="fd-nav-icon">🏠</span>
+                        <span class="fd-nav-label">Dashboard</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="<?= site_url('admin/users') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'admin/users')) ? 'active' : '' ?>">
-                        Users
+                        <span class="fd-nav-icon">👤</span>
+                        <span class="fd-nav-label">Users</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="<?= site_url('admin/restaurants/pending') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'admin/restaurants')) ? 'active' : '' ?>">
-                        Restaurant Approvals
+                        <span class="fd-nav-icon">🏬</span>
+                        <span class="fd-nav-label">Restaurant Approvals</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="<?= site_url('admin/drivers/pending') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'admin/drivers')) ? 'active' : '' ?>">
-                        Driver Approvals
+                        <span class="fd-nav-icon">🛵</span>
+                        <span class="fd-nav-label">Driver Approvals</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="<?= site_url('dashboard/admin/orders/history') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'dashboard/admin/orders/history')) ? 'active' : '' ?>">
-                        Delivered History
+                        <span class="fd-nav-icon">📦</span>
+                        <span class="fd-nav-label">Delivered History</span>
                     </a>
                 </li>
             </ul>
@@ -474,27 +552,32 @@
             <ul class="nav nav-pills flex-column gap-1">
                 <li class="nav-item">
                     <a href="<?= site_url('dashboard/restaurant') ?>" class="nav-link fd-nav-link <?= (uri_string() === 'dashboard/restaurant') ? 'active' : '' ?>">
-                        Dashboard
+                        <span class="fd-nav-icon">🏠</span>
+                        <span class="fd-nav-label">Dashboard</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="<?= site_url('menu') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'menu')) ? 'active' : '' ?>">
-                        Menu
+                        <span class="fd-nav-icon">🍔</span>
+                        <span class="fd-nav-label">Menu</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="<?= site_url('orders') ?>" class="nav-link fd-nav-link <?= (uri_string() === 'orders') ? 'active' : '' ?>">
-                        Orders
+                        <span class="fd-nav-icon">🧾</span>
+                        <span class="fd-nav-label">Orders</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="<?= site_url('orders/history') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'orders/history')) ? 'active' : '' ?>">
-                        Order History
+                        <span class="fd-nav-icon">📜</span>
+                        <span class="fd-nav-label">Order History</span>
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="<?= site_url('settings') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'settings')) ? 'active' : '' ?>">
-                        Settings
+                        <span class="fd-nav-icon">⚙️</span>
+                        <span class="fd-nav-label">Settings</span>
                     </a>
                 </li>
             </ul>
@@ -504,7 +587,8 @@
             <ul class="nav nav-pills flex-column gap-1">
                 <li class="nav-item">
                     <a href="<?= site_url('dashboard/admin') ?>" class="nav-link fd-nav-link">
-                        Dashboard
+                        <span class="fd-nav-icon">🏠</span>
+                        <span class="fd-nav-label">Dashboard</span>
                     </a>
                 </li>
             </ul>

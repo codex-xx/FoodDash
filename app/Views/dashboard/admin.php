@@ -3,8 +3,8 @@
 <?php $this->setVar('pageTitle', 'Admin Dashboard — FoodDash'); ?>
 
 <?= $this->section('content') ?>
-<div class="row mb-4">
-  <div class="col-12 d-flex justify-content-between align-items-center">
+<div class="fd-page-header mb-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>
       <h3 class="m-0">Admin Dashboard</h3>
       <small class="text-muted">System management and platform overview</small>

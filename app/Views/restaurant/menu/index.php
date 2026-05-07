@@ -129,7 +129,7 @@ $categoryCount = count($itemsByCategory);
     display: flex;
     flex-direction: column;
     height: 100%;
-    transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+    transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease, background .22s ease;
   }
 
   .menu-image-wrap {
@@ -276,14 +276,15 @@ $categoryCount = count($itemsByCategory);
 
   @media (hover: hover) and (pointer: fine) {
     .menu-product-card:hover {
-      transform: translateY(-6px);
+      transform: translateY(-6px) scale(1.03);
       box-shadow: 0 16px 34px rgba(31, 41, 55, 0.14);
-      border-color: rgba(58, 63, 69, 0.28);
+      border-color: rgba(22, 163, 74, 0.58);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(22, 163, 74, 0.12));
     }
 
     .menu-product-card:hover .menu-image-wrap {
-      border-color: rgba(242, 194, 0, 0.48);
-      background: linear-gradient(180deg, #FFFFFF, #FFF8E5);
+      border-color: rgba(22, 163, 74, 0.46);
+      background: linear-gradient(180deg, #FFFFFF, rgba(22, 163, 74, 0.10));
     }
 
     .menu-product-card:hover .menu-product-image {
