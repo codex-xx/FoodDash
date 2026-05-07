@@ -685,3 +685,12 @@ html[data-theme="light"] .badge.bg-secondary {
   color: #111827 !important;
 }
 
+/* Green status for Active/Delivered */
+.status-green,
+html[data-theme="dark"] .status-green {
+  background-color: var(--bs-success, #16a34a) !important;
+  color: #ffffff !important;
+  border-color: rgba(0,0,0,0.08) !important;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.04) inset !important;
+}
+

@@ -245,6 +245,38 @@ class ThemeManagerV3 {
   }
 
   /**
+   * Apply semantic colors to status badges based on their text content
+   * - Active      -> green
+   * - Delivered   -> green
+   */
+  applyStatusColors() {
+    try {
+      const selectors = ['.menu-status-pill', '.order-status-pill', '.status-pill', '.status-filter .badge', '.badge'];
+      document.querySelectorAll(selectors.join(',')).forEach(el => {
+        try {
+          if (el.dataset.statusColored === '1') return; // already annotated
+          const text = (el.textContent || '').trim().toLowerCase();
+          if (!text) return;
+
+          // Normalize common status words
+          if (text.includes('active') || text.includes('delivered')) {
+            el.classList.add('status-green');
+          } else {
+            el.classList.remove('status-green');
+          }
+
+          // Mark as processed so we don't repeatedly parse the same nodes
+          el.dataset.statusColored = '1';
+        } catch (inner) {
+          // ignore per-element errors
+        }
+      });
+    } catch (e) {
+      console.warn('[ThemeManager] applyStatusColors error:', e);
+    }
+  }
+
+  /**
    * Update critical components that might not respond to CSS alone
    */
   updateCriticalComponents(theme) {
@@ -275,6 +307,12 @@ class ThemeManagerV3 {
       });
       
       console.log('[ThemeManager] Updated critical components for', theme, 'mode');
+      // Apply semantic status colors (non-blocking)
+      try {
+        this.applyStatusColors();
+      } catch (e) {
+        // ignore
+      }
     } catch (e) {
       console.warn('[ThemeManager] Error updating critical components:', e);
     }
@@ -425,6 +463,8 @@ if (document.readyState === 'loading') {
 } else {
   // DOM already loaded
   window.themeManagerV3.init();
+  // Run status color application immediately for already-rendered DOM
+  try { window.themeManagerV3.applyStatusColors(); } catch (e) {}
   window.globalThemeManager = window.themeManagerV3;
 }
 
