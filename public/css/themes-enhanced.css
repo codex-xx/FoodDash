@@ -661,3 +661,27 @@ html[data-theme="light"] .muted {
   border-radius: 999px !important;
 }
 
+/* Force status/filter badges to be dark-text in light mode for readability */
+html[data-theme="light"] .menu-status-pill,
+html[data-theme="light"] .menu-category-badge,
+html[data-theme="light"] .badge,
+html[data-theme="light"] .status-filter .badge,
+html[data-theme="light"] .status-pill,
+html[data-theme="light"] .order-status-pill {
+  background-color: var(--color-badge-bg) !important;
+  color: #111827 !important; /* strong dark text */
+  border-color: var(--color-badge-border) !important;
+  opacity: 1 !important;
+  box-shadow: none !important;
+}
+
+/* Ensure specific Bootstrap contextual badges use readable text on light backgrounds */
+html[data-theme="light"] .badge.bg-warning,
+html[data-theme="light"] .badge.bg-info,
+html[data-theme="light"] .badge.bg-primary,
+html[data-theme="light"] .badge.bg-success,
+html[data-theme="light"] .badge.bg-danger,
+html[data-theme="light"] .badge.bg-secondary {
+  color: #111827 !important;
+}
+
