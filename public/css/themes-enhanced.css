@@ -102,7 +102,7 @@ html[data-theme-applying="true"] * {
 
 /* Enable transitions after theme application */
 html:not([data-theme-applying]) * {
-  transition: background-color 0.08s linear, color 0.08s linear, border-color 0.08s linear, box-shadow 0.08s linear !important;
+  transition: background-color 0.20s ease, color 0.20s ease, border-color 0.20s ease, box-shadow 0.20s ease !important;
 }
 
 input:focus,
@@ -664,7 +664,7 @@ html[data-theme="light"] .muted {
 /* Force status/filter badges to be dark-text in light mode for readability */
 html[data-theme="light"] .menu-status-pill,
 html[data-theme="light"] .menu-category-badge,
-html[data-theme="light"] .badge,
+html[data-theme="light"] .badge:not([class*="bg-"]),
 html[data-theme="light"] .status-filter .badge,
 html[data-theme="light"] .status-pill,
 html[data-theme="light"] .order-status-pill {
@@ -684,6 +684,14 @@ html[data-theme="light"] .badge.bg-danger,
 html[data-theme="light"] .badge.bg-secondary {
   color: #111827 !important;
 }
+
+/* Keep status colors consistent in both themes for contextual badges */
+.badge.bg-warning { background-color: #F59E0B !important; color: #111827 !important; }
+.badge.bg-info { background-color: #0EA5E9 !important; color: #FFFFFF !important; }
+.badge.bg-primary { background-color: #2563EB !important; color: #FFFFFF !important; }
+.badge.bg-success { background-color: #16A34A !important; color: #FFFFFF !important; }
+.badge.bg-danger { background-color: #DC2626 !important; color: #FFFFFF !important; }
+.badge.bg-secondary { background-color: #64748B !important; color: #FFFFFF !important; }
 
 /* Green status for Active/Delivered */
 .status-green,
@@ -705,5 +713,14 @@ html[data-theme="light"] .status-filter .badge.status-green {
   border-color: rgba(0,0,0,0.08) !important;
   box-shadow: 0 1px 0 rgba(0,0,0,0.04) inset !important;
   opacity: 1 !important;
+}
+
+/* Make status colors apply instantly without transition */
+.status-green,
+html[data-theme="light"] .status-green,
+html[data-theme="dark"] .status-green {
+  transition: none !important;
+  -webkit-transition: none !important;
+  will-change: auto !important;
 }
 

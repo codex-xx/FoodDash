@@ -24,7 +24,7 @@
       <span class="badge bg-primary">Picked Up</span>
       <span class="badge bg-secondary">Arrived At Restaurant</span>
       <span class="badge bg-primary">Out For Delivery</span>
-      <span class="badge bg-success">Delivered</span>
+      <span class="badge bg-success status-green">Delivered</span>
       <span class="badge bg-danger">Cancelled</span>
     </div>
   </div>
@@ -80,7 +80,8 @@
                       default => 'secondary'
                     };
                   ?>
-                  <span class="badge bg-<?= $statusClass ?>"><?= ucwords(str_replace('_', ' ', $order['status'])) ?></span>
+                  <?php $semantic = in_array($order['status'], ['delivered', 'active']) ? 'status-green' : ''; ?>
+                  <span class="badge bg-<?= $statusClass ?> <?= $semantic ?>"><?= ucwords(str_replace('_', ' ', $order['status'])) ?></span>
                 </td>
                 <td class="order-prep-cell">
                   <div class="input-group input-group-sm" style="max-width: 150px;">

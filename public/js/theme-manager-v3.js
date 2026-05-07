@@ -158,6 +158,13 @@ class ThemeManagerV3 {
     // Update CSS variables (redundant but ensures they update)
     this.updateCSSVariables(theme);
 
+    // Immediately apply semantic status colors so badges update without delay
+    try {
+      this.applyStatusColors();
+    } catch (e) {
+      // ignore
+    }
+
     // Force browser to recalculate styles
     this.forceStyleRecalculation();
 
@@ -251,22 +258,28 @@ class ThemeManagerV3 {
    */
   applyStatusColors() {
     try {
+      const theme = this.currentTheme || document.documentElement.getAttribute('data-theme') || 'light';
       const selectors = ['.menu-status-pill', '.order-status-pill', '.status-pill', '.status-filter .badge', '.badge'];
       document.querySelectorAll(selectors.join(',')).forEach(el => {
         try {
-          if (el.dataset.statusColored === '1') return; // already annotated
+          // Only re-evaluate if not already applied for this theme
+          if (el.dataset.statusColoredTheme === theme) return;
           const text = (el.textContent || '').trim().toLowerCase();
-          if (!text) return;
+          if (!text) {
+            el.classList.remove('status-green');
+            el.dataset.statusColoredTheme = theme;
+            return;
+          }
 
-          // Normalize common status words
+          // Normalize common status words and apply semantic class
           if (text.includes('active') || text.includes('delivered')) {
             el.classList.add('status-green');
           } else {
             el.classList.remove('status-green');
           }
 
-          // Mark as processed so we don't repeatedly parse the same nodes
-          el.dataset.statusColored = '1';
+          // Remember we processed this element for the current theme
+          el.dataset.statusColoredTheme = theme;
         } catch (inner) {
           // ignore per-element errors
         }
