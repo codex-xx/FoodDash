@@ -34,15 +34,62 @@ class MenuItems extends BaseController
         }
 
         $restaurantId = $session->get('restaurant_id');
-        $items = $this->menuItemModel->where('restaurant_id', $restaurantId)->findAll();
-        $archivedItems = [];
+        $q = trim((string) $this->request->getGet('q'));
+        $category = trim((string) $this->request->getGet('category'));
+        $perPage = (int) ($this->request->getGet('perPage') ?? 9);
+        if ($perPage <= 0) {
+            $perPage = 9;
+        }
+        if ($perPage > 60) {
+            $perPage = 60;
+        }
 
+        $itemsQuery = $this->menuItemModel->where('restaurant_id', $restaurantId);
+        if ($this->supportsArchive) {
+            $itemsQuery = $itemsQuery->where('deleted_at', null);
+        }
+
+        if ($category !== '') {
+            $itemsQuery = $itemsQuery->where('category', $category);
+        }
+
+        if ($q !== '') {
+            $itemsQuery = $itemsQuery
+                ->groupStart()
+                ->like('name', $q)
+                ->orLike('category', $q)
+                ->groupEnd();
+        }
+
+        $items = $itemsQuery
+            ->orderBy('created_at', 'DESC')
+            ->paginate($perPage, 'menu');
+
+        $pager = $this->menuItemModel->pager;
+
+        $archivedItems = [];
         if ($this->supportsArchive) {
             $archivedItems = $this->menuItemModel
-                ->withDeleted()
                 ->where('restaurant_id', $restaurantId)
                 ->where('deleted_at IS NOT NULL', null, false)
+                ->orderBy('deleted_at', 'DESC')
                 ->findAll();
+        }
+
+        $categoryRows = $this->menuItemModel
+            ->select('category')
+            ->where('restaurant_id', $restaurantId)
+            ->where("TRIM(COALESCE(category, '')) != ''", null, false)
+            ->groupBy('category')
+            ->orderBy('category', 'ASC')
+            ->findAll();
+
+        $categories = [];
+        foreach ($categoryRows as $row) {
+            $cat = trim((string) ($row['category'] ?? ''));
+            if ($cat !== '') {
+                $categories[] = $cat;
+            }
         }
 
         foreach ($items as &$item) {
@@ -58,7 +105,34 @@ class MenuItems extends BaseController
         return view('restaurant/menu/index', [
             'items' => $items,
             'archivedItems' => $archivedItems,
+            'pager' => $pager,
+            'q' => $q,
+            'category' => $category,
+            'perPage' => $perPage,
+            'categories' => $categories,
+            'supportsArchive' => $this->supportsArchive,
         ]);
+    }
+
+    /**
+     * Return a single menu item as JSON for modals (view/edit)
+     */
+    public function show($id)
+    {
+        $session = session();
+        if (!$session->get('isLoggedIn') || $session->get('role') !== 'restaurant') {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
+        }
+
+        $item = $this->menuItemModel->find($id);
+        if (!$item || $item['restaurant_id'] != $session->get('restaurant_id')) {
+            return $this->response->setStatusCode(404)->setJSON(['error' => 'Menu item not found']);
+        }
+
+        $item['image'] = $item['image_url'] ?? null;
+        $item['is_available'] = (int) ($item['availability'] ?? 1);
+
+        return $this->response->setJSON(['success' => true, 'item' => $item]);
     }
 
     /**
@@ -110,6 +184,7 @@ class MenuItems extends BaseController
                 'price' => $this->request->getPost('price'),
                 'category' => $this->request->getPost('category'),
                 'availability' => $this->request->getPost('is_available') ? 1 : 0,
+                'deleted_at' => null,
             ];
 
             // handle image upload
@@ -185,12 +260,12 @@ class MenuItems extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
         }
 
-        $item = $this->menuItemModel->withDeleted()->find($id);
+        $item = $this->menuItemModel->find($id);
         if (!$item || $item['restaurant_id'] != $session->get('restaurant_id')) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Menu item not found']);
         }
 
-        if (!empty($item['deleted_at'])) {
+        if ($this->supportsArchive && !empty($item['deleted_at'])) {
             return $this->response->setStatusCode(400)->setJSON(['error' => 'Archived menu items cannot be updated. Restore the item first.']);
         }
 
@@ -230,12 +305,12 @@ class MenuItems extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
         }
 
-        $item = $this->menuItemModel->withDeleted()->find($id);
+        $item = $this->menuItemModel->find($id);
         if (!$item || $item['restaurant_id'] != $session->get('restaurant_id')) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Menu item not found']);
         }
 
-        if (!empty($item['deleted_at'])) {
+        if ($this->supportsArchive && !empty($item['deleted_at'])) {
             return $this->response->setStatusCode(400)->setJSON(['error' => 'Archived items cannot change availability.']);
         }
 
@@ -257,20 +332,54 @@ class MenuItems extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
         }
 
-        $item = $this->menuItemModel->withDeleted()->find($id);
+        $item = $this->menuItemModel->find($id);
         if (!$item || $item['restaurant_id'] != $session->get('restaurant_id')) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Menu item not found']);
         }
 
-        if (!empty($item['deleted_at'])) {
-            return $this->response->setJSON(['success' => true, 'message' => 'Menu item is already archived']);
+        if ($this->supportsArchive) {
+            if (!empty($item['deleted_at'])) {
+                return $this->response->setJSON(['success' => true, 'message' => 'Menu item is already archived']);
+            }
+
+            if ($this->menuItemModel->update($id, ['deleted_at' => date('Y-m-d H:i:s')])) {
+                return $this->response->setJSON(['success' => true, 'message' => 'Menu item archived']);
+            }
+
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'Failed to archive menu item']);
         }
 
         if ($this->menuItemModel->delete($id)) {
-            return $this->response->setJSON(['success' => true, 'message' => 'Menu item archived']);
+            return $this->response->setJSON(['success' => true, 'message' => 'Menu item deleted']);
         }
 
-        return $this->response->setStatusCode(400)->setJSON(['error' => 'Failed to archive menu item']);
+        return $this->response->setStatusCode(400)->setJSON(['error' => 'Failed to delete menu item']);
+    }
+
+    /**
+     * Permanently delete a menu item (only available when archive is enabled)
+     */
+    public function destroy($id)
+    {
+        $session = session();
+        if (!$session->get('isLoggedIn') || $session->get('role') !== 'restaurant') {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
+        }
+
+        if (! $this->supportsArchive) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'Permanent delete is not available on this database schema']);
+        }
+
+        $item = $this->menuItemModel->find($id);
+        if (!$item || $item['restaurant_id'] != $session->get('restaurant_id')) {
+            return $this->response->setStatusCode(404)->setJSON(['error' => 'Menu item not found']);
+        }
+
+        if ($this->menuItemModel->delete($id)) {
+            return $this->response->setJSON(['success' => true, 'message' => 'Menu item deleted']);
+        }
+
+        return $this->response->setStatusCode(400)->setJSON(['error' => 'Failed to delete menu item']);
     }
 
     /**
@@ -287,7 +396,7 @@ class MenuItems extends BaseController
             return $this->response->setStatusCode(400)->setJSON(['error' => 'Archive/restore is not available on this database schema']);
         }
 
-        $item = $this->menuItemModel->withDeleted()->find($id);
+        $item = $this->menuItemModel->find($id);
         if (!$item || $item['restaurant_id'] != $session->get('restaurant_id')) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Menu item not found']);
         }

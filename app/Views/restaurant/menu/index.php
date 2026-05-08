@@ -381,6 +381,9 @@ $categoryCount = count($itemsByCategory);
   <div class="card-body">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 p-2 p-md-3 mb-3">
       <h5 class="card-title m-0">Your Menu Items</h5>
+      <div class="flex-grow-1 mx-lg-4" style="max-width: 400px; min-width: 200px;">
+        <input type="search" id="menuSearchInput" class="form-control form-control-sm rounded-pill px-3" placeholder="Search products by name or description...">
+      </div>
       <a href="<?= site_url('menu/create') ?>" class="btn btn-sm btn-primary px-3">+ Add Menu Item</a>
     </div>
 
@@ -555,5 +558,40 @@ $categoryCount = count($itemsByCategory);
     })
     .catch(err => alert('Error: ' + err));
   }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('menuSearchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const categories = document.querySelectorAll('.menu-category-section');
+
+        categories.forEach(category => {
+          let hasVisibleItems = false;
+          const items = category.querySelectorAll('.menu-product-grid > div');
+
+          items.forEach(item => {
+            const nameEl = item.querySelector('.menu-item-name');
+            const descEl = item.querySelector('.menu-description-text');
+            const name = nameEl ? nameEl.textContent.toLowerCase() : '';
+            const desc = descEl ? descEl.textContent.toLowerCase() : '';
+            
+            if (name.includes(searchTerm) || desc.includes(searchTerm)) {
+              item.style.display = '';
+              hasVisibleItems = true;
+            } else {
+              item.style.display = 'none';
+            }
+          });
+
+          if (hasVisibleItems) {
+            category.style.display = '';
+          } else {
+            category.style.display = 'none';
+          }
+        });
+      });
+    }
+  });
 </script>
 <?= $this->endSection() ?>
