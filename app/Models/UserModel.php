@@ -21,6 +21,10 @@ class UserModel extends Model
         'password',
         'role',
         'is_active',
+        // Lockout/protection fields
+        'failed_attempts',
+        'locked_until',
+        'lock_count',
         'reset_token',
         'reset_expires',
         'mfa_enabled',
