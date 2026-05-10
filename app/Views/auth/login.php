@@ -256,14 +256,6 @@ $hasLoginWallpaper = is_file($loginWallpaperAbs);
                             <input type="password" class="form-control" id="password" name="password" required>
                         </div>
 
-                        <?php if (!empty($captchaRequired) && !empty($captchaQuestion)): ?>
-                            <div class="mb-3">
-                                <label for="captcha_answer" class="form-label">Security Check: <?php echo esc($captchaQuestion); ?></label>
-                                <input type="text" class="form-control" id="captcha_answer" name="captcha_answer" required>
-                                <small class="text-muted">Required after repeated failed login attempts.</small>
-                            </div>
-                        <?php endif; ?>
-
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <a href="<?php echo site_url('forgot'); ?>" class="login-footlink">Forgot password?</a>
                             <button class="btn btn-login" type="submit">Login</button>

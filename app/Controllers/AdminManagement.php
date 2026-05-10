@@ -110,14 +110,17 @@ class AdminManagement extends BaseController
 
         $this->restaurantModel->update($id, ['status' => 'approved']);
         if ($restaurant['user_id']) {
-            $this->userModel->update($restaurant['user_id'], ['is_active' => 1]);
+            $this->userModel->update($restaurant['user_id'], [
+                'password'  => 'password123',
+                'is_active' => 1,
+            ]);
             
             // Send approval email
             $user = $this->userModel->find($restaurant['user_id']);
             if ($user && $user['email']) {
                 try {
                     $emailService = new \App\Libraries\EmailService();
-                    $emailService->sendApplicationApproved($user['email'], $restaurant['name'], 'restaurant');
+                    $emailService->sendApplicationApproved($user['email'], $restaurant['name'], 'restaurant', 'password123');
                 } catch (\Exception $e) {
                     log_message('error', 'Failed to send restaurant approval email: ' . $e->getMessage());
                 }
@@ -205,16 +208,20 @@ class AdminManagement extends BaseController
         $this->driverModel->update($id, [
             'status' => 'approved',
             'is_active' => 1,
+            'password' => 'password123',
         ]);
         if ($driver['user_id']) {
-            $this->userModel->update($driver['user_id'], ['is_active' => 1]);
+            $this->userModel->update($driver['user_id'], [
+                'password'  => 'password123',
+                'is_active' => 1,
+            ]);
         }
         
         // Send approval email directly to driver's email address
         if ($driver['email']) {
             try {
                 $emailService = new \App\Libraries\EmailService();
-                $emailService->sendApplicationApproved($driver['email'], $driver['name'], 'driver');
+                $emailService->sendApplicationApproved($driver['email'], $driver['name'], 'driver', 'password123');
             } catch (\Exception $e) {
                 log_message('error', 'Failed to send driver approval email: ' . $e->getMessage());
             }

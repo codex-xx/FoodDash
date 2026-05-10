@@ -416,7 +416,7 @@ HTML;
      * @param string $partnerType 'driver' or 'restaurant'
      * @return bool
      */
-    public function sendApplicationApproved(string $toEmail, string $toName, string $partnerType): bool
+    public function sendApplicationApproved(string $toEmail, string $toName, string $partnerType, ?string $defaultPassword = null): bool
     {
         try {
             $this->mailer->clearAddresses();
@@ -426,8 +426,10 @@ HTML;
             
             $partnerTypeLabel = ($partnerType === 'driver') ? 'Driver' : 'Restaurant';
             
-            $this->mailer->Body = $this->getApplicationApprovedEmailTemplate($toName, $partnerTypeLabel);
-            $this->mailer->AltBody = "Congratulations {$toName}!\n\nYour application to become a FoodDash {$partnerTypeLabel} has been approved!\n\nYou can now log in to your account and start using our platform.\n\nIf you have any questions, please contact our support team.\n\nBest regards,\nFoodDash Team";
+            $this->mailer->Body = $this->getApplicationApprovedEmailTemplate($toName, $partnerTypeLabel, $defaultPassword);
+            $this->mailer->AltBody = "Congratulations {$toName}!\n\nYour application to become a FoodDash {$partnerTypeLabel} has been approved!\n\nYou can now log in to your account and start using our platform." .
+                ($defaultPassword ? "\n\nDefault login password: {$defaultPassword}" : "") .
+                "\n\nIf you have any questions, please contact our support team.\n\nBest regards,\nFoodDash Team";
 
             $this->mailer->send();
             log_message('info', 'Application approved email sent to: ' . $toEmail);
@@ -518,8 +520,23 @@ HTML;
     /**
      * Get HTML template for application approved email
      */
-    protected function getApplicationApprovedEmailTemplate(string $name, string $partnerType): string
+    protected function getApplicationApprovedEmailTemplate(string $name, string $partnerType, ?string $defaultPassword = null): string
     {
+        $credentialsSection = '';
+
+        if ($defaultPassword !== null && $defaultPassword !== '') {
+            $escapedPassword = esc($defaultPassword);
+            $credentialsSection = <<<HTML
+        <div style="background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0; color: #856404;">
+                <strong>Your default login password:</strong><br>
+                {$escapedPassword}
+            </p>
+        </div>
+
+HTML;
+        }
+
         return <<<HTML
 <!DOCTYPE html>
 <html>
@@ -544,6 +561,8 @@ HTML;
                 <span style="font-size: 14px;">Start using our platform and grow your business with FoodDash!</span>
             </p>
         </div>
+
+        {$credentialsSection}
         
         <p>You can now:</p>
         <ul style="color: #333;">
