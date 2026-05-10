@@ -109,24 +109,9 @@ class SecurityAuditService
 
     public function requiresCaptcha(IncomingRequest $request): bool
     {
-        if (! $this->tableExists('audit_logs')) {
-            return false;
-        }
-
-        $ipHash = $this->sensitive->hashForLookup((string) $request->getIPAddress());
-        if ($ipHash === null) {
-            return false;
-        }
-
-        $since = date('Y-m-d H:i:s', time() - $this->config->captchaWindowSeconds);
-
-        $count = (new AuditLogModel())
-            ->where('event_type', 'failed_login')
-            ->where('ip_address_hash', $ipHash)
-            ->where('created_at >=', $since)
-            ->countAllResults();
-
-        return $count >= $this->config->captchaThreshold;
+        // CAPTCHA-based mitigation disabled — return false so calling code
+        // does not present a CAPTCHA. Auditing/alerts remain active.
+        return false;
     }
 
     public function recordFailedLogin(IncomingRequest $request, ?int $userId, string $reason, ?string $email = null): array
