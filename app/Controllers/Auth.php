@@ -20,21 +20,7 @@ class Auth extends BaseController
     // Show login form
     public function login()
     {
-        $captchaRequired = $this->requiresCaptchaForSession();
-        $captchaQuestion = null;
-
-        if ($captchaRequired) {
-            $captcha = $this->ensureCaptchaChallenge();
-            $captchaQuestion = $captcha['question'];
-        } else {
-            session()->remove('login_captcha_answer');
-            session()->remove('login_captcha_question');
-        }
-
-        return view('auth/login', [
-            'captchaRequired' => $captchaRequired,
-            'captchaQuestion' => $captchaQuestion,
-        ]);
+        return view('auth/login');
     }
 
     // Process login POST
@@ -55,19 +41,6 @@ class Auth extends BaseController
             return redirect()->back()->withInput()->with('error', 'Too many suspicious attempts detected. Try again later.');
         }
 
-        if ($this->requiresCaptchaForSession()) {
-            $captchaAnswer = trim((string) $this->request->getPost('captcha_answer'));
-            $expectedAnswer = (string) (session()->get('login_captcha_answer') ?? '');
-
-            if ($expectedAnswer === '' || $captchaAnswer === '' || ! hash_equals($expectedAnswer, $captchaAnswer)) {
-                $result = $security->recordFailedLogin($this->request, null, 'captcha_failed', (string) ($this->request->getPost('email') ?? ''));
-                $this->registerFailedAttemptForSession();
-                $this->appendSecurityWarning($result);
-
-                return redirect()->back()->withInput()->with('error', 'CAPTCHA verification failed.');
-            }
-        }
-
         $rules = [
             'email'    => 'required|valid_email',
             'password' => 'required|min_length[6]'
@@ -84,6 +57,7 @@ class Auth extends BaseController
 
         $email = $this->request->getPost('email');
         $password = $this->request->getPost('password');
+        $maxAttempts = 3;
 
         $user = $this->userModel->where('email', $email)->first();
 
@@ -92,15 +66,42 @@ class Auth extends BaseController
             $result = $security->recordFailedLogin($this->request, null, 'user_not_found', (string) $email);
             $this->registerFailedAttemptForSession();
             $this->appendSecurityWarning($result);
-            return redirect()->back()->withInput()->with('error', 'Email not found');
+            session()->setFlashdata('security_warning', 'Security notice: Unsuccessful sign-in detected. If this was not you, reset your password immediately.');
+            return redirect()->back()->withInput()->with('error', 'Invalid email or password.');
         }
 
-        if (! (int) $user['is_active']) {
-            $logger->logLoginAttempt($this->request, (string) ($user['role'] ?? 'user'), (int) $user['id'], (string) $email, false, 'account_disabled');
-            $result = $security->recordFailedLogin($this->request, (int) $user['id'], 'account_disabled', (string) $email);
-            $this->registerFailedAttemptForSession();
-            $this->appendSecurityWarning($result);
-            return redirect()->back()->withInput()->with('error', 'Account is disabled');
+        // Enforce account lockout before password verification.
+        if (! empty($user['locked_until'])) {
+            $lockedUntilTs = strtotime((string) $user['locked_until']);
+            if ($lockedUntilTs !== false && $lockedUntilTs > time()) {
+                $remainingSeconds = $lockedUntilTs - time();
+                $remainingMessage = $this->formatRemainingLockTime($remainingSeconds);
+
+                $logger->logLoginAttempt($this->request, (string) ($user['role'] ?? 'user'), (int) $user['id'], (string) $email, false, 'locked_account_access_attempt');
+                $security->logEvent(
+                    $this->request,
+                    (int) $user['id'],
+                    'locked_account_access_attempt',
+                    'Login attempt blocked because account is temporarily locked',
+                    'high',
+                    [
+                        'locked_until' => (string) $user['locked_until'],
+                        'remaining_seconds' => $remainingSeconds,
+                    ]
+                );
+
+                session()->setFlashdata('security_warning', 'Security protection active: A sign-in was attempted while this account is temporarily locked.');
+                return redirect()->back()->withInput()->with('error', 'Too many failed login attempts. Please try again later. ' . $remainingMessage);
+            }
+
+            // Lock has expired, so reset counters and allow a fresh attempt cycle.
+            $this->userModel->update((int) $user['id'], [
+                'failed_attempts' => 0,
+                'locked_until' => null,
+            ]);
+
+            $user['failed_attempts'] = 0;
+            $user['locked_until'] = null;
         }
 
         if (! password_verify($password, $user['password'])) {
@@ -108,10 +109,60 @@ class Auth extends BaseController
             $result = $security->recordFailedLogin($this->request, (int) $user['id'], 'invalid_password', (string) $email);
             $this->registerFailedAttemptForSession();
             $this->appendSecurityWarning($result);
-            return redirect()->back()->withInput()->with('error', 'Incorrect email or password');
+
+            $failedAttempts = (int) ($user['failed_attempts'] ?? 0) + 1;
+
+            if ($failedAttempts >= $maxAttempts) {
+                $newLockCount = (int) ($user['lock_count'] ?? 0) + 1;
+                $lockMinutes = $this->resolveProgressiveLockMinutes($newLockCount);
+                $lockedUntil = date('Y-m-d H:i:s', time() + ($lockMinutes * 60));
+
+                $this->userModel->update((int) $user['id'], [
+                    'failed_attempts' => $maxAttempts,
+                    'locked_until' => $lockedUntil,
+                    'lock_count' => $newLockCount,
+                ]);
+
+                session()->setFlashdata('security_warning', 'Security alert: Multiple invalid password attempts were detected. Temporary account lock has been applied.');
+                return redirect()->back()->withInput()->with('error', 'Too many failed login attempts. Please try again later. Account locked for ' . $lockMinutes . ' minute(s).');
+            }
+
+            $remainingAttempts = $maxAttempts - $failedAttempts;
+            $this->userModel->update((int) $user['id'], [
+                'failed_attempts' => $failedAttempts,
+                'locked_until' => null,
+            ]);
+
+            if ($remainingAttempts <= 1) {
+                session()->setFlashdata('security_warning', 'Security warning: One remaining attempt before temporary account lock is activated.');
+            } else {
+                session()->setFlashdata('security_warning', 'Security notice: Invalid password attempt detected. Review your credentials before trying again.');
+            }
+
+            return redirect()->back()->withInput()->with('error', 'Invalid password. You have ' . $remainingAttempts . ' login attempt(s) remaining before temporary account lock.');
         }
 
+        if (! (int) $user['is_active']) {
+            $logger->logLoginAttempt($this->request, (string) ($user['role'] ?? 'user'), (int) $user['id'], (string) $email, false, 'account_disabled');
+            $security->logEvent(
+                $this->request,
+                (int) $user['id'],
+                'account_disabled_login_attempt',
+                'Valid credentials provided, but account is disabled',
+                'medium'
+            );
+
+            return redirect()->back()->withInput()->with('error', 'Account is currently disabled. Please contact support or wait for approval.');
+        }
+
+        // Successful login resets account lockout counters.
+        $this->userModel->update((int) $user['id'], [
+            'failed_attempts' => 0,
+            'locked_until' => null,
+        ]);
+
         // Successful login: create session
+        session()->regenerate(true);
         $sessionData = [
             'isLoggedIn'    => true,
             'user_id'       => $user['id'],
@@ -359,6 +410,35 @@ class Auth extends BaseController
         session()->remove('login_captcha_question');
     }
 
+    /**
+     * Progressive lock durations in minutes:
+     * 1st lock = 1, 2nd lock = 15, 3rd lock = 30, then +15 for each next cycle.
+     */
+    protected function resolveProgressiveLockMinutes(int $lockCount): int
+    {
+        if ($lockCount <= 1) {
+            return 1;
+        }
+
+        if ($lockCount === 2) {
+            return 15;
+        }
+
+        if ($lockCount === 3) {
+            return 30;
+        }
+
+        return 30 + (($lockCount - 3) * 15);
+    }
+
+    protected function formatRemainingLockTime(int $seconds): string
+    {
+        $seconds = max(1, $seconds);
+        $minutes = (int) ceil($seconds / 60);
+
+        return 'Please wait ' . $minutes . ' minute(s) before trying again.';
+    }
+
     // Show forgot password form
     public function forgot()
     {
@@ -489,6 +569,7 @@ class Auth extends BaseController
                 'driver_email'   => 'required|valid_email',
                 'driver_phone'   => 'required|min_length[10]',
                 'vehicle_type'   => 'required',
+                'license_number' => 'required|min_length[3]|max_length[50]',
                 'driver_terms'   => 'required',
             ];
 
@@ -525,6 +606,7 @@ class Auth extends BaseController
                 'email'        => $this->request->getPost('driver_email'),
                 'phone'        => $this->request->getPost('driver_phone'),
                 'vehicle_type' => $this->request->getPost('vehicle_type'),
+                'license_number' => $this->request->getPost('license_number'),
                 'status'       => 'pending',
                 'is_active'    => 0,
             ];
@@ -557,11 +639,11 @@ class Auth extends BaseController
                 'restaurant_name'   => 'required|min_length[3]',
                 'restaurant_phone' => 'required|min_length[10]',
                 'restaurant_address' => 'required',
-                'restaurant_latitude' => 'permit_empty|numeric',
-                'restaurant_longitude' => 'permit_empty|numeric',
+                // latitude/longitude removed (no map)
                 'owner_name'        => 'required|min_length[3]',
                 'owner_email'       => 'required|valid_email',
                 'owner_phone'       => 'required|min_length[10]',
+                'owner_password'    => 'required|min_length[8]',
                 'restaurant_terms'  => 'required',
             ];
 
@@ -575,15 +657,12 @@ class Auth extends BaseController
                 return redirect()->back()->withInput()->with('restaurant_error', 'Email already registered');
             }
 
-            // Generate a random password (they can reset it later)
-            $tempPassword = bin2hex(random_bytes(8));
-
             // Create user account
             $userId = $this->userModel->insert([
                 'email'      => $this->request->getPost('owner_email'),
-                'password'   => $tempPassword,
+                'password'   => $this->request->getPost('owner_password'),
                 'role'       => 'restaurant',
-                'is_active'  => 0, // Not active until approved
+                'is_active'  => 1, // Allow immediate login after registration
             ]);
 
             if (!$userId) {
@@ -592,14 +671,10 @@ class Auth extends BaseController
 
             // Create restaurant record
             $restaurantModel = new \App\Models\RestaurantModel();
-            $restaurantLatitude = $this->request->getPost('restaurant_latitude');
-            $restaurantLongitude = $this->request->getPost('restaurant_longitude');
             $restaurantData = [
                 'user_id'    => $userId,
                 'name'       => $this->request->getPost('restaurant_name'),
                 'address'    => $this->request->getPost('restaurant_address'),
-                'latitude'   => ($restaurantLatitude === '' || $restaurantLatitude === null) ? null : (float) $restaurantLatitude,
-                'longitude'  => ($restaurantLongitude === '' || $restaurantLongitude === null) ? null : (float) $restaurantLongitude,
                 'status'     => 'pending',
                 'is_active'  => 0,
             ];
