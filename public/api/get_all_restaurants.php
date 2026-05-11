@@ -6,9 +6,9 @@ require __DIR__ . '/_bootstrap.php';
 
 $conn = db_conn();
 
-$sql = 'SELECT id, name, address, logo, opening_hours, status, is_active, created_at, updated_at
+$sql = 'SELECT id, name, address, logo, opening_hours, status, is_active, COALESCE(is_open, 1) AS is_open, created_at, updated_at
     FROM restaurants
-    WHERE is_active = 1 AND status = ?
+    WHERE is_active = 1 AND status = ? AND COALESCE(is_open, 1) = 1
     ORDER BY name ASC';
 
 $stmt = $conn->prepare($sql);
@@ -25,6 +25,7 @@ $restaurants = [];
 while ($row = $result->fetch_assoc()) {
     $row['id'] = (int) $row['id'];
     $row['is_active'] = (int) $row['is_active'];
+    $row['is_open'] = (int) $row['is_open'];
     $restaurants[] = $row;
 }
 
