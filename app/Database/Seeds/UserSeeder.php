@@ -23,7 +23,7 @@ class UserSeeder extends Seeder
             ],
             // additional restaurant owners used by the system
             [
-                'email' => '`vesterlaurel@gmail.com',
+                'email' => 'vesterlaurel@gmail.com',
                 'password' => password_hash('secret123', PASSWORD_DEFAULT),
                 'role' => 'restaurant',
                 'is_active' => 1,
