@@ -31,6 +31,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         json_error('items must be an array', 422);
     }
 
+    $restaurantStmt = $conn->prepare('SELECT id FROM restaurants WHERE id = ? AND is_active = 1 AND status = ? AND COALESCE(is_open, 1) = 1 LIMIT 1');
+    if (!$restaurantStmt) {
+        json_error('Failed to validate restaurant availability', 500);
+    }
+
+    $approvedStatus = 'approved';
+    $restaurantStmt->bind_param('is', $restaurantId, $approvedStatus);
+    $restaurantStmt->execute();
+    $restaurant = $restaurantStmt->get_result()->fetch_assoc();
+    $restaurantStmt->close();
+
+    if (!$restaurant) {
+        json_error('Restaurant is currently unavailable for orders', 422);
+    }
+
     $orderNumber = 'ORD-' . strtoupper(bin2hex(random_bytes(4)));
     $sizeCategory = get_size_category($totalAmount);
 
