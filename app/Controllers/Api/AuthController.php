@@ -788,7 +788,8 @@ class AuthController extends ResourceController
             }
 
             if (password_needs_rehash($customer['password'], defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_BCRYPT)) {
-                $customerModel->update((int) $customer['id'], ['password' => $password]);
+                $algo = defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_BCRYPT;
+                $customerModel->update((int) $customer['id'], ['password' => password_hash($password, $algo)]);
                 $customer = $customerModel->find((int) $customer['id']) ?? $customer;
             }
 
@@ -981,7 +982,8 @@ class AuthController extends ResourceController
             }
 
             if (password_needs_rehash($driver['password'], defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_BCRYPT)) {
-                $driverModel->update((int) $driver['id'], ['password' => $password]);
+                $algo = defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_BCRYPT;
+                $driverModel->update((int) $driver['id'], ['password' => password_hash($password, $algo)]);
                 $driver = $driverModel->find((int) $driver['id']) ?? $driver;
             }
 

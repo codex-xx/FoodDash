@@ -55,6 +55,13 @@ class AdminManagement extends BaseController
 
         $this->userModel->update($id, ['is_active' => 0]);
 
+        if (($user['role'] ?? null) === 'restaurant') {
+            $restaurant = $this->restaurantModel->where('user_id', $id)->first();
+            if ($restaurant) {
+                $this->restaurantModel->update($restaurant['id'], ['is_active' => 0]);
+            }
+        }
+
         return $this->response->setJSON(['success' => true, 'message' => 'User suspended']);
     }
 
@@ -74,6 +81,16 @@ class AdminManagement extends BaseController
         }
 
         $this->userModel->update($id, ['is_active' => 1]);
+
+        if (($user['role'] ?? null) === 'restaurant') {
+            $restaurant = $this->restaurantModel->where('user_id', $id)->first();
+            if ($restaurant) {
+                $this->restaurantModel->update($restaurant['id'], [
+                    'status' => 'approved',
+                    'is_active' => 1,
+                ]);
+            }
+        }
 
         return $this->response->setJSON(['success' => true, 'message' => 'User activated']);
     }
@@ -108,7 +125,10 @@ class AdminManagement extends BaseController
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Restaurant not found']);
         }
 
-        $this->restaurantModel->update($id, ['status' => 'approved']);
+        $this->restaurantModel->update($id, [
+            'status' => 'approved',
+            'is_active' => 1,
+        ]);
         if ($restaurant['user_id']) {
             $this->userModel->update($restaurant['user_id'], [
                 'password'  => 'password123',
@@ -145,7 +165,10 @@ class AdminManagement extends BaseController
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Restaurant not found']);
         }
 
-        $this->restaurantModel->update($id, ['status' => 'rejected']);
+        $this->restaurantModel->update($id, [
+            'status' => 'rejected',
+            'is_active' => 0,
+        ]);
         if ($restaurant['user_id']) {
             $this->userModel->update($restaurant['user_id'], ['is_active' => 0]);
             
@@ -208,11 +231,9 @@ class AdminManagement extends BaseController
         $this->driverModel->update($id, [
             'status' => 'approved',
             'is_active' => 1,
-            'password' => 'password123',
         ]);
         if ($driver['user_id']) {
             $this->userModel->update($driver['user_id'], [
-                'password'  => 'password123',
                 'is_active' => 1,
             ]);
         }
@@ -221,7 +242,7 @@ class AdminManagement extends BaseController
         if ($driver['email']) {
             try {
                 $emailService = new \App\Libraries\EmailService();
-                $emailService->sendApplicationApproved($driver['email'], $driver['name'], 'driver', 'password123');
+                $emailService->sendApplicationApproved($driver['email'], $driver['name'], 'driver');
             } catch (\Exception $e) {
                 log_message('error', 'Failed to send driver approval email: ' . $e->getMessage());
             }
