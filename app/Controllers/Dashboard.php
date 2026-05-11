@@ -750,16 +750,23 @@ class Dashboard extends BaseController
 
         $lat = $this->request->getPost('latitude');
         $lng = $this->request->getPost('longitude');
+        $address = trim((string) $this->request->getPost('address'));
 
         if ($lat === null || $lng === null || ! is_numeric($lat) || ! is_numeric($lng)) {
             return $this->response->setStatusCode(422)->setJSON(['error' => 'Invalid coordinates']);
         }
 
         $restaurantId = (int) $session->get('restaurant_id');
-        $ok = (new RestaurantModel())->update($restaurantId, [
+        $updateData = [
             'latitude' => (float) $lat,
             'longitude' => (float) $lng,
-        ]);
+        ];
+
+        if ($address !== '') {
+            $updateData['address'] = mb_substr($address, 0, 255);
+        }
+
+        $ok = (new RestaurantModel())->update($restaurantId, $updateData);
 
         if (! $ok) {
             return $this->response->setStatusCode(500)->setJSON(['error' => 'Failed to update location']);

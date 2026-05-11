@@ -286,6 +286,10 @@
     const body = new URLSearchParams();
     body.append('latitude', String(lat));
     body.append('longitude', String(lng));
+    const addressEl = document.getElementById('restaurant_address');
+    if (addressEl && addressEl.value.trim() !== '') {
+      body.append('address', addressEl.value.trim());
+    }
     body.append(restaurantCsrfName, restaurantCsrfHash);
 
     return fetch('<?= site_url('dashboard/restaurant/location') ?>', {
