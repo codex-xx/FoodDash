@@ -625,6 +625,11 @@ class Dashboard extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Access denied']);
         }
 
+        $restaurantId = (int) $session->get('restaurant_id');
+        if ($restaurantId <= 0) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Restaurant context not found']);
+        }
+
         $db = \Config\Database::connect();
         $orderModel = new OrderModel();
 
@@ -635,6 +640,7 @@ class Dashboard extends BaseController
                 FROM order_items oi
                 JOIN orders o ON o.id = oi.order_id
                 WHERE o.status = 'delivered'
+                AND o.restaurant_id = " . $db->escape($restaurantId) . "
                 GROUP BY oi.item_name
                 ORDER BY order_count DESC
                 LIMIT 5
@@ -653,7 +659,11 @@ class Dashboard extends BaseController
                 $startDate = date('Y-m-d', $day) . ' 00:00:00';
                 $endDate = date('Y-m-d', $day) . ' 23:59:59';
                 $orderRateLabels[] = date('D', $day);
-                $orderRateData[] = $orderModel->where('created_at >=', $startDate)->where('created_at <=', $endDate)->countAllResults();
+                $orderRateData[] = $orderModel
+                    ->where('restaurant_id', $restaurantId)
+                    ->where('created_at >=', $startDate)
+                    ->where('created_at <=', $endDate)
+                    ->countAllResults();
             }
         } elseif ($timeframe === 'month') {
             for ($i = 29; $i >= 0; $i--) {
@@ -661,14 +671,22 @@ class Dashboard extends BaseController
                 $startDate = date('Y-m-d', $day) . ' 00:00:00';
                 $endDate = date('Y-m-d', $day) . ' 23:59:59';
                 $orderRateLabels[] = date('M j', $day);
-                $orderRateData[] = $orderModel->where('created_at >=', $startDate)->where('created_at <=', $endDate)->countAllResults();
+                $orderRateData[] = $orderModel
+                    ->where('restaurant_id', $restaurantId)
+                    ->where('created_at >=', $startDate)
+                    ->where('created_at <=', $endDate)
+                    ->countAllResults();
             }
         } else {
             for ($month = 1; $month <= 12; $month++) {
                 $startDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-01 00:00:00';
                 $endDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . cal_days_in_month(CAL_GREGORIAN, $month, date('Y')) . ' 23:59:59';
                 $orderRateLabels[] = date('M', mktime(0, 0, 0, $month, 1));
-                $orderRateData[] = $orderModel->where('created_at >=', $startDate)->where('created_at <=', $endDate)->countAllResults();
+                $orderRateData[] = $orderModel
+                    ->where('restaurant_id', $restaurantId)
+                    ->where('created_at >=', $startDate)
+                    ->where('created_at <=', $endDate)
+                    ->countAllResults();
             }
         }
 
@@ -676,24 +694,28 @@ class Dashboard extends BaseController
         $todayEnd   = date('Y-m-d') . ' 23:59:59';
 
         $completed = $orderModel
+            ->where('restaurant_id', $restaurantId)
             ->where('status', 'delivered')
             ->where('created_at >=', $todayStart)
             ->where('created_at <=', $todayEnd)
             ->countAllResults();
 
         $delivered = $orderModel
+            ->where('restaurant_id', $restaurantId)
             ->whereIn('status', ['on_the_way', 'assigned'])
             ->where('created_at >=', $todayStart)
             ->where('created_at <=', $todayEnd)
             ->countAllResults();
 
         $cancelled = $orderModel
+            ->where('restaurant_id', $restaurantId)
             ->where('status', 'cancelled')
             ->where('created_at >=', $todayStart)
             ->where('created_at <=', $todayEnd)
             ->countAllResults();
 
         $pending = $orderModel
+            ->where('restaurant_id', $restaurantId)
             ->where('status', 'pending')
             ->where('created_at >=', $todayStart)
             ->where('created_at <=', $todayEnd)
