@@ -47,16 +47,11 @@ class RestaurantOwnersSeeder extends Seeder
 
         // Seed only the first restaurant account with default fast-food items.
         $firstRestaurantUser = $userModel->where('email', 'restaurant@example.com')->first();
-        if (! $firstRestaurantUser) {
-            return;
-        }
+        if ($firstRestaurantUser) {
+            $firstRestaurant = $restaurantModel->where('user_id', $firstRestaurantUser['id'])->first();
+            if ($firstRestaurant) {
 
-        $firstRestaurant = $restaurantModel->where('user_id', $firstRestaurantUser['id'])->first();
-        if (! $firstRestaurant) {
-            return;
-        }
-
-        $defaultFastFoodItems = [
+                $defaultFastFoodItems = [
             [
                 'name' => 'Classic Cheeseburger',
                 'description' => 'Juicy beef patty with cheddar, pickles, and signature burger sauce.',
@@ -99,7 +94,7 @@ class RestaurantOwnersSeeder extends Seeder
             ],
         ];
 
-        foreach ($defaultFastFoodItems as $item) {
+                foreach ($defaultFastFoodItems as $item) {
             $existingItem = $menuModel
                 ->where('restaurant_id', $firstRestaurant['id'])
                 ->where('name', $item['name'])
@@ -115,18 +110,16 @@ class RestaurantOwnersSeeder extends Seeder
             $menuModel->insert($item);
         }
 
+            }
+        }
+
         // Laurel's Kitchen
         $laurelUser = $userModel->where('email', 'vesterlaurel@gmail.com')->first();
-        if (! $laurelUser) {
-            return;
-        }
+        if ($laurelUser) {
+            $laurelRestaurant = $restaurantModel->where('user_id', $laurelUser['id'])->first();
+            if ($laurelRestaurant) {
 
-        $laurelRestaurant = $restaurantModel->where('user_id', $laurelUser['id'])->first();
-        if (! $laurelRestaurant) {
-            return;
-        }
-
-        $laurelItems = [
+                $laurelItems = [
             [
                 'name' => 'Basic Catering',
                 'description' => 'Classic soy-vinegar braised chicken served with steamed rice.',
@@ -169,7 +162,7 @@ class RestaurantOwnersSeeder extends Seeder
             ],
         ];
 
-        foreach ($laurelItems as $item) {
+                foreach ($laurelItems as $item) {
             $existingItem = $menuModel
                 ->where('restaurant_id', $laurelRestaurant['id'])
                 ->where('name', $item['name'])
@@ -185,18 +178,16 @@ class RestaurantOwnersSeeder extends Seeder
             $menuModel->insert($item);
         }
 
+            }
+        }
+
         // General
         $owner2User = $userModel->where('email', 'owner2@example.com')->first();
-        if (! $owner2User) {
-            return;
-        }
+        if ($owner2User) {
+            $owner2Restaurant = $restaurantModel->where('user_id', $owner2User['id'])->first();
+            if ($owner2Restaurant) {
 
-        $owner2Restaurant = $restaurantModel->where('user_id', $owner2User['id'])->first();
-        if (! $owner2Restaurant) {
-            return;
-        }
-
-        $generalItems = [
+                $generalItems = [
             [
                 'name' => 'Cola Drink',
                 'description' => 'Chilled carbonated cola served over ice for a crisp and refreshing taste.',
@@ -247,7 +238,7 @@ class RestaurantOwnersSeeder extends Seeder
             ],
         ];
 
-        foreach ($generalItems as $item) {
+                foreach ($generalItems as $item) {
             $existingItem = $menuModel
                 ->where('restaurant_id', $owner2Restaurant['id'])
                 ->where('name', $item['name'])
@@ -261,6 +252,9 @@ class RestaurantOwnersSeeder extends Seeder
             }
 
             $menuModel->insert($item);
+        }
+
+            }
         }
     }
 }
