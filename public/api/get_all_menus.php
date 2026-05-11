@@ -10,6 +10,7 @@ $sql = 'SELECT
         r.id AS restaurant_id,
         r.name AS restaurant_name,
         r.address AS restaurant_address,
+    COALESCE(r.is_open, 1) AS restaurant_is_open,
         m.id AS menu_id,
         m.name AS menu_name,
         m.description AS menu_description,
@@ -21,7 +22,7 @@ $sql = 'SELECT
         m.updated_at AS menu_updated_at
     FROM restaurants r
     LEFT JOIN menus m ON m.restaurant_id = r.id
-    WHERE r.is_active = 1 AND r.status = ?
+    WHERE r.is_active = 1 AND r.status = ? AND COALESCE(r.is_open, 1) = 1
     ORDER BY r.name ASC, m.category ASC, m.name ASC';
 
 $stmt = $conn->prepare($sql);
@@ -43,6 +44,7 @@ while ($row = $result->fetch_assoc()) {
             'id' => $restaurantId,
             'name' => $row['restaurant_name'],
             'address' => $row['restaurant_address'],
+            'is_open' => (int) $row['restaurant_is_open'],
             'menus' => [],
         ];
     }
@@ -51,7 +53,16 @@ while ($row = $result->fetch_assoc()) {
         continue;
     }
 
+    $restaurantIsOpen = (int) $row['restaurant_is_open'];
     $availability = (int) $row['menu_availability'];
+    $canOrder = $availability === 1 && $restaurantIsOpen === 1;
+    $availabilityMessage = null;
+
+    if ($restaurantIsOpen !== 1) {
+        $availabilityMessage = 'Restaurant is currently closed';
+    } elseif ($availability !== 1) {
+        $availabilityMessage = 'Not available for a moment';
+    }
 
     $restaurantsMap[$restaurantId]['menus'][] = [
         'id' => (int) $row['menu_id'],
@@ -62,10 +73,11 @@ while ($row = $result->fetch_assoc()) {
         'image_url' => build_image_url($row['menu_image_url']),
         'category' => $row['menu_category'],
         'availability' => $availability,
+        'restaurant_is_open' => $restaurantIsOpen,
         'is_available' => $availability,
-        'can_order' => $availability === 1,
-        'ui_disabled' => $availability !== 1,
-        'availability_message' => $availability === 1 ? null : 'Not available for a moment',
+        'can_order' => $canOrder,
+        'ui_disabled' => !$canOrder,
+        'availability_message' => $availabilityMessage,
         'created_at' => $row['menu_created_at'],
         'updated_at' => $row['menu_updated_at'],
     ];

@@ -47,11 +47,12 @@ $approvedStatus = 'approved';
 
 $conn = db_conn();
 
-$restaurantSql = 'SELECT DISTINCT r.id, r.name, r.logo AS image
+$restaurantSql = 'SELECT DISTINCT r.id, r.name, r.logo AS image, COALESCE(r.is_open, 1) AS is_open
     FROM restaurants r
     LEFT JOIN menus m ON m.restaurant_id = r.id
     WHERE r.is_active = 1
       AND r.status = ?
+            AND COALESCE(r.is_open, 1) = 1
       AND (
             r.name LIKE ?
             OR m.name LIKE ?
@@ -75,6 +76,7 @@ while ($row = $restaurantResult->fetch_assoc()) {
         'id' => (int) $row['id'],
         'name' => $row['name'],
         'image' => build_image_url($row['image']),
+        'is_open' => (int) $row['is_open'],
     ];
 }
 
@@ -88,11 +90,13 @@ $menuSql = 'SELECT
         m.price,
         m.image_url,
         r.name AS restaurant_name,
-        r.id AS restaurant_id
+                r.id AS restaurant_id,
+                COALESCE(r.is_open, 1) AS restaurant_is_open
     FROM menus m
     INNER JOIN restaurants r ON r.id = m.restaurant_id
     WHERE r.is_active = 1
       AND r.status = ?
+            AND COALESCE(r.is_open, 1) = 1
       AND (
             r.name LIKE ?
             OR m.name LIKE ?
@@ -141,6 +145,7 @@ while ($row = $menuResult->fetch_assoc()) {
         'description' => $row['description'],
         'category' => $row['category'],
         'restaurant_name' => $row['restaurant_name'],
+        'restaurant_is_open' => (int) $row['restaurant_is_open'],
         'price' => (float) $row['price'],
         'image_url' => build_image_url($row['image_url']),
     ];

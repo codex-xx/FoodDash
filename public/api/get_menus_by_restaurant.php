@@ -12,7 +12,7 @@ if ($restaurantIdRaw === '' || !ctype_digit((string) $restaurantIdRaw)) {
 $restaurantId = (int) $restaurantIdRaw;
 $conn = db_conn();
 
-$restaurantStmt = $conn->prepare('SELECT id, name, address FROM restaurants WHERE id = ? AND is_active = 1 AND status = ? LIMIT 1');
+$restaurantStmt = $conn->prepare('SELECT id, name, address, COALESCE(is_open, 1) AS is_open FROM restaurants WHERE id = ? AND is_active = 1 AND status = ? AND COALESCE(is_open, 1) = 1 LIMIT 1');
 if (!$restaurantStmt) {
     json_error('Failed to prepare restaurant query', 500);
 }
@@ -39,7 +39,16 @@ $menuResult = $menuStmt->get_result();
 
 $menus = [];
 while ($row = $menuResult->fetch_assoc()) {
+    $restaurantIsOpen = (int) $restaurant['is_open'];
     $availability = (int) $row['availability'];
+    $canOrder = $availability === 1 && $restaurantIsOpen === 1;
+    $availabilityMessage = null;
+
+    if ($restaurantIsOpen !== 1) {
+        $availabilityMessage = 'Restaurant is currently closed';
+    } elseif ($availability !== 1) {
+        $availabilityMessage = 'Not available for a moment';
+    }
 
     $menus[] = [
         'id' => (int) $row['id'],
@@ -50,10 +59,11 @@ while ($row = $menuResult->fetch_assoc()) {
         'image_url' => build_image_url($row['image_url']),
         'category' => $row['category'],
         'availability' => $availability,
+        'restaurant_is_open' => $restaurantIsOpen,
         'is_available' => $availability,
-        'can_order' => $availability === 1,
-        'ui_disabled' => $availability !== 1,
-        'availability_message' => $availability === 1 ? null : 'Not available for a moment',
+        'can_order' => $canOrder,
+        'ui_disabled' => !$canOrder,
+        'availability_message' => $availabilityMessage,
         'created_at' => $row['created_at'],
         'updated_at' => $row['updated_at'],
     ];
@@ -68,6 +78,7 @@ echo json_encode([
         'id' => (int) $restaurant['id'],
         'name' => $restaurant['name'],
         'address' => $restaurant['address'],
+        'is_open' => (int) $restaurant['is_open'],
     ],
     'menus' => $menus,
 ]);
