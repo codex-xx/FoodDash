@@ -628,6 +628,48 @@
     document.getElementById('message-container').innerHTML = '';
   }
 
+  function saveStoreAvailabilityState() {
+    const toggle = document.getElementById('is_open_toggle');
+    const previousState = originalData.is_open === '1';
+    const formData = new FormData();
+
+    formData.append('name', document.getElementById('restaurant_name').value);
+    formData.append('address', document.getElementById('restaurant_address').value);
+    formData.append('opening_hours', document.getElementById('opening_hours').value);
+    formData.append('is_open', document.getElementById('is_open').value);
+
+    toggle.disabled = true;
+
+    return fetch('<?= site_url('settings/update') ?>', {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        originalData.is_open = formData.get('is_open');
+        return;
+      }
+
+      const errorMsg = typeof data.error === 'object'
+        ? Object.values(data.error).join(', ')
+        : (data.error || 'Failed to update store availability.');
+
+      applyStoreOpenState(previousState);
+      showMessage(errorMsg, 'error');
+    })
+    .catch(() => {
+      applyStoreOpenState(previousState);
+      showMessage('Failed to update store availability. Please try again.', 'error');
+    })
+    .finally(() => {
+      toggle.disabled = false;
+    });
+  }
+
   document.getElementById('settingsForm').addEventListener('submit', function(e) {
     e.preventDefault();
     clearMessages();
@@ -700,6 +742,7 @@
 
   document.getElementById('is_open_toggle').addEventListener('change', function() {
     applyStoreOpenState(this.checked);
+    saveStoreAvailabilityState();
   });
 
   applyStoreOpenState(document.getElementById('is_open').value === '1');
