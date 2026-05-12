@@ -155,6 +155,13 @@ $routes->post('api/profile', 'Api\ProfileController::update');
 $routes->post('api/fcm-token', 'Api\ProfileController::updateFcmToken');
 $routes->post('api/driver/location', 'Api\ProfileController::updateLocation');
 
+// Notifications (Authenticated - Customer)
+$routes->get('api/notifications', 'Api\NotificationsController::index');
+$routes->delete('api/notifications', 'Api\NotificationsController::clear');
+$routes->post('api/notifications/clear', 'Api\NotificationsController::clear');
+$routes->delete('api/notifications/(:num)', 'Api\NotificationsController::delete/$1');
+$routes->post('api/notifications/(:num)/delete', 'Api\NotificationsController::delete/$1');
+
 // Orders (Authenticated)
 $routes->get('api/orders', 'Api\OrderController::index');
 $routes->post('api/orders', 'Api\OrderController::create');
