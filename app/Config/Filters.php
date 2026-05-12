@@ -130,6 +130,8 @@ class Filters extends BaseFilters
             'api/update_order_status.php*',
             'api/driver/location',
             'api/fcm-token',
+            'api/notifications',
+            'api/notifications/*',
             'api/logout',
             'api/sessions',
             'api/sessions/*',
