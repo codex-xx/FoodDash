@@ -29,18 +29,6 @@ class Auth extends BaseController
         $logger = new ActivityLogger();
         $security = new SecurityAuditService();
 
-        if ($security->isRequestBlocked($this->request)) {
-            $security->logEvent(
-                $this->request,
-                null,
-                'intrusion_attempt',
-                'Blocked IP attempted to login',
-                'critical'
-            );
-
-            return redirect()->back()->withInput()->with('error', 'Too many suspicious attempts detected. Try again later.');
-        }
-
         $rules = [
             'email'    => 'required|valid_email',
             'password' => 'required|min_length[6]'
@@ -49,9 +37,6 @@ class Auth extends BaseController
         if (! $this->validate($rules)) {
             $submittedEmail = (string) ($this->request->getPost('email') ?? '');
             $logger->logLoginAttempt($this->request, null, null, $submittedEmail, false, 'validation_failed');
-            $result = $security->recordFailedLogin($this->request, null, 'validation_failed', $submittedEmail);
-            $this->registerFailedAttemptForSession();
-            $this->appendSecurityWarning($result);
             return redirect()->back()->withInput()->with('error', $this->validator->getErrors());
         }
 
@@ -63,10 +48,6 @@ class Auth extends BaseController
 
         if (! $user) {
             $logger->logLoginAttempt($this->request, null, null, (string) $email, false, 'user_not_found');
-            $result = $security->recordFailedLogin($this->request, null, 'user_not_found', (string) $email);
-            $this->registerFailedAttemptForSession();
-            $this->appendSecurityWarning($result);
-            session()->setFlashdata('security_warning', 'Security notice: Unsuccessful sign-in detected. If this was not you, reset your password immediately.');
             return redirect()->back()->withInput()->with('error', 'Invalid email or password.');
         }
 
@@ -78,19 +59,7 @@ class Auth extends BaseController
                 $remainingMessage = $this->formatRemainingLockTime($remainingSeconds);
 
                 $logger->logLoginAttempt($this->request, (string) ($user['role'] ?? 'user'), (int) $user['id'], (string) $email, false, 'locked_account_access_attempt');
-                $security->logEvent(
-                    $this->request,
-                    (int) $user['id'],
-                    'locked_account_access_attempt',
-                    'Login attempt blocked because account is temporarily locked',
-                    'high',
-                    [
-                        'locked_until' => (string) $user['locked_until'],
-                        'remaining_seconds' => $remainingSeconds,
-                    ]
-                );
 
-                session()->setFlashdata('security_warning', 'Security protection active: A sign-in was attempted while this account is temporarily locked.');
                 return redirect()->back()->withInput()->with('error', 'Too many failed login attempts. Please try again later. ' . $remainingMessage);
             }
 
@@ -106,9 +75,6 @@ class Auth extends BaseController
 
         if (! password_verify($password, $user['password'])) {
             $logger->logLoginAttempt($this->request, (string) ($user['role'] ?? 'user'), (int) $user['id'], (string) $email, false, 'invalid_password');
-            $result = $security->recordFailedLogin($this->request, (int) $user['id'], 'invalid_password', (string) $email);
-            $this->registerFailedAttemptForSession();
-            $this->appendSecurityWarning($result);
 
             $failedAttempts = (int) ($user['failed_attempts'] ?? 0) + 1;
 
@@ -123,8 +89,15 @@ class Auth extends BaseController
                     'lock_count' => $newLockCount,
                 ]);
 
-                session()->setFlashdata('security_warning', 'Security alert: Multiple invalid password attempts were detected. Temporary account lock has been applied.');
-                return redirect()->back()->withInput()->with('error', 'Too many failed login attempts. Please try again later. Account locked for ' . $lockMinutes . ' minute(s).');
+                $security->recordAccountLockout(
+                    $this->request,
+                    (int) $user['id'],
+                    $newLockCount,
+                    $lockMinutes,
+                    (string) $email
+                );
+
+                return redirect()->back()->withInput()->with('error', 'Too many failed login attempts. Account locked for ' . $lockMinutes . ' minute(s). Please try again later.');
             }
 
             $remainingAttempts = $maxAttempts - $failedAttempts;
@@ -133,13 +106,7 @@ class Auth extends BaseController
                 'locked_until' => null,
             ]);
 
-            if ($remainingAttempts <= 1) {
-                session()->setFlashdata('security_warning', 'Security warning: One remaining attempt before temporary account lock is activated.');
-            } else {
-                session()->setFlashdata('security_warning', 'Security notice: Invalid password attempt detected. Review your credentials before trying again.');
-            }
-
-            return redirect()->back()->withInput()->with('error', 'Invalid password. You have ' . $remainingAttempts . ' login attempt(s) remaining before temporary account lock.');
+            return redirect()->back()->withInput()->with('error', 'Invalid password. You have ' . $remainingAttempts . ' login attempt(s) remaining.');
         }
 
         if (! (int) $user['is_active']) {
@@ -191,7 +158,6 @@ class Auth extends BaseController
         }
 
         $logger->logLoginAttempt($this->request, $role, (int) $user['id'], (string) $email, true, null);
-        $security->recordSuccessfulLogin($this->request, (int) $user['id']);
         $this->clearFailedAttemptSession();
         $logger->logUserActivity(
             $this->request,
@@ -342,66 +308,6 @@ class Auth extends BaseController
         return ['question' => $question, 'answer' => $answer];
     }
 
-    protected function appendSecurityWarning(array $result): void
-    {
-        if (! ($result['captcha_required'] ?? false) && ! ($result['alert_raised'] ?? false) && ! ($result['blocked'] ?? false)) {
-            return;
-        }
-
-        $messages = [];
-        if ($result['captcha_required'] ?? false) {
-            $messages[] = 'Additional verification is now required for this IP.';
-        }
-
-        if ($result['alert_raised'] ?? false) {
-            $messages[] = 'Security alert triggered and logged for admin review.';
-        }
-
-        if ($result['blocked'] ?? false) {
-            $messages[] = 'IP temporarily blocked due to suspicious retries.';
-        }
-
-        if ($messages !== []) {
-            session()->setFlashdata('security_warning', implode(' ', $messages));
-        }
-    }
-
-    protected function registerFailedAttemptForSession(): void
-    {
-        $now = time();
-        $window = 300;
-        $count = (int) (session()->get('login_failed_count') ?? 0);
-        $start = (int) (session()->get('login_failed_window_start') ?? 0);
-
-        if ($start === 0 || ($now - $start) > $window) {
-            $start = $now;
-            $count = 0;
-        }
-
-        $count++;
-        session()->set('login_failed_count', $count);
-        session()->set('login_failed_window_start', $start);
-    }
-
-    protected function requiresCaptchaForSession(): bool
-    {
-        $now = time();
-        $window = 300;
-        $threshold = 3;
-        $count = (int) (session()->get('login_failed_count') ?? 0);
-        $start = (int) (session()->get('login_failed_window_start') ?? 0);
-
-        if ($start === 0 || ($now - $start) > $window) {
-            session()->remove('login_failed_count');
-            session()->remove('login_failed_window_start');
-            session()->remove('login_captcha_answer');
-            session()->remove('login_captcha_question');
-            return false;
-        }
-
-        return $count >= $threshold;
-    }
-
     protected function clearFailedAttemptSession(): void
     {
         session()->remove('login_failed_count');
@@ -412,23 +318,19 @@ class Auth extends BaseController
 
     /**
      * Progressive lock durations in minutes:
-     * 1st lock = 1, 2nd lock = 15, 3rd lock = 30, then +15 for each next cycle.
+     * 1st lock = 1 minute
+     * 2nd lock = 5 minutes
+     * 3rd lock = 15 minutes
+     * 4th+ lock = 30 minutes
      */
     protected function resolveProgressiveLockMinutes(int $lockCount): int
     {
-        if ($lockCount <= 1) {
-            return 1;
-        }
-
-        if ($lockCount === 2) {
-            return 15;
-        }
-
-        if ($lockCount === 3) {
-            return 30;
-        }
-
-        return 30 + (($lockCount - 3) * 15);
+        return match($lockCount) {
+            1 => 1,
+            2 => 5,
+            3 => 15,
+            default => 30,
+        };
     }
 
     protected function formatRemainingLockTime(int $seconds): string

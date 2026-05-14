@@ -231,6 +231,55 @@ class SecurityAuditService
         }
     }
 
+    public function recordAccountLockout(
+        IncomingRequest $request,
+        int $userId,
+        int $lockCount,
+        int $lockMinutes,
+        ?string $email = null
+    ): void {
+        $emailHash = $this->sensitive->hashForLookup($email);
+        $ipHash = $this->sensitive->hashForLookup((string) $request->getIPAddress());
+
+        // Keep failed login counts visible in security reports without IP-based blocking.
+        $this->logEvent(
+            $request,
+            $userId,
+            'failed_login',
+            'Failed login attempt reached account lockout threshold',
+            'high',
+            [
+                'reason' => 'progressive_account_lockout',
+                'lock_count' => max(1, $lockCount),
+                'lock_minutes' => max(1, $lockMinutes),
+                'email_hash' => $emailHash,
+            ]
+        );
+
+        $auditId = $this->logEvent(
+            $request,
+            $userId,
+            'account_lockout',
+            'Account locked after repeated failed login attempts',
+            $lockCount >= 3 ? 'critical' : 'high',
+            [
+                'lock_count' => max(1, $lockCount),
+                'lock_minutes' => max(1, $lockMinutes),
+                'email_hash' => $emailHash,
+            ]
+        );
+
+        $this->raiseAlert(
+            $auditId,
+            $userId,
+            $ipHash,
+            'progressive_account_lockout',
+            $lockCount >= 3 ? 'critical' : 'high',
+            'Account locked for ' . max(1, $lockMinutes) . ' minute(s) after repeated failed login attempts',
+            max(1, $lockCount)
+        );
+    }
+
     public function recentAlerts(int $limit = 20): array
     {
         if (! $this->tableExists('intrusion_alerts')) {
