@@ -574,7 +574,7 @@
         <div class="collapse navbar-collapse justify-content-end">
             <ul class="navbar-nav mb-2 mb-lg-0">
                 <li class="nav-item me-3 d-flex align-items-center text-white-50">
-                    <small>Signed in as&nbsp;<strong><?= esc(session('email') ?? 'User') ?></strong></small>
+                    <small>Signed in as&nbsp;<strong><?= esc(session('name') ?: (session('email') ?? 'User')) ?></strong><?php if (session('role_name')): ?>&nbsp;·&nbsp;<span><?= esc(session('role_name')) ?></span><?php endif; ?></small>
                 </li>
                 <li class="nav-item ms-2">
                     <button type="button" id="theme-toggle-btn" class="btn btn-outline-light d-flex align-items-center gap-2" aria-pressed="false" aria-label="Toggle theme">
@@ -598,54 +598,80 @@
 
         <?php if ($role === 'admin'): ?>
             <!-- Admin Navigation -->
+            <?php $sessionPermissions = session('permission_keys') ?? []; ?>
             <ul class="nav nav-pills flex-column gap-1">
+                <?php if (in_array('access_admin_dashboard', $sessionPermissions, true)): ?>
                 <li class="nav-item">
                     <a href="<?= site_url('dashboard/admin') ?>" class="nav-link fd-nav-link <?= (uri_string() === 'dashboard/admin') ? 'active' : '' ?>">
                         <span class="fd-nav-icon">🏠</span>
                         <span class="fd-nav-label">Dashboard</span>
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a href="<?= site_url('admin/users') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'admin/users')) ? 'active' : '' ?>">
-                        <span class="fd-nav-icon">👤</span>
-                        <span class="fd-nav-label">Users</span>
-                    </a>
-                </li>
+                <?php endif; ?>
+                <?php $activeTab = (string) (service('request')->getGet('tab') ?? ''); ?>
+                <?php if (in_array('manage_roles', $sessionPermissions, true)): ?>
+                    <li class="nav-item">
+                        <a href="<?= site_url('admin/rbac?tab=roles') ?>" class="nav-link fd-nav-link <?= ($activeTab === 'roles') ? 'active' : '' ?>">
+                            <span class="fd-nav-icon">🛡️</span>
+                            <span class="fd-nav-label">Role Management</span>
+                        </a>
+                    </li>
+                <?php endif; ?>
+                <?php if (in_array('manage_staff_accounts', $sessionPermissions, true)): ?>
+                    <li class="nav-item">
+                        <a href="<?= site_url('admin/rbac?tab=users') ?>" class="nav-link fd-nav-link <?= ($activeTab === 'users') ? 'active' : '' ?>">
+                            <span class="fd-nav-icon">👤</span>
+                            <span class="fd-nav-label">User Management</span>
+                        </a>
+                    </li>
+                <?php endif; ?>
+                <?php if (in_array('manage_restaurant_information', $sessionPermissions, true)): ?>
                 <li class="nav-item">
                     <a href="<?= site_url('admin/restaurants/pending') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'admin/restaurants')) ? 'active' : '' ?>">
                         <span class="fd-nav-icon">🏬</span>
                         <span class="fd-nav-label">Restaurant Approvals</span>
                     </a>
                 </li>
+                <?php endif; ?>
+                <?php if (in_array('manage_drivers', $sessionPermissions, true)): ?>
                 <li class="nav-item">
                     <a href="<?= site_url('admin/drivers/pending') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'admin/drivers')) ? 'active' : '' ?>">
                         <span class="fd-nav-icon">🛵</span>
                         <span class="fd-nav-label">Driver Approvals</span>
                     </a>
                 </li>
+                <?php endif; ?>
+                <?php if (in_array('view_orders', $sessionPermissions, true)): ?>
                 <li class="nav-item">
                     <a href="<?= site_url('dashboard/admin/orders/history') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'dashboard/admin/orders/history')) ? 'active' : '' ?>">
                         <span class="fd-nav-icon">📦</span>
                         <span class="fd-nav-label">Delivered History</span>
                     </a>
                 </li>
+                <?php endif; ?>
             </ul>
 
         <?php elseif ($role === 'restaurant'): ?>
             <!-- Restaurant Navigation -->
+            <?php $sessionPermissions = session('permission_keys') ?? []; ?>
             <ul class="nav nav-pills flex-column gap-1">
+                <?php if (in_array('access_admin_dashboard', $sessionPermissions, true) || true): // Restaurant dashboard is generally allowed if they have the role, but let's allow by default or we can leave it ?>
                 <li class="nav-item">
                     <a href="<?= site_url('dashboard/restaurant') ?>" class="nav-link fd-nav-link <?= (uri_string() === 'dashboard/restaurant') ? 'active' : '' ?>">
                         <span class="fd-nav-icon">🏠</span>
                         <span class="fd-nav-label">Dashboard</span>
                     </a>
                 </li>
+                <?php endif; ?>
+                <?php if (in_array('manage_menu_items', $sessionPermissions, true)): ?>
                 <li class="nav-item">
                     <a href="<?= site_url('menu') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'menu')) ? 'active' : '' ?>">
                         <span class="fd-nav-icon">🍔</span>
                         <span class="fd-nav-label">Menu</span>
                     </a>
                 </li>
+                <?php endif; ?>
+                <?php if (in_array('view_orders', $sessionPermissions, true)): ?>
                 <li class="nav-item">
                     <a href="<?= site_url('orders') ?>" class="nav-link fd-nav-link <?= (uri_string() === 'orders') ? 'active' : '' ?>">
                         <span class="fd-nav-icon">🧾</span>
@@ -658,12 +684,15 @@
                         <span class="fd-nav-label">Order History</span>
                     </a>
                 </li>
+                <?php endif; ?>
+                <?php if (in_array('manage_restaurant_information', $sessionPermissions, true)): ?>
                 <li class="nav-item">
                     <a href="<?= site_url('settings') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'settings')) ? 'active' : '' ?>">
                         <span class="fd-nav-icon">⚙️</span>
                         <span class="fd-nav-label">Settings</span>
                     </a>
                 </li>
+                <?php endif; ?>
             </ul>
 
         <?php else: ?>
