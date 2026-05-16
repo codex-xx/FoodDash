@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Libraries\ActivityLogger;
+use App\Libraries\PermissionService;
 use App\Libraries\SecurityAuditService;
 use App\Models\UserModel;
 use CodeIgniter\Controller;
@@ -28,9 +29,10 @@ class Auth extends BaseController
     {
         $logger = new ActivityLogger();
         $security = new SecurityAuditService();
+        $permissions = new PermissionService();
 
         $rules = [
-            'email'    => 'required|valid_email',
+            'email'    => 'required|min_length[3]',
             'password' => 'required|min_length[6]'
         ];
 
@@ -40,15 +42,22 @@ class Auth extends BaseController
             return redirect()->back()->withInput()->with('error', $this->validator->getErrors());
         }
 
-        $email = $this->request->getPost('email');
+        $identifier = trim((string) $this->request->getPost('email'));
         $password = $this->request->getPost('password');
         $maxAttempts = 3;
 
-        $user = $this->userModel->where('email', $email)->first();
+        $builder = $this->userModel->builder();
+        $builder->groupStart()->where('email', $identifier);
+        if (db_connect()->fieldExists('username', 'users')) {
+            $builder->orWhere('username', $identifier);
+        }
+        $builder->groupEnd();
+
+        $user = $builder->get()->getRowArray();
 
         if (! $user) {
-            $logger->logLoginAttempt($this->request, null, null, (string) $email, false, 'user_not_found');
-            return redirect()->back()->withInput()->with('error', 'Invalid email or password.');
+            $logger->logLoginAttempt($this->request, null, null, (string) $identifier, false, 'user_not_found');
+            return redirect()->back()->withInput()->with('error', 'Invalid email, username, or password.');
         }
 
         // Enforce account lockout before password verification.
@@ -58,7 +67,7 @@ class Auth extends BaseController
                 $remainingSeconds = $lockedUntilTs - time();
                 $remainingMessage = $this->formatRemainingLockTime($remainingSeconds);
 
-                $logger->logLoginAttempt($this->request, (string) ($user['role'] ?? 'user'), (int) $user['id'], (string) $email, false, 'locked_account_access_attempt');
+                $logger->logLoginAttempt($this->request, (string) ($user['role'] ?? 'user'), (int) $user['id'], (string) $identifier, false, 'locked_account_access_attempt');
 
                 return redirect()->back()->withInput()->with('error', 'Too many failed login attempts. Please try again later. ' . $remainingMessage);
             }
@@ -74,7 +83,7 @@ class Auth extends BaseController
         }
 
         if (! password_verify($password, $user['password'])) {
-            $logger->logLoginAttempt($this->request, (string) ($user['role'] ?? 'user'), (int) $user['id'], (string) $email, false, 'invalid_password');
+            $logger->logLoginAttempt($this->request, (string) ($user['role'] ?? 'user'), (int) $user['id'], (string) $identifier, false, 'invalid_password');
 
             $failedAttempts = (int) ($user['failed_attempts'] ?? 0) + 1;
 
@@ -94,7 +103,7 @@ class Auth extends BaseController
                     (int) $user['id'],
                     $newLockCount,
                     $lockMinutes,
-                    (string) $email
+                    (string) $identifier
                 );
 
                 return redirect()->back()->withInput()->with('error', 'Too many failed login attempts. Account locked for ' . $lockMinutes . ' minute(s). Please try again later.');
@@ -110,7 +119,7 @@ class Auth extends BaseController
         }
 
         if (! (int) $user['is_active']) {
-            $logger->logLoginAttempt($this->request, (string) ($user['role'] ?? 'user'), (int) $user['id'], (string) $email, false, 'account_disabled');
+            $logger->logLoginAttempt($this->request, (string) ($user['role'] ?? 'user'), (int) $user['id'], (string) $identifier, false, 'account_disabled');
             $security->logEvent(
                 $this->request,
                 (int) $user['id'],
@@ -130,18 +139,36 @@ class Auth extends BaseController
 
         // Successful login: create session
         session()->regenerate(true);
+        $accessProfile = $permissions->resolveUserAccess($user);
+
         $sessionData = [
             'isLoggedIn'    => true,
             'user_id'       => $user['id'],
             'email'         => $user['email'],
-            'role'          => $user['role'],
+            'name'          => $user['name'] ?? null,
+            'username'      => $user['username'] ?? null,
+            'role'          => $accessProfile['role_scope'] ?? $user['role'],
+            'role_id'       => $accessProfile['role_id'] ?? ($user['role_id'] ?? null),
+            'role_name'     => $accessProfile['role_name'] ?? ucfirst((string) ($user['role'] ?? 'user')),
+            'role_slug'     => $accessProfile['role_slug'] ?? (string) ($user['role'] ?? 'user'),
+            'permission_keys' => $accessProfile['permission_keys'] ?? [],
+            'permission_labels' => $accessProfile['permission_labels'] ?? [],
             'last_activity' => time(),
         ];
 
         // if the user is a restaurant owner, look up the related restaurant record
-        if ($user['role'] === 'restaurant') {
+        if (($sessionData['role'] ?? '') === 'restaurant') {
             $restaurantModel = new \App\Models\RestaurantModel();
-            $restaurant = $restaurantModel->where('user_id', $user['id'])->first();
+            $restaurant = null;
+
+            if (! empty($user['restaurant_id'])) {
+                $restaurant = $restaurantModel->find((int) $user['restaurant_id']);
+            }
+
+            if (! $restaurant) {
+                $restaurant = $restaurantModel->where('user_id', $user['id'])->first();
+            }
+
             if ($restaurant) {
                 $sessionData['restaurant_id']   = $restaurant['id'];
                 $sessionData['restaurant_name'] = $restaurant['name'];
@@ -150,14 +177,21 @@ class Auth extends BaseController
 
         session()->set($sessionData);
 
-        $role = (string) ($user['role'] ?? 'user');
+        $role = (string) ($sessionData['role'] ?? 'user');
 
         $sessionJti = $this->persistWebSessionToken((string) $role, (int) $user['id']);
         if ($sessionJti !== null) {
             session()->set('session_jti', $sessionJti);
         }
 
-        $logger->logLoginAttempt($this->request, $role, (int) $user['id'], (string) $email, true, null);
+        $logger->logLoginAttempt(
+            $this->request,
+            $role,
+            (int) $user['id'],
+            (string) ($sessionData['email'] ?? $identifier ?? $user['email'] ?? ''),
+            true,
+            null
+        );
         $this->clearFailedAttemptSession();
         $logger->logUserActivity(
             $this->request,
@@ -170,7 +204,7 @@ class Auth extends BaseController
         );
 
         // Role-based redirect
-        if ($user['role'] === 'admin') {
+        if ($role === 'admin') {
             return redirect()->to('/dashboard/admin');
         }
 

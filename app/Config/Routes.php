@@ -69,6 +69,15 @@ $routes->get('admin/users', 'AdminManagement::users');
 $routes->post('admin/users/(:num)/suspend', 'AdminManagement::suspendUser/$1');
 $routes->post('admin/users/(:num)/activate', 'AdminManagement::activateUser/$1');
 
+// RBAC Management
+$routes->get('admin/rbac', 'AdminRbac::index');
+$routes->post('admin/rbac/roles/save', 'AdminRbac::saveRole');
+$routes->post('admin/rbac/roles/delete/(:num)', 'AdminRbac::deleteRole/$1');
+$routes->get('admin/rbac/roles/preview/(:num)', 'AdminRbac::previewRole/$1');
+$routes->post('admin/rbac/users/save', 'AdminRbac::saveUser');
+$routes->post('admin/rbac/users/toggle-status/(:num)', 'AdminRbac::toggleUserStatus/$1');
+$routes->get('admin/rbac/users/preview/(:num)', 'AdminRbac::previewUser/$1');
+
 $routes->get('admin/restaurants/pending', 'AdminManagement::pendingRestaurants');
 $routes->post('admin/restaurants/(:num)/approve', 'AdminManagement::approveRestaurant/$1');
 $routes->post('admin/restaurants/(:num)/reject', 'AdminManagement::rejectRestaurant/$1');

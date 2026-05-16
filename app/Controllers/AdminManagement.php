@@ -24,14 +24,7 @@ class AdminManagement extends BaseController
      */
     public function users()
     {
-        $session = session();
-        if (!$session->get('isLoggedIn') || $session->get('role') !== 'admin') {
-            return redirect()->to('/login')->with('error', 'Unauthorized');
-        }
-
-        $users = $this->userModel->findAll();
-
-        return view('admin/users/index', ['users' => $users]);
+        return redirect()->to('/admin/rbac');
     }
 
     /**
@@ -42,6 +35,11 @@ class AdminManagement extends BaseController
         $session = session();
         if (!$session->get('isLoggedIn') || $session->get('role') !== 'admin') {
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
+        }
+
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_staff_accounts')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
         }
 
         if ((int) $session->get('user_id') === (int) $id) {
@@ -75,6 +73,11 @@ class AdminManagement extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_staff_accounts')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
+        }
+
         $user = $this->userModel->find($id);
         if (!$user) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'User not found']);
@@ -105,6 +108,11 @@ class AdminManagement extends BaseController
             return redirect()->to('/login')->with('error', 'Unauthorized');
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_restaurant_information')) {
+            return view('errors/unauthorized', ['message' => 'Permission denied']);
+        }
+
         $restaurants = $this->restaurantModel->where('status', 'pending')->findAll();
 
         return view('admin/restaurants/pending', ['restaurants' => $restaurants]);
@@ -118,6 +126,11 @@ class AdminManagement extends BaseController
         $session = session();
         if (!$session->get('isLoggedIn') || $session->get('role') !== 'admin') {
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
+        }
+
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_restaurant_information')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
         }
 
         $restaurant = $this->restaurantModel->find($id);
@@ -160,6 +173,11 @@ class AdminManagement extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_restaurant_information')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
+        }
+
         $restaurant = $this->restaurantModel->find($id);
         if (!$restaurant) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Restaurant not found']);
@@ -197,6 +215,11 @@ class AdminManagement extends BaseController
             return redirect()->to('/login')->with('error', 'Unauthorized');
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_drivers')) {
+            return view('errors/unauthorized', ['message' => 'Permission denied']);
+        }
+
         $drivers = (new DriverModel())
             ->where('status', 'pending')
             ->orderBy('created_at', 'DESC')
@@ -221,6 +244,11 @@ class AdminManagement extends BaseController
         $session = session();
         if (!$session->get('isLoggedIn') || $session->get('role') !== 'admin') {
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
+        }
+
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_drivers')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
         }
 
         $driver = $this->driverModel->find($id);
@@ -261,6 +289,11 @@ class AdminManagement extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_drivers')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
+        }
+
         $driver = $this->driverModel->find($id);
         if (!$driver) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Driver not found']);
@@ -295,6 +328,11 @@ class AdminManagement extends BaseController
         $session = session();
         if (!$session->get('isLoggedIn') || $session->get('role') !== 'admin') {
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
+        }
+
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('view_sales_reports') && !$permissions->hasPermission('access_analytics')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
         }
 
         $db = \Config\Database::connect();
