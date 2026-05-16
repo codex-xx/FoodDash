@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Libraries\SecurityAuditService;
+use App\Models\AppSettingModel;
 use App\Models\OrderModel;
 use App\Models\DriverModel;
 use App\Models\RestaurantModel;
@@ -29,6 +30,51 @@ class Dashboard extends BaseController
         }
 
         return view('dashboard/admin');
+    }
+
+    public function adminMfa()
+    {
+        $session = session();
+        if (! $session->get('isLoggedIn')) {
+            return redirect()->to('/login');
+        }
+
+        if ($session->get('role') !== 'admin') {
+            return redirect()->to('/login')->with('error', 'Unauthorized');
+        }
+
+        $permissions = new \App\Libraries\PermissionService();
+        if (! $permissions->hasPermission('access_admin_dashboard')) {
+            return view('errors/unauthorized', ['message' => 'Permission denied']);
+        }
+
+        $settings = new AppSettingModel();
+
+        return view('dashboard/admin_mfa', [
+            'mfaEnabled' => $settings->isEnabled('mfa_enabled', false),
+        ]);
+    }
+
+    public function updateAdminMfa()
+    {
+        $session = session();
+        if (! $session->get('isLoggedIn') || $session->get('role') !== 'admin') {
+            return redirect()->to('/login')->with('error', 'Unauthorized');
+        }
+
+        $permissions = new \App\Libraries\PermissionService();
+        if (! $permissions->hasPermission('access_admin_dashboard')) {
+            return view('errors/unauthorized', ['message' => 'Permission denied']);
+        }
+
+        $enabled = (bool) $this->request->getPost('mfa_enabled');
+        $mfaService = new \App\Libraries\MfaService();
+
+        if (! $mfaService->setEnabled($enabled)) {
+            return redirect()->back()->with('error', 'Unable to update MFA settings right now.');
+        }
+
+        return redirect()->to('/dashboard/admin/mfa')->with('success', 'MFA settings updated successfully.');
     }
 
     public function restaurant()

@@ -10,6 +10,7 @@
       <small class="text-muted">System management and platform overview</small>
     </div>
     <div class="d-flex gap-2">
+      <a href="<?= site_url('dashboard/admin/mfa') ?>" class="btn btn-sm btn-outline-primary">MFA Settings</a>
       <a href="<?= site_url('dashboard/admin/security') ?>" class="btn btn-sm btn-outline-dark">Security Monitor</a>
       <button class="btn btn-sm btn-primary" id="refreshBtn">Refresh Data</button>
     </div>

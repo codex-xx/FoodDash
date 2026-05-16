@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Libraries\ActivityLogger;
+use App\Libraries\MfaService;
 use App\Libraries\PermissionService;
 use App\Libraries\SecurityAuditService;
 use App\Models\UserModel;
@@ -21,6 +22,10 @@ class Auth extends BaseController
     // Show login form
     public function login()
     {
+        if ($this->hasPendingMfaChallenge()) {
+            return redirect()->to(site_url('mfa/verify'));
+        }
+
         return view('auth/login');
     }
 
@@ -137,79 +142,90 @@ class Auth extends BaseController
             'locked_until' => null,
         ]);
 
-        // Successful login: create session
-        session()->regenerate(true);
         $accessProfile = $permissions->resolveUserAccess($user);
+        $sessionData = $this->buildWebSessionData($user, $accessProfile);
+        $mfaService = new MfaService();
 
-        $sessionData = [
-            'isLoggedIn'    => true,
-            'user_id'       => $user['id'],
-            'email'         => $user['email'],
-            'name'          => $user['name'] ?? null,
-            'username'      => $user['username'] ?? null,
-            'role'          => $accessProfile['role_scope'] ?? $user['role'],
-            'role_id'       => $accessProfile['role_id'] ?? ($user['role_id'] ?? null),
-            'role_name'     => $accessProfile['role_name'] ?? ucfirst((string) ($user['role'] ?? 'user')),
-            'role_slug'     => $accessProfile['role_slug'] ?? (string) ($user['role'] ?? 'user'),
-            'permission_keys' => $accessProfile['permission_keys'] ?? [],
-            'permission_labels' => $accessProfile['permission_labels'] ?? [],
-            'last_activity' => time(),
+        if ($mfaService->isEnabled()) {
+            session()->regenerate(true);
+
+            $challenge = $mfaService->createLoginChallenge($user);
+            if (! (bool) ($challenge['success'] ?? false)) {
+                return redirect()->back()->withInput()->with('error', $challenge['message'] ?? 'Unable to send the MFA code.');
+            }
+
+            $pendingUser = $user;
+            unset($pendingUser['password']);
+
+            session()->set([
+                'mfa_pending_user' => $pendingUser,
+                'mfa_pending_session_data' => $sessionData,
+                'mfa_pending_access_profile' => $accessProfile,
+                'mfa_pending_challenge_token' => $challenge['challenge_token'] ?? '',
+                'mfa_pending_email' => (string) ($challenge['email'] ?? $user['email'] ?? ''),
+                'mfa_otp_expires_at' => (string) ($challenge['expires_at'] ?? ''),
+                'mfa_pending_identifier' => $identifier,
+            ]);
+
+            return redirect()->to(site_url('mfa/verify'))->with('success', 'We sent a verification code to your email.');
+        }
+
+        return $this->completeWebLogin($user, $sessionData, $accessProfile, $identifier);
+    }
+
+    public function mfaVerify()
+    {
+        if (! $this->hasPendingMfaChallenge()) {
+            return redirect()->to('/login')->with('error', 'Please sign in again to request a verification code.');
+        }
+
+        if (strtolower((string) $this->request->getMethod()) !== 'post') {
+            return view('auth/mfa_verify');
+        }
+
+        $rules = [
+            'otp' => 'required|regex_match[/^\d{6}$/]'
         ];
 
-        // if the user is a restaurant owner, look up the related restaurant record
-        if (($sessionData['role'] ?? '') === 'restaurant') {
-            $restaurantModel = new \App\Models\RestaurantModel();
-            $restaurant = null;
-
-            if (! empty($user['restaurant_id'])) {
-                $restaurant = $restaurantModel->find((int) $user['restaurant_id']);
-            }
-
-            if (! $restaurant) {
-                $restaurant = $restaurantModel->where('user_id', $user['id'])->first();
-            }
-
-            if ($restaurant) {
-                $sessionData['restaurant_id']   = $restaurant['id'];
-                $sessionData['restaurant_name'] = $restaurant['name'];
-            }
+        if (! $this->validate($rules)) {
+            return redirect()->back()->withInput()->with('error', 'Please enter a valid 6-digit verification code.');
         }
 
-        session()->set($sessionData);
+        $pendingUser = $this->getPendingMfaUser();
+        $challengeToken = (string) session()->get('mfa_pending_challenge_token');
+        $email = (string) session()->get('mfa_pending_email');
+        $otp = trim((string) $this->request->getPost('otp'));
 
-        $role = (string) ($sessionData['role'] ?? 'user');
+        if ($pendingUser === null || $challengeToken === '' || $email === '') {
+            $this->clearPendingMfaChallenge();
 
-        $sessionJti = $this->persistWebSessionToken((string) $role, (int) $user['id']);
-        if ($sessionJti !== null) {
-            session()->set('session_jti', $sessionJti);
+            return redirect()->to('/login')->with('error', 'Your verification session expired. Please sign in again.');
         }
 
-        $logger->logLoginAttempt(
-            $this->request,
-            $role,
-            (int) $user['id'],
-            (string) ($sessionData['email'] ?? $identifier ?? $user['email'] ?? ''),
-            true,
-            null
-        );
-        $this->clearFailedAttemptSession();
-        $logger->logUserActivity(
-            $this->request,
-            $role,
-            (int) $user['id'],
-            'session_login',
-            'users',
-            (int) $user['id'],
-            ['auth_channel' => 'web']
-        );
+        $mfaService = new MfaService();
+        $result = $mfaService->verifyLoginChallenge($challengeToken, (int) $pendingUser['id'], $email, $otp);
 
-        // Role-based redirect — use role_scope so custom roles go to the right dashboard
-        $roleScope = (string) ($accessProfile['role_scope'] ?? $role);
-        if ($roleScope === 'admin') {
-            return redirect()->to('/dashboard/admin');
+        if (! (bool) ($result['success'] ?? false)) {
+            $message = (string) ($result['message'] ?? 'Invalid verification code.');
+
+            if (str_contains(strtolower($message), 'expired') || str_contains(strtolower($message), 'too many')) {
+                $this->clearPendingMfaChallenge();
+                $mfaService->clearLoginChallenge($challengeToken);
+
+                return redirect()->to('/login')->with('error', $message);
+            }
+
+            return redirect()->back()->withInput()->with('error', $message);
         }
 
-        return redirect()->to('/dashboard/restaurant');
+        $sessionData = $this->getPendingMfaSessionData();
+        $accessProfile = $this->getPendingMfaAccessProfile();
+        $pendingIdentifier = (string) session()->get('mfa_pending_identifier');
+
+        $this->clearPendingMfaChallenge();
+        $mfaService->clearLoginChallenge($challengeToken);
+
+        return $this->completeWebLogin($pendingUser, $sessionData, $accessProfile, $pendingIdentifier);
     }
 
     public function logout()
@@ -234,9 +250,128 @@ class Auth extends BaseController
         $this->revokeWebSessionToken((string) ($session->get('session_jti') ?? ''));
 
         $this->clearFailedAttemptSession();
+        $this->clearPendingMfaChallenge();
 
         session()->destroy();
         return redirect()->to('/login')->with('success', 'Logged out');
+    }
+
+    protected function buildWebSessionData(array $user, array $accessProfile): array
+    {
+        $sessionData = [
+            'user_id' => $user['id'],
+            'email' => $user['email'],
+            'name' => $user['name'] ?? null,
+            'username' => $user['username'] ?? null,
+            'role' => $accessProfile['role_scope'] ?? $user['role'],
+            'role_id' => $accessProfile['role_id'] ?? ($user['role_id'] ?? null),
+            'role_name' => $accessProfile['role_name'] ?? ucfirst((string) ($user['role'] ?? 'user')),
+            'role_slug' => $accessProfile['role_slug'] ?? (string) ($user['role'] ?? 'user'),
+            'permission_keys' => $accessProfile['permission_keys'] ?? [],
+            'permission_labels' => $accessProfile['permission_labels'] ?? [],
+            'last_activity' => time(),
+        ];
+
+        if (($sessionData['role'] ?? '') === 'restaurant') {
+            $restaurantModel = new \App\Models\RestaurantModel();
+            $restaurant = null;
+
+            if (! empty($user['restaurant_id'])) {
+                $restaurant = $restaurantModel->find((int) $user['restaurant_id']);
+            }
+
+            if (! $restaurant) {
+                $restaurant = $restaurantModel->where('user_id', $user['id'])->first();
+            }
+
+            if ($restaurant) {
+                $sessionData['restaurant_id'] = $restaurant['id'];
+                $sessionData['restaurant_name'] = $restaurant['name'];
+            }
+        }
+
+        return $sessionData;
+    }
+
+    protected function completeWebLogin(array $user, array $sessionData, array $accessProfile, string $identifier)
+    {
+        session()->regenerate(true);
+
+        $sessionData['isLoggedIn'] = true;
+
+        session()->set($sessionData);
+
+        $role = (string) ($sessionData['role'] ?? 'user');
+
+        $sessionJti = $this->persistWebSessionToken((string) $role, (int) $user['id']);
+        if ($sessionJti !== null) {
+            session()->set('session_jti', $sessionJti);
+        }
+
+        $logger = new ActivityLogger();
+        $logger->logLoginAttempt(
+            $this->request,
+            $role,
+            (int) $user['id'],
+            (string) ($sessionData['email'] ?? $identifier ?? $user['email'] ?? ''),
+            true,
+            null
+        );
+        $this->clearFailedAttemptSession();
+        $logger->logUserActivity(
+            $this->request,
+            $role,
+            (int) $user['id'],
+            'session_login',
+            'users',
+            (int) $user['id'],
+            ['auth_channel' => 'web']
+        );
+
+        $roleScope = (string) ($accessProfile['role_scope'] ?? $role);
+        if ($roleScope === 'admin') {
+            return redirect()->to('/dashboard/admin');
+        }
+
+        return redirect()->to('/dashboard/restaurant');
+    }
+
+    protected function hasPendingMfaChallenge(): bool
+    {
+        $pendingUser = session()->get('mfa_pending_user');
+
+        return is_array($pendingUser) && (int) ($pendingUser['id'] ?? 0) > 0;
+    }
+
+    protected function getPendingMfaUser(): ?array
+    {
+        $pendingUser = session()->get('mfa_pending_user');
+        return is_array($pendingUser) && isset($pendingUser['id']) ? $pendingUser : null;
+    }
+
+    protected function getPendingMfaSessionData(): array
+    {
+        $sessionData = session()->get('mfa_pending_session_data');
+        return is_array($sessionData) ? $sessionData : [];
+    }
+
+    protected function getPendingMfaAccessProfile(): array
+    {
+        $profile = session()->get('mfa_pending_access_profile');
+        return is_array($profile) ? $profile : [];
+    }
+
+    protected function clearPendingMfaChallenge(): void
+    {
+        session()->remove([
+            'mfa_pending_user',
+            'mfa_pending_session_data',
+            'mfa_pending_access_profile',
+            'mfa_pending_challenge_token',
+            'mfa_pending_email',
+            'mfa_otp_expires_at',
+            'mfa_pending_identifier',
+        ]);
     }
 
     protected function tableExists(string $table): bool

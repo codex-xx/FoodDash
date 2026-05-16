@@ -100,7 +100,7 @@ class EmailService
 
             $this->mailer->Subject = 'FoodDash - Login Verification Code';
             $this->mailer->Body = $this->getLoginOtpEmailTemplate($toName, $otpCode);
-            $this->mailer->AltBody = "Hello {$toName},\n\nYour FoodDash login verification code is: {$otpCode}\n\nThis code will expire in 10 minutes.\n\nIf this wasn't you, please change your password immediately.\n\nBest regards,\nFoodDash Team";
+            $this->mailer->AltBody = "Hello {$toName},\n\nYour FoodDash login verification code is: {$otpCode}\n\nThis code will expire in 5 minutes.\n\nIf this wasn't you, please change your password immediately.\n\nBest regards,\nFoodDash Team";
 
             $this->mailer->send();
             log_message('info', 'Login OTP email sent to: ' . $toEmail);
@@ -219,8 +219,8 @@ class EmailService
             <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px;">{$code}</span>
         </div>
         
-        <p style="color: #666; font-size: 14px;">
-            ⏰ This code will expire in <strong>15 minutes</strong>.
+            <p style="color: #666; font-size: 14px;">
+            ⏰ This code will expire in <strong>5 minutes</strong>.
         </p>
         
         <p style="color: #666; font-size: 14px;">

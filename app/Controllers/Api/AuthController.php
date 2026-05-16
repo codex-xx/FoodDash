@@ -6,6 +6,7 @@ use CodeIgniter\RESTful\ResourceController;
 use App\Models\CustomerModel;
 use App\Models\DriverModel;
 use App\Models\AuthTokenModel;
+use App\Models\AppSettingModel;
 use App\Libraries\JwtService;
 use App\Libraries\EmailService;
 use App\Libraries\ActivityLogger;
@@ -256,7 +257,7 @@ class AuthController extends ResourceController
     protected function beginMfaChallenge(string $userType, array $user, $model)
     {
         $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        $otpExpires = date('Y-m-d H:i:s', strtotime('+10 minutes'));
+        $otpExpires = date('Y-m-d H:i:s', strtotime('+5 minutes'));
 
         $model->update((int) $user['id'], [
             'login_otp_code' => $otp,
@@ -272,7 +273,7 @@ class AuthController extends ResourceController
                 'mfa_required' => true,
                 'user_type' => $userType,
                 'email' => $user['email'],
-                'otp_expires_in' => 600,
+                'otp_expires_in' => 300,
             ],
         ]);
     }
@@ -325,6 +326,21 @@ class AuthController extends ResourceController
 
     protected function isMfaEnforced(): bool
     {
+        try {
+            if (db_connect()->tableExists('app_settings')) {
+                $settings = new AppSettingModel();
+                $settingValue = $settings->getValue('mfa_enabled', null);
+
+                if ($settingValue !== null) {
+                    $normalized = strtolower(trim((string) $settingValue));
+
+                    return in_array($normalized, ['1', 'true', 'yes', 'on'], true);
+                }
+            }
+        } catch (\Throwable $e) {
+            // Fall back to env below.
+        }
+
         $raw = env('auth.enforceMfa');
         if ($raw === null) {
             return false;

@@ -11,6 +11,8 @@ $routes->get('/', 'Auth::login');
 $routes->get('login', 'Auth::login');
 $routes->post('login', 'Auth::attempt');
 $routes->get('logout', 'Auth::logout');
+$routes->get('mfa/verify', 'Auth::mfaVerify');
+$routes->post('mfa/verify', 'Auth::mfaVerify');
 
 // Password recovery
 $routes->get('forgot', 'Auth::forgot');
@@ -25,6 +27,8 @@ $routes->post('partner/register', 'Auth::submitPartnerRegistration');
 
 // Dashboards (protected by filter)
 $routes->get('dashboard/admin', 'Dashboard::admin');
+$routes->get('dashboard/admin/mfa', 'Dashboard::adminMfa');
+$routes->post('dashboard/admin/mfa', 'Dashboard::updateAdminMfa');
 $routes->get('dashboard/restaurant', 'Dashboard::restaurant');
 $routes->get('dashboard/admin/orders', 'Dashboard::adminOrdersHistory');
 $routes->get('dashboard/admin/orders/history', 'Dashboard::adminOrdersHistory');
