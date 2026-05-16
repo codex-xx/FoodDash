@@ -109,7 +109,8 @@ class PermissionService
             $roleRow = (new RoleModel())->find($userRoleId);
         }
 
-        if (! $roleRow && $this->tableExists('roles')) {
+        // Only attempt slug/scope fallback lookup if no role_id was supplied
+        if (! $roleRow && $userRoleId === null && $this->tableExists('roles')) {
             $roleRow = (new RoleModel())
                 ->groupStart()
                 ->where('slug', $legacyRole)
@@ -118,27 +119,40 @@ class PermissionService
                 ->first();
         }
 
-        $permissionKeys = [];
-        if ($roleRow && $this->tableExists('permissions') && $this->tableExists('role_permissions')) {
-            $permissionKeys = $this->permissionsForRoleId((int) $roleRow['id']);
-        }
+        $permissionKeys   = [];
+        $roleFoundInDb    = $roleRow !== null && $this->tableExists('permissions') && $this->tableExists('role_permissions');
+        $isSystemRole     = $roleFoundInDb && (int) ($roleRow['is_system'] ?? 0) === 1;
 
-        if ($permissionKeys === []) {
+        if ($roleFoundInDb) {
+            $permissionKeys = $this->permissionsForRoleId((int) $roleRow['id']);
+
+            // For system roles only: if the role_permissions table has no entries
+            // (e.g. DB was seeded without them), fall back to the built-in legacy
+            // matrix so built-in admin/restaurant accounts never lose their access.
+            if ($permissionKeys === [] && $isSystemRole) {
+                $permissionKeys = $this->legacyPermissionsForRole($legacyRole);
+            }
+            // Custom roles (is_system = 0) intentionally keep their DB-assigned
+            // permissions — even if empty. No legacy escalation for custom roles.
+        } else {
+            // No RBAC role row found at all — use the built-in legacy matrix so
+            // the original admin/restaurant accounts keep working.
             $permissionKeys = $this->legacyPermissionsForRole($legacyRole);
         }
 
         $permissionKeys = array_values(array_unique(array_map(static fn (string $key): string => strtolower(trim($key)), $permissionKeys)));
 
         return [
-            'role_id' => $roleRow ? (int) $roleRow['id'] : $userRoleId,
-            'role_scope' => (string) ($roleRow['scope'] ?? $legacyRole),
-            'role_name' => (string) ($roleRow['name'] ?? ucfirst($legacyRole)),
-            'role_slug' => (string) ($roleRow['slug'] ?? $legacyRole),
-            'permission_keys' => $permissionKeys,
+            'role_id'           => $roleRow ? (int) $roleRow['id'] : $userRoleId,
+            'role_scope'        => (string) ($roleRow['scope'] ?? $legacyRole),
+            'role_name'         => (string) ($roleRow['name'] ?? ucfirst($legacyRole)),
+            'role_slug'         => (string) ($roleRow['slug'] ?? $legacyRole),
+            'permission_keys'   => $permissionKeys,
             'permission_labels' => $this->labelsForPermissionKeys($permissionKeys),
-            'restaurant_id' => isset($user['restaurant_id']) && is_numeric($user['restaurant_id']) ? (int) $user['restaurant_id'] : null,
+            'restaurant_id'     => isset($user['restaurant_id']) && is_numeric($user['restaurant_id']) ? (int) $user['restaurant_id'] : null,
         ];
     }
+
 
     public function permissionsForRoleId(int $roleId): array
     {
@@ -165,12 +179,15 @@ class PermissionService
         if (! is_array($sessionData)) {
             $sessionData = [];
         }
-        if (array_key_exists('permission_keys', $sessionData) && is_array($sessionData['permission_keys'])) {
+        if (array_key_exists('permission_keys', $sessionData) && is_array($sessionData['permission_keys']) && $sessionData['permission_keys'] !== []) {
             $keys = $sessionData['permission_keys'];
 
             return array_values(array_unique(array_map(static fn ($key): string => strtolower(trim((string) $key)), $keys)));
         }
 
+        // Session has no permission_keys (or is empty). Re-resolve from the DB via
+        // the full user record so all fallback logic (including system-role legacy
+        // fallback) is applied consistently.
         $userId = isset($sessionData['user_id']) && is_numeric($sessionData['user_id']) ? (int) $sessionData['user_id'] : null;
         if ($userId === null || ! $this->tableExists('users')) {
             return [];
@@ -181,7 +198,18 @@ class PermissionService
             return [];
         }
 
-        return $this->resolveUserAccess($user)['permission_keys'] ?? [];
+        $keys = $this->resolveUserAccess($user)['permission_keys'] ?? [];
+
+        // Cache resolved keys back into the session for subsequent requests
+        if ($keys !== []) {
+            try {
+                session()->set('permission_keys', $keys);
+            } catch (\Throwable $e) {
+                // ignore session write errors
+            }
+        }
+
+        return $keys;
     }
 
     public function hasPermission(string $permissionKey, ?array $sessionData = null): bool

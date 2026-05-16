@@ -98,8 +98,28 @@ class AdminRbac extends BaseController
         $permissionKeys = (array) $this->request->getPost('permissions');
         $permissionKeys = array_values(array_unique(array_filter(array_map('strtolower', array_map('trim', $permissionKeys)))));
 
-        if ($name === '' || ! in_array($scope, ['admin', 'restaurant'], true)) {
-            return redirect()->back()->withInput()->with('error', 'Role name and scope are required.');
+        // Server-side scope auto-detection: if scope wasn't sent correctly from the
+        // form, derive it from the selected permissions so roles are never mis-scoped.
+        $adminOnlyKeys = ['access_admin_dashboard', 'manage_roles', 'manage_staff_accounts',
+                          'manage_restaurant_information', 'manage_drivers', 'view_orders'];
+        $restaurantOnlyKeys = ['manage_menu_items', 'accept_reject_orders', 'prepare_orders', 'update_order_status'];
+        $hasAdmin      = array_intersect($permissionKeys, $adminOnlyKeys) !== [];
+        $hasRestaurant = array_intersect($permissionKeys, $restaurantOnlyKeys) !== [];
+
+        if (! in_array($scope, ['admin', 'restaurant'], true)) {
+            // Scope not supplied or invalid — derive from permissions
+            $scope = $hasAdmin ? 'admin' : 'restaurant';
+        } elseif ($hasAdmin && ! $hasRestaurant) {
+            // Only admin permissions selected but scope was 'restaurant' (old form bug)
+            $scope = 'admin';
+        } elseif ($hasRestaurant && ! $hasAdmin) {
+            // Only restaurant permissions selected
+            $scope = 'restaurant';
+        }
+        // Mixed or no permissions: trust the submitted scope value.
+
+        if ($name === '') {
+            return redirect()->back()->withInput()->with('error', 'Role name is required.');
         }
 
         $roleSlug = $this->makeSlug($name);
@@ -374,19 +394,52 @@ class AdminRbac extends BaseController
             return;
         }
 
+        // Self-heal: auto-insert any permission keys that are missing from the
+        // permissions table so that custom roles always save their full selection.
+        $existing = $this->permissionModel
+            ->select('permission_key')
+            ->whereIn('permission_key', $permissionKeys)
+            ->findAll();
+
+        $existingKeys = array_column($existing, 'permission_key');
+        $missingKeys  = array_diff($permissionKeys, $existingKeys);
+
+        if ($missingKeys !== []) {
+            $catalog = [];
+            foreach ((new \App\Libraries\PermissionService())->permissionCatalog() as $entry) {
+                $catalog[strtolower(trim((string) ($entry['permission_key'] ?? '')))] = $entry;
+            }
+
+            $now = date('Y-m-d H:i:s');
+            foreach ($missingKeys as $missingKey) {
+                $missingKey = strtolower(trim($missingKey));
+                $catalogEntry = $catalog[$missingKey] ?? [];
+                $this->permissionModel->insert([
+                    'permission_key' => $missingKey,
+                    'label'          => (string) ($catalogEntry['label']       ?? ucwords(str_replace('_', ' ', $missingKey))),
+                    'module'         => (string) ($catalogEntry['module']      ?? 'General'),
+                    'description'    => (string) ($catalogEntry['description'] ?? ''),
+                    'sort_order'     => (int)    ($catalogEntry['sort_order']  ?? 99),
+                    'created_at'     => $now,
+                    'updated_at'     => $now,
+                ]);
+            }
+        }
+
+        // Now fetch all matching permission IDs (including newly inserted ones)
         $permissions = $this->permissionModel
             ->select('id, permission_key')
             ->whereIn('permission_key', $permissionKeys)
             ->findAll();
 
         $rows = [];
-        $now = date('Y-m-d H:i:s');
+        $now  = date('Y-m-d H:i:s');
         foreach ($permissions as $permission) {
             $rows[] = [
-                'role_id' => $roleId,
+                'role_id'       => $roleId,
                 'permission_id' => (int) $permission['id'],
-                'created_at' => $now,
-                'updated_at' => $now,
+                'created_at'    => $now,
+                'updated_at'    => $now,
             ];
         }
 

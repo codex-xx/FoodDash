@@ -55,8 +55,15 @@
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="form-label">Role name</label>
-                            <input type="text" name="name" id="role_name" class="form-control" placeholder="Kitchen Staff" required>
-                            <input type="hidden" name="scope" id="role_scope_input" value="restaurant">
+                            <input type="text" name="name" id="role_name" class="form-control" placeholder="e.g. Kitchen Staff, Order Manager" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Role Scope <span class="text-muted small">(determines which dashboard this role uses)</span></label>
+                            <select name="scope" id="role_scope_input" class="form-select" required>
+                                <option value="restaurant">Restaurant (restaurant-side features)</option>
+                                <option value="admin">Admin (admin-side features)</option>
+                            </select>
+                            <small class="text-muted">Tip: selecting Admin permissions below will automatically switch this to Admin.</small>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Description</label>
@@ -170,11 +177,40 @@
         document.querySelectorAll('#roleForm input[type="checkbox"]').forEach(el => el.checked = false);
     }
 
+    // Admin-specific permission keys — selecting any of these auto-sets scope to 'admin'
+    const ADMIN_PERMISSION_KEYS = [
+        'access_admin_dashboard', 'manage_roles', 'manage_staff_accounts',
+        'manage_restaurant_information', 'manage_drivers', 'view_orders'
+    ];
+
+    function autoDetectScope() {
+        const checked = Array.from(document.querySelectorAll('#roleForm input[type="checkbox"]:checked'))
+            .map(el => el.value.toLowerCase());
+        const hasAdmin = checked.some(k => ADMIN_PERMISSION_KEYS.includes(k));
+        const hasRestaurant = checked.some(k => !ADMIN_PERMISSION_KEYS.includes(k));
+        const scopeEl = document.getElementById('role_scope_input');
+        // If ONLY admin perms are selected → admin. If ONLY restaurant perms → restaurant.
+        // If both or neither → keep current selection (don't override).
+        if (hasAdmin && !hasRestaurant) {
+            scopeEl.value = 'admin';
+        } else if (hasRestaurant && !hasAdmin) {
+            scopeEl.value = 'restaurant';
+        }
+        // Mixed or empty: leave the current dropdown value as-is.
+    }
+
+    // Wire up permission checkboxes to auto-detect scope on change
+    document.querySelectorAll('#roleForm input[type="checkbox"]').forEach(el => {
+        el.addEventListener('change', autoDetectScope);
+    });
+
     function editRole(role) {
         document.getElementById('role_id').value = role.id || 0;
         document.getElementById('role_name').value = role.name || '';
         document.getElementById('role_description').value = role.description || '';
-        document.getElementById('role_scope_input').value = role.scope || 'restaurant';
+        // Restore the saved scope — critical so admin-scope roles display correctly
+        const scopeEl = document.getElementById('role_scope_input');
+        scopeEl.value = (role.scope && (role.scope === 'admin' || role.scope === 'restaurant')) ? role.scope : 'restaurant';
         const selected = new Set(Array.isArray(role.permissions) ? role.permissions.map(v => String(v).toLowerCase()) : []);
         document.querySelectorAll('#roleForm input[type="checkbox"]').forEach(el => el.checked = selected.has(String(el.value).toLowerCase()));
         document.getElementById('role_name').focus();

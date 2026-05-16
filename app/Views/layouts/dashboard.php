@@ -654,15 +654,21 @@
         <?php elseif ($role === 'restaurant'): ?>
             <!-- Restaurant Navigation -->
             <?php $sessionPermissions = session('permission_keys') ?? []; ?>
+            <?php
+                // Helper: does this user hold at least one order-related permission?
+                $canSeeOrders = array_intersect(
+                    ['view_orders', 'accept_reject_orders', 'prepare_orders', 'update_order_status'],
+                    $sessionPermissions
+                ) !== [];
+            ?>
             <ul class="nav nav-pills flex-column gap-1">
-                <?php if (in_array('access_admin_dashboard', $sessionPermissions, true) || true): // Restaurant dashboard is generally allowed if they have the role, but let's allow by default or we can leave it ?>
                 <li class="nav-item">
                     <a href="<?= site_url('dashboard/restaurant') ?>" class="nav-link fd-nav-link <?= (uri_string() === 'dashboard/restaurant') ? 'active' : '' ?>">
                         <span class="fd-nav-icon">🏠</span>
                         <span class="fd-nav-label">Dashboard</span>
                     </a>
                 </li>
-                <?php endif; ?>
+
                 <?php if (in_array('manage_menu_items', $sessionPermissions, true)): ?>
                 <li class="nav-item">
                     <a href="<?= site_url('menu') ?>" class="nav-link fd-nav-link <?= (str_contains(uri_string(), 'menu')) ? 'active' : '' ?>">
@@ -671,7 +677,7 @@
                     </a>
                 </li>
                 <?php endif; ?>
-                <?php if (in_array('view_orders', $sessionPermissions, true)): ?>
+                <?php if ($canSeeOrders): ?>
                 <li class="nav-item">
                     <a href="<?= site_url('orders') ?>" class="nav-link fd-nav-link <?= (uri_string() === 'orders') ? 'active' : '' ?>">
                         <span class="fd-nav-icon">🧾</span>

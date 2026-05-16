@@ -38,7 +38,11 @@ class Orders extends BaseController
         }
 
         $permissions = new \App\Libraries\PermissionService();
-        if (!$permissions->hasPermission('view_orders')) {
+        $canAccessOrders = $permissions->hasPermission('view_orders')
+            || $permissions->hasPermission('accept_reject_orders')
+            || $permissions->hasPermission('prepare_orders')
+            || $permissions->hasPermission('update_order_status');
+        if (!$canAccessOrders) {
             return view('errors/unauthorized', ['message' => 'Permission denied']);
         }
 
@@ -352,7 +356,12 @@ class Orders extends BaseController
         }
 
         $permissions = new \App\Libraries\PermissionService();
-        if (!$permissions->hasPermission('view_orders') && !$permissions->hasPermission('view_sales_reports')) {
+        $canAccessOrders = $permissions->hasPermission('view_orders')
+            || $permissions->hasPermission('view_sales_reports')
+            || $permissions->hasPermission('accept_reject_orders')
+            || $permissions->hasPermission('prepare_orders')
+            || $permissions->hasPermission('update_order_status');
+        if (!$canAccessOrders) {
             return view('errors/unauthorized', ['message' => 'Permission denied']);
         }
 

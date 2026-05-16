@@ -203,8 +203,9 @@ class Auth extends BaseController
             ['auth_channel' => 'web']
         );
 
-        // Role-based redirect
-        if ($role === 'admin') {
+        // Role-based redirect — use role_scope so custom roles go to the right dashboard
+        $roleScope = (string) ($accessProfile['role_scope'] ?? $role);
+        if ($roleScope === 'admin') {
             return redirect()->to('/dashboard/admin');
         }
 
