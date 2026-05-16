@@ -23,6 +23,11 @@ class StoreSettings extends BaseController
             return redirect()->to('/login')->with('error', 'Unauthorized');
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_restaurant_information')) {
+            return view('errors/unauthorized', ['message' => 'Permission denied']);
+        }
+
         $restaurantId = $session->get('restaurant_id');
         $restaurant = $this->restaurantModel->find($restaurantId);
 
@@ -41,6 +46,11 @@ class StoreSettings extends BaseController
         $session = session();
         if (!$session->get('isLoggedIn') || $session->get('role') !== 'restaurant') {
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
+        }
+
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_restaurant_information')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
         }
 
         $restaurantId = $session->get('restaurant_id');

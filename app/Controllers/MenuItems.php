@@ -33,6 +33,11 @@ class MenuItems extends BaseController
             return redirect()->to('/login')->with('error', 'Unauthorized');
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_menu_items')) {
+            return view('errors/unauthorized', ['message' => 'Permission denied']);
+        }
+
         $restaurantId = $session->get('restaurant_id');
         $q = trim((string) $this->request->getGet('q'));
         $category = trim((string) $this->request->getGet('category'));
@@ -124,6 +129,11 @@ class MenuItems extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_menu_items')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
+        }
+
         $item = $this->menuItemModel->find($id);
         if (!$item || $item['restaurant_id'] != $session->get('restaurant_id')) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Menu item not found']);
@@ -145,6 +155,11 @@ class MenuItems extends BaseController
             return redirect()->to('/login')->with('error', 'Unauthorized');
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_menu_items')) {
+            return view('errors/unauthorized', ['message' => 'Permission denied']);
+        }
+
         return view('restaurant/menu/create');
     }
 
@@ -157,6 +172,11 @@ class MenuItems extends BaseController
             $session = session();
             if (!$session->get('isLoggedIn') || $session->get('role') !== 'restaurant') {
                 return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
+            }
+
+            $permissions = new \App\Libraries\PermissionService();
+            if (!$permissions->hasPermission('manage_menu_items')) {
+                return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
             }
 
             $restaurantId = $session->get('restaurant_id');
@@ -235,6 +255,11 @@ class MenuItems extends BaseController
             return redirect()->to('/login')->with('error', 'Unauthorized');
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_menu_items')) {
+            return view('errors/unauthorized', ['message' => 'Permission denied']);
+        }
+
         $item = $this->menuItemModel->withDeleted()->find($id);
         if (!$item || $item['restaurant_id'] != $session->get('restaurant_id')) {
             return redirect()->to('/menu')->with('error', 'Menu item not found');
@@ -258,6 +283,11 @@ class MenuItems extends BaseController
         $session = session();
         if (!$session->get('isLoggedIn') || $session->get('role') !== 'restaurant') {
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
+        }
+
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_menu_items')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
         }
 
         $item = $this->menuItemModel->find($id);
@@ -305,6 +335,11 @@ class MenuItems extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_menu_items')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
+        }
+
         $item = $this->menuItemModel->find($id);
         if (!$item || $item['restaurant_id'] != $session->get('restaurant_id')) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Menu item not found']);
@@ -330,6 +365,11 @@ class MenuItems extends BaseController
         $session = session();
         if (!$session->get('isLoggedIn') || $session->get('role') !== 'restaurant') {
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
+        }
+
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_menu_items')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
         }
 
         $item = $this->menuItemModel->find($id);
@@ -366,6 +406,11 @@ class MenuItems extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_menu_items')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
+        }
+
         if (! $this->supportsArchive) {
             return $this->response->setStatusCode(400)->setJSON(['error' => 'Permanent delete is not available on this database schema']);
         }
@@ -390,6 +435,11 @@ class MenuItems extends BaseController
         $session = session();
         if (!$session->get('isLoggedIn') || $session->get('role') !== 'restaurant') {
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
+        }
+
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_menu_items')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
         }
 
         if (! $this->supportsArchive) {

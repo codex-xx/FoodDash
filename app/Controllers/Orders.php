@@ -37,6 +37,11 @@ class Orders extends BaseController
             return redirect()->to('/login')->with('error', 'Unauthorized');
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('view_orders')) {
+            return view('errors/unauthorized', ['message' => 'Permission denied']);
+        }
+
         $restaurantId = $session->get('restaurant_id');
 
         // Orders page is for active order management only.
@@ -240,6 +245,11 @@ class Orders extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('update_order_status')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
+        }
+
         $order = $this->orderModel->find($id);
         if (!$order) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Order not found']);
@@ -306,6 +316,11 @@ class Orders extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('manage_drivers')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
+        }
+
         $order = $this->orderModel->find($id);
         if (!$order) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Order not found']);
@@ -334,6 +349,11 @@ class Orders extends BaseController
         $session = session();
         if (!$session->get('isLoggedIn') || $session->get('role') !== 'restaurant') {
             return redirect()->to('/login')->with('error', 'Unauthorized');
+        }
+
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('view_orders') && !$permissions->hasPermission('view_sales_reports')) {
+            return view('errors/unauthorized', ['message' => 'Permission denied']);
         }
 
         $restaurantId = $session->get('restaurant_id');
@@ -372,6 +392,11 @@ class Orders extends BaseController
         $session = session();
         if (!$session->get('isLoggedIn') || $session->get('role') !== 'restaurant') {
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Unauthorized']);
+        }
+
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('view_sales_reports')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
         }
 
         $restaurantId = $session->get('restaurant_id');

@@ -23,6 +23,11 @@ class Dashboard extends BaseController
             return redirect()->to('/login')->with('error', 'Unauthorized');
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('access_admin_dashboard')) {
+            return view('errors/unauthorized', ['message' => 'Permission denied']);
+        }
+
         return view('dashboard/admin');
     }
 
@@ -51,6 +56,11 @@ class Dashboard extends BaseController
             return redirect()->to('/login')->with('error', 'Unauthorized');
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('view_orders')) {
+            return view('errors/unauthorized', ['message' => 'Permission denied']);
+        }
+
         return redirect()->to(site_url('dashboard/admin/orders/history'));
     }
 
@@ -65,6 +75,11 @@ class Dashboard extends BaseController
             return redirect()->to('/login')->with('error', 'Unauthorized');
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('view_orders')) {
+            return view('errors/unauthorized', ['message' => 'Permission denied']);
+        }
+
         return view('dashboard/admin_orders_history');
     }
 
@@ -74,6 +89,11 @@ class Dashboard extends BaseController
         $session = session();
         if (! $session->get('isLoggedIn') || $session->get('role') !== 'admin') {
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Access denied']);
+        }
+
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('access_admin_dashboard')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
         }
 
         $orderModel = new OrderModel();
@@ -156,6 +176,11 @@ class Dashboard extends BaseController
             return redirect()->to('/login')->with('error', 'Unauthorized');
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('access_admin_dashboard')) {
+            return view('errors/unauthorized', ['message' => 'Permission denied']);
+        }
+
         return view('dashboard/admin_security');
     }
 
@@ -164,6 +189,11 @@ class Dashboard extends BaseController
         $session = session();
         if (! $session->get('isLoggedIn') || $session->get('role') !== 'admin') {
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Access denied']);
+        }
+
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('access_admin_dashboard')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
         }
 
         $db = \Config\Database::connect();
@@ -295,6 +325,11 @@ class Dashboard extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Access denied']);
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('access_admin_dashboard')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
+        }
+
         $period = strtolower((string) $this->request->getGet('period'));
         $format = strtolower((string) $this->request->getGet('format'));
         if (! in_array($period, ['daily', 'weekly', 'monthly'], true)) {
@@ -405,6 +440,11 @@ class Dashboard extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Access denied']);
         }
 
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('view_orders')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
+        }
+
         $scope = strtolower((string) $this->request->getGet('scope'));
         $orderModel = new OrderModel();
         $driverModel = new DriverModel();
@@ -513,6 +553,11 @@ class Dashboard extends BaseController
         $session = session();
         if (! $session->get('isLoggedIn') || $session->get('role') !== 'admin') {
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Access denied']);
+        }
+
+        $permissions = new \App\Libraries\PermissionService();
+        if (!$permissions->hasPermission('access_admin_dashboard')) {
+            return $this->response->setStatusCode(403)->setJSON(['error' => 'Permission denied']);
         }
 
         $db = \Config\Database::connect();
