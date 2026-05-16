@@ -15,11 +15,15 @@ class UserModel extends Model
     protected $updatedField  = 'updated_at';
 
     protected $allowedFields = [
+        'name',
+        'username',
         'email',
         'email_encrypted',
         'email_hash',
         'password',
         'role',
+        'role_id',
+        'restaurant_id',
         'is_active',
         // Lockout/protection fields
         'failed_attempts',
