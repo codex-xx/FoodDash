@@ -1,9 +1,5 @@
 <?php
-$activePartnerTab = old('partner_type') === 'restaurant'
-    || session()->getFlashdata('restaurant_success')
-    || session()->getFlashdata('restaurant_error')
-    ? 'restaurant'
-    : 'driver';
+$activePartnerTab = 'restaurant';
 
 $pageWallpaperRel = null;
 foreach (['upload/logo/Merchant.png', 'logos/Merchant.png', 'uploads/logos/Merchant.png'] as $candidateRel) {
@@ -20,7 +16,7 @@ $hasPageWallpaper = $pageWallpaperRel !== null;
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>FoodDash - Rider Registration</title>
+    <title>FoodDash - Restaurant Registration</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Leaflet map removed -->
     <style>
@@ -270,9 +266,9 @@ $hasPageWallpaper = $pageWallpaperRel !== null;
     <div class="partner-shell">
         <section class="partner-visual" aria-label="Partner hero section">
             <div class="partner-visual-content">
-                <p class="partner-visual-kicker">FoodDash Rider Team</p>
-                <h1>Ride with FoodDash. Earn on your own schedule.</h1>
-                <p>Deliver orders across your area, choose your working hours, and start earning with every completed delivery.</p>
+                <p class="partner-visual-kicker">FoodDash Restaurant Partners</p>
+                <h1>Join FoodDash as a restaurant partner.</h1>
+                <p>List your restaurant, manage orders more easily, and reach more customers through the FoodDash platform.</p>
             </div>
         </section>
 
@@ -281,284 +277,131 @@ $hasPageWallpaper = $pageWallpaperRel !== null;
                 <a href="<?php echo site_url('login'); ?>" class="btn btn-outline-secondary btn-sm">
                     ← Back to Login
                 </a>
-                <h2>Rider Registration</h2>
+                <h2>Restaurant Registration</h2>
             </div>
 
             <div class="partner-form-surface">
-                        <!-- Nav Tabs -->
-                        <ul class="nav nav-tabs" id="partnerTab" role="tablist">
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link <?= $activePartnerTab === 'driver' ? 'active' : '' ?>" id="driver-tab" data-bs-toggle="tab" data-bs-target="#driver" type="button" role="tab" aria-selected="<?= $activePartnerTab === 'driver' ? 'true' : 'false' ?>">
-                                    🏍️ Become a Driver
-                                </button>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <button class="nav-link <?= $activePartnerTab === 'restaurant' ? 'active' : '' ?>" id="restaurant-tab" data-bs-toggle="tab" data-bs-target="#restaurant" type="button" role="tab" aria-selected="<?= $activePartnerTab === 'restaurant' ? 'true' : 'false' ?>">
-                                    🍽️ Register Restaurant
-                                </button>
-                            </li>
-                        </ul>
+                        <div class="p-4">
+                            <h4 class="mb-4"><span class="restaurant-icon">🍽️</span> Restaurant Owner Registration</h4>
 
-                        <!-- Tab Content -->
-                        <div class="tab-content p-4" id="partnerTabContent">
-                            
-                            <!-- Driver Application Form -->
-                            <div class="tab-pane fade <?= $activePartnerTab === 'driver' ? 'show active' : '' ?>" id="driver" role="tabpanel" aria-labelledby="driver-tab">
-                                <h4 class="mb-4"><span class="driver-icon">🏍️</span> Driver Application</h4>
-                                
-                                <!-- Requirements -->
-                                <div class="requirements-box">
-                                    <h6>📋 Who Can Apply?</h6>
-                                    <ul>
-                                        <li>Must be at least 18 years old</li>
-                                        <li>Valid driver's license for your vehicle type</li>
-                                        <li>Own a smartphone with internet connection</li>
-                                        <li>Have a clean background record</li>
-                                        <li>Own vehicle (motorcycle, car, or a valid bicycle)</li>
-                                    </ul>
-                                </div>
-
-                                <?php if (session()->getFlashdata('driver_success')): ?>
-                                    <div class="alert alert-success">
-                                        <?php echo esc(session()->getFlashdata('driver_success')); ?>
-                                    </div>
-                                <?php endif; ?>
-
-                                <?php if (session()->getFlashdata('driver_error')): ?>
-                                    <div class="alert alert-danger">
-                                        <?php echo esc(session()->getFlashdata('driver_error')); ?>
-                                    </div>
-                                <?php endif; ?>
-
-                                <form action="<?php echo site_url('partner/register'); ?>" method="post" id="driverForm">
-                                    <?php echo csrf_field(); ?>
-                                    <input type="hidden" name="partner_type" value="driver">
-
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="driver_name" class="form-label">Full Name *</label>
-                                                <input type="text" class="form-control" id="driver_name" name="driver_name" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="driver_email" class="form-label">Email Address *</label>
-                                                <input type="email" class="form-control" id="driver_email" name="driver_email" required>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="driver_phone" class="form-label">Phone Number *</label>
-                                                <input type="tel" class="form-control" id="driver_phone" name="driver_phone" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="vehicle_type" class="form-label">Vehicle Type *</label>
-                                                <select class="form-select" id="vehicle_type" name="vehicle_type" required>
-                                                    <option value="">Select vehicle type</option>
-                                                    <option value="motorcycle">🏍️ Motorcycle</option>
-                                                    <option value="car">🚗 Car</option>
-                                                    <option value="bicycle">🚲 Bicycle</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="vehicle_brand" class="form-label">Vehicle Brand/Model</label>
-                                                <input type="text" class="form-control" id="vehicle_brand" name="vehicle_brand" placeholder="e.g., Honda PCX, Toyota Vios">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="license_number" class="form-label">Driver License Number *</label>
-                                                <input type="text" class="form-control" id="license_number" name="license_number" placeholder="e.g., D-1234567" required>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label for="driver_address" class="form-label">Current Address</label>
-                                        <textarea class="form-control" id="driver_address" name="driver_address" rows="2" placeholder="Your current residential address"></textarea>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <label for="driver_notes" class="form-label">Additional Information</label>
-                                        <textarea class="form-control" id="driver_notes" name="driver_notes" rows="2" placeholder="Any additional information you'd like to share"></textarea>
-                                    </div>
-
-                                    <div class="form-check mb-3">
-                                        <input class="form-check-input" type="checkbox" id="driver_terms" name="driver_terms" required>
-                                        <label class="form-check-label" for="driver_terms">
-                                            I agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#driverTermsModal">Terms and Conditions</a> and privacy policy.
-                                        </label>
-                                    </div>
-
-                                    <button type="submit" class="btn btn-primary px-4">Submit Application</button>
-                                </form>
+                            <!-- Requirements -->
+                            <div class="requirements-box">
+                                <h6>📋 Requirements to Register</h6>
+                                <ul>
+                                    <li>Valid business license or registration</li>
+                                    <li>Physical restaurant location</li>
+                                    <li>Ability to prepare food for delivery</li>
+                                    <li>Owner's identification</li>
+                                    <li>Bank account for payouts</li>
+                                </ul>
                             </div>
 
-                            <!-- Restaurant Registration Form -->
-                            <div class="tab-pane fade <?= $activePartnerTab === 'restaurant' ? 'show active' : '' ?>" id="restaurant" role="tabpanel" aria-labelledby="restaurant-tab">
-                                <h4 class="mb-4"><span class="restaurant-icon">🍽️</span> Restaurant Owner Registration</h4>
-                                
-                                <!-- Requirements -->
-                                <div class="requirements-box">
-                                    <h6>📋 Requirements to Register</h6>
-                                    <ul>
-                                        <li>Valid business license or registration</li>
-                                        <li>Physical restaurant location</li>
-                                        <li>Ability to prepare food for delivery</li>
-                                        <li>Owner's identification</li>
-                                        <li>Bank account for payouts</li>
-                                    </ul>
+                            <?php if (session()->getFlashdata('restaurant_success')): ?>
+                                <div class="alert alert-success">
+                                    <?php echo esc(session()->getFlashdata('restaurant_success')); ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <?php if (session()->getFlashdata('restaurant_error')): ?>
+                                <div class="alert alert-danger">
+                                    <?php echo esc(session()->getFlashdata('restaurant_error')); ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <form action="<?php echo site_url('partner/register'); ?>" method="post" id="restaurantForm">
+                                <?php echo csrf_field(); ?>
+                                <input type="hidden" name="partner_type" value="restaurant">
+
+                                <h6 class="mt-3 mb-2">🏪 Restaurant Information</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="restaurant_name" class="form-label">Restaurant Name *</label>
+                                            <input type="text" class="form-control" id="restaurant_name" name="restaurant_name" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="restaurant_phone" class="form-label">Restaurant Phone *</label>
+                                            <input type="tel" class="form-control" id="restaurant_phone" name="restaurant_phone" required>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <?php if (session()->getFlashdata('restaurant_success')): ?>
-                                    <div class="alert alert-success">
-                                        <?php echo esc(session()->getFlashdata('restaurant_success')); ?>
-                                    </div>
-                                <?php endif; ?>
+                                <div class="mb-3">
+                                    <label for="restaurant_address" class="form-label">Restaurant Address *</label>
+                                    <textarea class="form-control" id="restaurant_address" name="restaurant_address" rows="2" required></textarea>
+                                </div>
 
-                                <?php if (session()->getFlashdata('restaurant_error')): ?>
-                                    <div class="alert alert-danger">
-                                        <?php echo esc(session()->getFlashdata('restaurant_error')); ?>
-                                    </div>
-                                <?php endif; ?>
+                                <!-- Map input removed -->
 
-                                <form action="<?php echo site_url('partner/register'); ?>" method="post" id="restaurantForm">
-                                    <?php echo csrf_field(); ?>
-                                    <input type="hidden" name="partner_type" value="restaurant">
-
-                                    <h6 class="mt-3 mb-2">🏪 Restaurant Information</h6>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="restaurant_name" class="form-label">Restaurant Name *</label>
-                                                <input type="text" class="form-control" id="restaurant_name" name="restaurant_name" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="restaurant_phone" class="form-label">Restaurant Phone *</label>
-                                                <input type="tel" class="form-control" id="restaurant_phone" name="restaurant_phone" required>
-                                            </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="cuisine_type" class="form-label">Cuisine Type</label>
+                                            <input type="text" class="form-control" id="cuisine_type" name="cuisine_type" placeholder="e.g., Italian, Chinese, Filipino">
                                         </div>
                                     </div>
-
-                                    <div class="mb-3">
-                                        <label for="restaurant_address" class="form-label">Restaurant Address *</label>
-                                        <textarea class="form-control" id="restaurant_address" name="restaurant_address" rows="2" required></textarea>
-                                    </div>
-
-                                    <!-- Map input removed -->
-
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="cuisine_type" class="form-label">Cuisine Type</label>
-                                                <input type="text" class="form-control" id="cuisine_type" name="cuisine_type" placeholder="e.g., Italian, Chinese, Filipino">
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="business_license" class="form-label">Business License Number</label>
-                                                <input type="text" class="form-control" id="business_license" name="business_license">
-                                            </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="business_license" class="form-label">Business License Number</label>
+                                            <input type="text" class="form-control" id="business_license" name="business_license">
                                         </div>
                                     </div>
+                                </div>
 
-                                    <h6 class="mt-4 mb-2">👤 Owner/Contact Person Information</h6>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="owner_name" class="form-label">Full Name *</label>
-                                                <input type="text" class="form-control" id="owner_name" name="owner_name" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="owner_email" class="form-label">Email Address *</label>
-                                                <input type="email" class="form-control" id="owner_email" name="owner_email" required>
-                                            </div>
+                                <h6 class="mt-4 mb-2">👤 Owner/Contact Person Information</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="owner_name" class="form-label">Full Name *</label>
+                                            <input type="text" class="form-control" id="owner_name" name="owner_name" required>
                                         </div>
                                     </div>
-
-                                    <div class="row">
-                                        <div class="col-md-12">
-                                            <div class="mb-3">
-                                                <label for="owner_phone" class="form-label">Phone Number *</label>
-                                                <input type="tel" class="form-control" id="owner_phone" name="owner_phone" required>
-                                            </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="owner_email" class="form-label">Email Address *</label>
+                                            <input type="email" class="form-control" id="owner_email" name="owner_email" required>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div class="row">
-                                        <div class="col-md-12">
-                                            <div class="mb-3">
-                                                <label for="owner_password" class="form-label">Password *</label>
-                                                <input type="password" class="form-control" id="owner_password" name="owner_password" minlength="8" required>
-                                            </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="mb-3">
+                                            <label for="owner_phone" class="form-label">Phone Number *</label>
+                                            <input type="tel" class="form-control" id="owner_phone" name="owner_phone" required>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div class="mb-3">
-                                        <label for="restaurant_notes" class="form-label">Additional Information</label>
-                                        <textarea class="form-control" id="restaurant_notes" name="restaurant_notes" rows="2" placeholder="Any additional information about your restaurant"></textarea>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="mb-3">
+                                            <label for="owner_password" class="form-label">Password *</label>
+                                            <input type="password" class="form-control" id="owner_password" name="owner_password" minlength="8" required>
+                                        </div>
                                     </div>
+                                </div>
 
-                                    <div class="form-check mb-3">
-                                        <input class="form-check-input" type="checkbox" id="restaurant_terms" name="restaurant_terms" required>
-                                        <label class="form-check-label" for="restaurant_terms">
-                                            I agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#restaurantTermsModal">Terms and Conditions</a> and privacy policy.
-                                        </label>
-                                    </div>
+                                <div class="mb-3">
+                                    <label for="restaurant_notes" class="form-label">Additional Information</label>
+                                    <textarea class="form-control" id="restaurant_notes" name="restaurant_notes" rows="2" placeholder="Any additional information about your restaurant"></textarea>
+                                </div>
 
-                                    <button type="submit" class="btn btn-primary px-4">Submit Registration</button>
-                                </form>
-                            </div>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="restaurant_terms" name="restaurant_terms" required>
+                                    <label class="form-check-label" for="restaurant_terms">
+                                        I agree to the <a href="#" data-bs-toggle="modal" data-bs-target="#restaurantTermsModal">Terms and Conditions</a> and privacy policy.
+                                    </label>
+                                </div>
+
+                                <button type="submit" class="btn btn-primary px-4">Submit Registration</button>
+                            </form>
                         </div>
                     </div>
             </div>
         </section>
-    </div>
-
-    <!-- Driver Terms Modal -->
-    <div class="modal fade" id="driverTermsModal" tabindex="-1" aria-labelledby="driverTermsModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="driverTermsModalLabel">Driver Terms and Conditions</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <h6>1. Eligibility</h6>
-                    <p>You must be at least 18 years old and possess a valid driver's license for your vehicle type.</p>
-                    
-                    <h6>2. Vehicle Requirements</h6>
-                    <p>Your vehicle must be in good condition and properly registered. Regular maintenance is your responsibility.</p>
-                    
-                    <h6>3. Deliveries</h6>
-                    <p>You agree to deliver orders in a timely manner and maintain professional conduct with customers.</p>
-                    
-                    <h6>4. Earnings</h6>
-                    <p>You will receive payments based on completed deliveries. Payment terms are subject to change with notice.</p>
-                    
-                    <h6>5. Termination</h6>
-                    <p>FoodDash reserves the right to terminate your partnership at any time for violation of terms or policies.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">I Understand</button>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Restaurant Terms Modal -->

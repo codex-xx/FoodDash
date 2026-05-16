@@ -147,6 +147,14 @@ class Auth extends BaseController
         $mfaService = new MfaService();
 
         if ($mfaService->isEnabled()) {
+            // Allow administrators to login without MFA and go directly to their dashboard.
+            $roleScope = strtolower((string) ($accessProfile['role_scope'] ?? $user['role'] ?? ''));
+            $userRole = strtolower((string) ($user['role'] ?? ''));
+
+            if ($roleScope === 'admin' || $userRole === 'admin' || stripos($userRole, 'admin') !== false) {
+                return $this->completeWebLogin($user, $sessionData, $accessProfile, $identifier);
+            }
+
             session()->regenerate(true);
 
             $challenge = $mfaService->createLoginChallenge($user);

@@ -183,18 +183,6 @@ $hasPageWallpaper = is_file($pageWallpaperAbs);
                             </div>
                             <div class="accordion-item">
                                 <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
-                                        How do I become a FoodDash driver?
-                                    </button>
-                                </h2>
-                                <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
-                                    <div class="accordion-body">
-                                        Click on "Be Our Partner" on the login page and fill out the driver application form. Our team will review your application and get back to you within 2-3 business days.
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="accordion-item">
-                                <h2 class="accordion-header">
                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour">
                                         How do I register my restaurant?
                                     </button>
