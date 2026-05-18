@@ -304,10 +304,10 @@ class CreateRbacTables extends Migration
                 'scope' => 'restaurant',
                 'description' => 'Default restaurant operations role',
                 'is_system' => 1,
-                'permissions' => [
-                    'manage_menu_items', 'accept_reject_orders', 'prepare_orders',
-                    'update_order_status', 'view_orders',
-                ],
+                    'permissions' => [
+                        'manage_menu_items', 'accept_reject_orders', 'prepare_orders',
+                        'update_order_status', 'view_orders', 'manage_restaurant_information',
+                    ],
             ],
         ];
 

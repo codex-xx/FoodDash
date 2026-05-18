@@ -126,6 +126,11 @@ class PermissionService
         if ($roleFoundInDb) {
             $permissionKeys = $this->permissionsForRoleId((int) $roleRow['id']);
 
+            $roleScope = strtolower(trim((string) ($roleRow['scope'] ?? '')));
+            if ($roleScope === 'admin' && ! in_array('access_admin_dashboard', $permissionKeys, true)) {
+                array_unshift($permissionKeys, 'access_admin_dashboard');
+            }
+
             // For system roles only: if the role_permissions table has no entries
             // (e.g. DB was seeded without them), fall back to the built-in legacy
             // matrix so built-in admin/restaurant accounts never lose their access.

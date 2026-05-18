@@ -251,6 +251,7 @@ class AdminRbac extends BaseController
             'role' => (string) ($role['scope'] ?? 'restaurant'),
             'role_id' => $roleId,
             'restaurant_id' => ($role['scope'] ?? '') === 'restaurant' && $restaurantId > 0 ? $restaurantId : null,
+            'mfa_enabled' => ($role['scope'] ?? '') === 'admin' ? 1 : 0,
             'is_active' => $isActive,
         ];
 

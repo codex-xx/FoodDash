@@ -31,7 +31,8 @@ class RestaurantOwnersSeeder extends Seeder
                     $restaurantModel->update($existing['id'], [
                         'name'    => $restaurantName,
                         'status'  => 'approved',
-                    ]);
+                        'is_active' => 1,
+                        ]);
                     continue;
                 }
 
@@ -40,6 +41,7 @@ class RestaurantOwnersSeeder extends Seeder
                         'user_id' => $user['id'],
                         'name'    => $restaurantName,
                         'status'  => 'approved',
+                        'is_active' => 1,
                     ]);
                 }
             }

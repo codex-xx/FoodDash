@@ -146,15 +146,8 @@ class Auth extends BaseController
         $sessionData = $this->buildWebSessionData($user, $accessProfile);
         $mfaService = new MfaService();
 
-        if ($mfaService->isEnabled()) {
-            // Allow administrators to login without MFA and go directly to their dashboard.
-            $roleScope = strtolower((string) ($accessProfile['role_scope'] ?? $user['role'] ?? ''));
-            $userRole = strtolower((string) ($user['role'] ?? ''));
-
-            if ($roleScope === 'admin' || $userRole === 'admin' || stripos($userRole, 'admin') !== false) {
-                return $this->completeWebLogin($user, $sessionData, $accessProfile, $identifier);
-            }
-
+        $userNeedsMfa = $this->supportsMfaColumns('users') && (int) ($user['mfa_enabled'] ?? 0) === 1;
+        if ($mfaService->isEnabled() && $userNeedsMfa) {
             session()->regenerate(true);
 
             $challenge = $mfaService->createLoginChallenge($user);
@@ -386,6 +379,19 @@ class Auth extends BaseController
     {
         try {
             return db_connect()->tableExists($table);
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    protected function supportsMfaColumns(string $table): bool
+    {
+        try {
+            $db = db_connect();
+
+            return $db->fieldExists('mfa_enabled', $table)
+                && $db->fieldExists('login_otp_code', $table)
+                && $db->fieldExists('login_otp_expires', $table);
         } catch (\Throwable $e) {
             return false;
         }

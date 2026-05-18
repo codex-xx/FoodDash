@@ -3,7 +3,6 @@
 <?php $this->setVar('pageTitle', 'Store Settings — FoodDash'); ?>
 
 <?= $this->section('head') ?>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
@@ -57,29 +56,7 @@
             <div class="form-text">Your restaurant's physical address</div>
           </div>
 
-          <div class="mb-4">
-            <label class="form-label">Restaurant Location on Map</label>
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <small class="text-muted">Click map or drag marker to update your location</small>
-              <div class="d-flex align-items-center gap-2">
-                <span id="locationSaveStatus" class="badge text-bg-light">Not saved yet</span>
-                <button type="button" class="btn btn-sm btn-primary" id="saveLocationBtn" disabled>Save Location</button>
-              </div>
-            </div>
-            <div class="form-check form-switch mb-2">
-              <input class="form-check-input" type="checkbox" role="switch" id="autoFillAddressToggle" checked>
-              <label class="form-check-label" for="autoFillAddressToggle">Auto-fill address from map</label>
-            </div>
-            <div id="settingsLocationMap" style="height: 340px; border: 1px solid var(--fd-border); border-radius: 0.75rem;"></div>
-            <div class="row mt-2">
-              <div class="col-md-6">
-                <small class="text-muted" id="settingsLatitudeText">Latitude: <?= array_key_exists('latitude', $restaurant) && $restaurant['latitude'] !== null ? esc((string) $restaurant['latitude']) : '-' ?></small>
-              </div>
-              <div class="col-md-6 text-md-end">
-                <small class="text-muted" id="settingsLongitudeText">Longitude: <?= array_key_exists('longitude', $restaurant) && $restaurant['longitude'] !== null ? esc((string) $restaurant['longitude']) : '-' ?></small>
-              </div>
-            </div>
-          </div>
+
 
           <div class="mb-4">
             <label for="restaurant_logo" class="form-label">Restaurant Logo</label>
@@ -227,7 +204,6 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
   const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const DEFAULT_SCHEDULE = {
@@ -246,163 +222,10 @@
     opening_hours: document.getElementById('opening_hours').value,
     is_open: document.getElementById('is_open').value
   };
-  let settingsLocationMap = null;
-  let settingsLocationMarker = null;
-  let pendingLocation = null;
   let restaurantCsrfName = '<?= csrf_token() ?>';
   let restaurantCsrfHash = '<?= csrf_hash() ?>';
 
-  function setLocationSaveStatus(text, ok) {
-    const badge = document.getElementById('locationSaveStatus');
-    if (!badge) return;
-    badge.textContent = text;
-    badge.className = ok ? 'badge text-bg-success' : 'badge text-bg-light';
-  }
 
-  function setCoordinateText(lat, lng) {
-    const latText = document.getElementById('settingsLatitudeText');
-    const lngText = document.getElementById('settingsLongitudeText');
-    if (latText) latText.textContent = 'Latitude: ' + Number(lat).toFixed(7);
-    if (lngText) lngText.textContent = 'Longitude: ' + Number(lng).toFixed(7);
-  }
-
-  function reverseGeocodeAddress(lat, lng) {
-    const addressEl = document.getElementById('restaurant_address');
-    const autoFillToggle = document.getElementById('autoFillAddressToggle');
-    if (autoFillToggle && !autoFillToggle.checked) return;
-    if (!addressEl) return;
-
-    fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lng))
-      .then(response => response.ok ? response.json() : null)
-      .then(result => {
-        if (result && result.display_name) {
-          addressEl.value = result.display_name;
-        }
-      })
-      .catch(() => {});
-  }
-
-  function saveLocation(lat, lng) {
-    const body = new URLSearchParams();
-    body.append('latitude', String(lat));
-    body.append('longitude', String(lng));
-    const addressEl = document.getElementById('restaurant_address');
-    if (addressEl && addressEl.value.trim() !== '') {
-      body.append('address', addressEl.value.trim());
-    }
-    body.append(restaurantCsrfName, restaurantCsrfHash);
-
-    return fetch('<?= site_url('dashboard/restaurant/location') ?>', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: body.toString()
-    })
-      .then(r => r.json())
-      .then(json => {
-        if (json.success) {
-          if (json.csrfHash) {
-            restaurantCsrfHash = json.csrfHash;
-          }
-          return true;
-        }
-
-        return false;
-      })
-      .catch(() => false);
-  }
-
-  function markLocationPending(lat, lng) {
-    pendingLocation = { lat, lng };
-    setCoordinateText(lat, lng);
-    setLocationSaveStatus('Unsaved changes', false);
-    const saveBtn = document.getElementById('saveLocationBtn');
-    if (saveBtn) {
-      saveBtn.disabled = false;
-    }
-  }
-
-  function placeLocationMarker(lat, lng) {
-    if (!settingsLocationMap) return;
-
-    if (!settingsLocationMarker) {
-      settingsLocationMarker = L.marker([lat, lng], { draggable: true }).addTo(settingsLocationMap);
-      settingsLocationMarker.on('dragend', function (event) {
-        const point = event.target.getLatLng();
-        markLocationPending(point.lat, point.lng);
-        reverseGeocodeAddress(point.lat, point.lng);
-      });
-    } else {
-      settingsLocationMarker.setLatLng([lat, lng]);
-    }
-  }
-
-  function initSettingsLocationMap() {
-    const mapEl = document.getElementById('settingsLocationMap');
-    if (!mapEl || typeof L === 'undefined') return;
-
-    fetch('<?= site_url('dashboard/restaurant/location') ?>')
-      .then(r => r.json())
-      .then(data => {
-        const hasSaved = data.latitude !== null && data.longitude !== null;
-        const centerLat = hasSaved ? Number(data.latitude) : 14.5995;
-        const centerLng = hasSaved ? Number(data.longitude) : 120.9842;
-        const zoom = hasSaved ? 16 : 13;
-
-        settingsLocationMap = L.map('settingsLocationMap').setView([centerLat, centerLng], zoom);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 19,
-          attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(settingsLocationMap);
-
-        placeLocationMarker(centerLat, centerLng);
-        setCoordinateText(centerLat, centerLng);
-        if (hasSaved) {
-          setLocationSaveStatus('Saved', true);
-        } else {
-          setLocationSaveStatus('Pick a location', false);
-        }
-        const saveBtn = document.getElementById('saveLocationBtn');
-        if (saveBtn) {
-          saveBtn.disabled = true;
-        }
-
-        settingsLocationMap.on('click', function (event) {
-          placeLocationMarker(event.latlng.lat, event.latlng.lng);
-          markLocationPending(event.latlng.lat, event.latlng.lng);
-          reverseGeocodeAddress(event.latlng.lat, event.latlng.lng);
-        });
-      })
-      .catch(() => setLocationSaveStatus('Load failed', false));
-  }
-
-  document.getElementById('saveLocationBtn').addEventListener('click', function () {
-    if (!pendingLocation) {
-      return;
-    }
-
-    const saveBtn = this;
-    const oldLabel = saveBtn.textContent;
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving...';
-
-    saveLocation(pendingLocation.lat, pendingLocation.lng)
-      .then(success => {
-        if (success) {
-          setLocationSaveStatus('Saved', true);
-          pendingLocation = null;
-          return;
-        }
-
-        setLocationSaveStatus('Save failed', false);
-        saveBtn.disabled = false;
-      })
-      .finally(() => {
-        saveBtn.textContent = oldLabel;
-      });
-  });
 
   function applyStoreOpenState(isOpen) {
     const hidden = document.getElementById('is_open');
@@ -746,6 +569,5 @@
   });
 
   applyStoreOpenState(document.getElementById('is_open').value === '1');
-  initSettingsLocationMap();
 </script>
 <?= $this->endSection() ?>

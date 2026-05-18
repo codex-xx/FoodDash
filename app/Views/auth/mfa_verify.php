@@ -183,11 +183,14 @@ $mfaExpiryText = $mfaExpiry !== '' ? date('g:i A', strtotime($mfaExpiry)) : '5 m
                     <input type="text" class="form-control" id="otp" name="otp" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>
                 </div>
 
-                <div class="d-flex justify-content-between align-items-center gap-2">
-                    <a href="<?= site_url('login') ?>" class="verify-footlink">Back to login</a>
+                <div class="d-flex justify-content-end gap-2">
                     <button class="btn btn-verify" type="submit">Verify code</button>
                 </div>
             </form>
+
+            <div class="d-flex justify-content-start mt-3">
+                <a href="<?= site_url('login') ?>" class="verify-footlink" onclick="window.location.href=this.href; return false;">Back to login</a>
+            </div>
         </div>
     </section>
 </main>

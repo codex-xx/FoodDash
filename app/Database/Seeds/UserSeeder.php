@@ -24,6 +24,7 @@ class UserSeeder extends Seeder
                 'password' => password_hash('AdminPass123', PASSWORD_DEFAULT),
                 'role' => 'admin',
                 'role_id' => $roleIds['admin'] ?? null,
+                'mfa_enabled' => 1,
                 'is_active' => 1,
             ],
             [
@@ -33,6 +34,7 @@ class UserSeeder extends Seeder
                 'password' => password_hash('RestaurantPass123', PASSWORD_DEFAULT),
                 'role' => 'restaurant',
                 'role_id' => $roleIds['restaurant'] ?? null,
+                'mfa_enabled' => 0,
                 'is_active' => 1,
             ],
             // additional restaurant owners used by the system
@@ -43,6 +45,7 @@ class UserSeeder extends Seeder
                 'password' => password_hash('secret123', PASSWORD_DEFAULT),
                 'role' => 'restaurant',
                 'role_id' => $roleIds['restaurant'] ?? null,
+                'mfa_enabled' => 0,
                 'is_active' => 1,
             ],
             [
@@ -52,6 +55,7 @@ class UserSeeder extends Seeder
                 'password' => password_hash('secret123', PASSWORD_DEFAULT),
                 'role' => 'restaurant',
                 'role_id' => $roleIds['restaurant'] ?? null,
+                'mfa_enabled' => 0,
                 'is_active' => 1,
             ],
         ];
