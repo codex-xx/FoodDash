@@ -725,7 +725,9 @@ class Auth extends BaseController
                 'restaurant_name'   => 'required|min_length[3]',
                 'restaurant_phone' => 'required|min_length[10]',
                 'restaurant_address' => 'required',
-                // latitude/longitude removed (no map)
+                'restaurant_latitude' => 'permit_empty|numeric',
+                'restaurant_longitude' => 'permit_empty|numeric',
+                'delivery_radius_km' => 'required|numeric',
                 'owner_name'        => 'required|min_length[3]',
                 'owner_email'       => 'required|valid_email',
                 'owner_phone'       => 'required|min_length[10]',
@@ -757,13 +759,47 @@ class Auth extends BaseController
 
             // Create restaurant record
             $restaurantModel = new \App\Models\RestaurantModel();
+            $restaurantLatitude = $this->request->getPost('restaurant_latitude');
+            $restaurantLongitude = $this->request->getPost('restaurant_longitude');
+            $deliveryRadius = trim((string) $this->request->getPost('delivery_radius_km'));
+            $restaurantAddress = trim((string) $this->request->getPost('restaurant_address'));
+            $hasRestaurantAddressColumn = db_connect()->fieldExists('restaurant_address', 'restaurants');
+            $hasRestaurantLatitudeColumn = db_connect()->fieldExists('restaurant_latitude', 'restaurants');
+            $hasRestaurantLongitudeColumn = db_connect()->fieldExists('restaurant_longitude', 'restaurants');
+            $hasDeliveryRadiusColumn = db_connect()->fieldExists('delivery_radius_km', 'restaurants');
             $restaurantData = [
-                'user_id'    => $userId,
-                'name'       => $this->request->getPost('restaurant_name'),
-                'address'    => $this->request->getPost('restaurant_address'),
-                'status'     => 'pending',
-                'is_active'  => 0,
+                'user_id'             => $userId,
+                'name'                => $this->request->getPost('restaurant_name'),
+                'address'             => $restaurantAddress,
+                'status'              => 'pending',
+                'is_active'           => 0,
             ];
+
+            if ($hasRestaurantAddressColumn) {
+                $restaurantData['restaurant_address'] = $restaurantAddress;
+            }
+
+            if (is_numeric($restaurantLatitude)) {
+                $restaurantData['latitude'] = (float) $restaurantLatitude;
+
+                if ($hasRestaurantLatitudeColumn) {
+                    $restaurantData['restaurant_latitude'] = (float) $restaurantLatitude;
+                }
+            }
+
+            if (is_numeric($restaurantLongitude)) {
+                $restaurantData['longitude'] = (float) $restaurantLongitude;
+
+                if ($hasRestaurantLongitudeColumn) {
+                    $restaurantData['restaurant_longitude'] = (float) $restaurantLongitude;
+                }
+            }
+
+            if ($deliveryRadius !== '' && is_numeric($deliveryRadius)) {
+                if ($hasDeliveryRadiusColumn) {
+                    $restaurantData['delivery_radius_km'] = (float) $deliveryRadius;
+                }
+            }
 
             $restaurantResult = $restaurantModel->insert($restaurantData);
 

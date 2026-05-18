@@ -35,6 +35,11 @@ class StoreSettings extends BaseController
             return redirect()->to('/dashboard/restaurant')->with('error', 'Restaurant not found');
         }
 
+        $restaurant['restaurant_address'] = $restaurant['restaurant_address'] ?? $restaurant['address'] ?? '';
+        $restaurant['restaurant_latitude'] = $restaurant['restaurant_latitude'] ?? $restaurant['latitude'] ?? null;
+        $restaurant['restaurant_longitude'] = $restaurant['restaurant_longitude'] ?? $restaurant['longitude'] ?? null;
+        $restaurant['delivery_radius_km'] = $restaurant['delivery_radius_km'] ?? null;
+
         return view('restaurant/settings/index', ['restaurant' => $restaurant]);
     }
 
@@ -59,10 +64,22 @@ class StoreSettings extends BaseController
             return $this->response->setStatusCode(400)->setJSON(['error' => 'Restaurant information missing']);
         }
 
+        $fullAddress = trim((string) $this->request->getPost('address'));
+        $restaurantLatitude = trim((string) $this->request->getPost('restaurant_latitude'));
+        $restaurantLongitude = trim((string) $this->request->getPost('restaurant_longitude'));
+        $deliveryRadius = trim((string) $this->request->getPost('delivery_radius_km'));
+        $hasRestaurantAddressColumn = db_connect()->fieldExists('restaurant_address', 'restaurants');
+        $hasRestaurantLatitudeColumn = db_connect()->fieldExists('restaurant_latitude', 'restaurants');
+        $hasRestaurantLongitudeColumn = db_connect()->fieldExists('restaurant_longitude', 'restaurants');
+        $hasDeliveryRadiusColumn = db_connect()->fieldExists('delivery_radius_km', 'restaurants');
+
         // Validate input
         $rules = [
             'name' => 'required|min_length[2]|max_length[255]',
-            'address' => 'permit_empty|max_length[255]',
+            'address' => 'permit_empty|max_length[1000]',
+            'restaurant_latitude' => 'permit_empty|numeric',
+            'restaurant_longitude' => 'permit_empty|numeric',
+            'delivery_radius_km' => 'permit_empty|numeric',
             'logo' => 'permit_empty|is_image[logo]|max_size[logo,2048]|ext_in[logo,jpg,jpeg,png,gif]',
             'opening_hours' => 'permit_empty',
         ];
@@ -73,10 +90,34 @@ class StoreSettings extends BaseController
 
         $data = [
             'name' => $this->request->getPost('name'),
-            'address' => $this->request->getPost('address'),
+            'address' => $fullAddress !== '' ? mb_substr($fullAddress, 0, 255) : null,
             'opening_hours' => $this->request->getPost('opening_hours') ?: null,
             'is_open' => $this->request->getPost('is_open') ? 1 : 0,
         ];
+
+        if ($hasRestaurantAddressColumn) {
+            $data['restaurant_address'] = $fullAddress !== '' ? mb_substr($fullAddress, 0, 1000) : null;
+        }
+
+        if ($restaurantLatitude !== '' && is_numeric($restaurantLatitude)) {
+            $data['latitude'] = (float) $restaurantLatitude;
+            if ($hasRestaurantLatitudeColumn) {
+                $data['restaurant_latitude'] = (float) $restaurantLatitude;
+            }
+        }
+
+        if ($restaurantLongitude !== '' && is_numeric($restaurantLongitude)) {
+            $data['longitude'] = (float) $restaurantLongitude;
+            if ($hasRestaurantLongitudeColumn) {
+                $data['restaurant_longitude'] = (float) $restaurantLongitude;
+            }
+        }
+
+        if ($deliveryRadius !== '' && is_numeric($deliveryRadius)) {
+            if ($hasDeliveryRadiusColumn) {
+                $data['delivery_radius_km'] = (float) $deliveryRadius;
+            }
+        }
 
         // Handle logo upload
         $logo = $this->request->getFile('logo');
@@ -111,6 +152,10 @@ class StoreSettings extends BaseController
             return $this->response->setJSON([
                 'success' => true,
                 'message' => 'Store settings updated successfully',
+                'latitude' => $data['latitude'] ?? null,
+                'longitude' => $data['longitude'] ?? null,
+                'address' => $data['restaurant_address'] ?? $data['address'] ?? null,
+                'delivery_radius_km' => $data['delivery_radius_km'] ?? null,
                 'logo' => isset($data['logo']) ? base_url('uploads/logos/' . $data['logo']) : null
             ]);
         }

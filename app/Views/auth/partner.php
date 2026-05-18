@@ -17,6 +17,7 @@ $hasPageWallpaper = $pageWallpaperRel !== null;
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>FoodDash - Restaurant Registration</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Leaflet map removed -->
     <style>
@@ -259,6 +260,18 @@ $hasPageWallpaper = $pageWallpaperRel !== null;
 
         .driver-icon { color: #007bff; }
         .restaurant-icon { color: #fd7e14; }
+        #restaurant-location-map {
+            height: 320px;
+            border-radius: 0.9rem;
+            border: 1px solid rgba(58, 63, 69, 0.16);
+            overflow: hidden;
+            background: linear-gradient(180deg, #eef7f2 0%, #e6efe9 100%);
+        }
+
+        .location-note {
+            color: var(--fd-slate);
+            font-size: 0.92rem;
+        }
     </style>
 </head>
 
@@ -333,7 +346,28 @@ $hasPageWallpaper = $pageWallpaperRel !== null;
                                     <textarea class="form-control" id="restaurant_address" name="restaurant_address" rows="2" required></textarea>
                                 </div>
 
-                                <!-- Map input removed -->
+                                <div class="mb-3">
+                                    <label for="delivery_radius_km" class="form-label">Delivery Radius (km) *</label>
+                                    <input type="number" class="form-control" id="delivery_radius_km" name="delivery_radius_km" min="0.1" step="0.1" placeholder="e.g., 5" required>
+                                    <div class="form-text">This will define how far your restaurant can deliver for now. You can edit it later in settings.</div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-2">
+                                        <div>
+                                            <label class="form-label mb-1">Restaurant Location</label>
+                                            <div class="location-note">Drag the pin or use your current location to fill the address and coordinates automatically.</div>
+                                        </div>
+                                        <button type="button" class="btn btn-outline-primary btn-sm" id="useCurrentLocationBtn">
+                                            Use My Current Location
+                                        </button>
+                                    </div>
+
+                                    <div id="restaurant-location-map" data-initial-address="" data-initial-lat="" data-initial-lng=""></div>
+                                    <input type="hidden" id="restaurant_latitude" name="restaurant_latitude">
+                                    <input type="hidden" id="restaurant_longitude" name="restaurant_longitude">
+                                    <div id="locationStatus" class="location-note mt-2">Choose a location on the map. The address will update automatically.</div>
+                                </div>
 
                                 <div class="row">
                                     <div class="col-md-6">
@@ -438,7 +472,19 @@ $hasPageWallpaper = $pageWallpaperRel !== null;
         </div>
     </div>
 
-    <!-- Map JS removed -->
+    <script>
+        window.FoodDashRestaurantLocationMapConfig = {
+            mapElementId: 'restaurant-location-map',
+            latitudeInputId: 'restaurant_latitude',
+            longitudeInputId: 'restaurant_longitude',
+            addressInputId: 'restaurant_address',
+            useCurrentLocationButtonId: 'useCurrentLocationBtn',
+            statusElementId: 'locationStatus',
+            editableByDefault: true
+        };
+    </script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="<?= base_url('js/restaurant-location-map.js') ?>"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

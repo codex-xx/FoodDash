@@ -3,6 +3,32 @@
 <?php $this->setVar('pageTitle', 'Store Settings — FoodDash'); ?>
 
 <?= $this->section('head') ?>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<style>
+  #restaurant-location-map {
+    height: 360px;
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+  }
+
+  .location-metric {
+    background: #f8f9fa;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 0.75rem;
+    padding: 0.85rem 1rem;
+  }
+
+  .location-metric .metric-label {
+    display: block;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6c757d;
+    margin-bottom: 0.2rem;
+  }
+</style>
 <?= $this->endSection() ?>
 
 <?= $this->section('content') ?>
@@ -51,9 +77,49 @@
           </div>
 
           <div class="mb-3">
-            <label for="restaurant_address" class="form-label">Address</label>
-            <textarea class="form-control" id="restaurant_address" name="address" rows="3"><?= esc($restaurant['address'] ?? '') ?></textarea>
-            <div class="form-text">Your restaurant's physical address</div>
+            <label for="restaurant_address" class="form-label">Complete Address</label>
+            <textarea class="form-control" id="restaurant_address" name="address" rows="3"><?= esc($restaurant['restaurant_address'] ?? $restaurant['address'] ?? '') ?></textarea>
+            <div class="form-text">Your restaurant's full physical address. Drag the map pin or use your current location to update it automatically.</div>
+          </div>
+
+          <div class="mb-3">
+            <label for="delivery_radius_km" class="form-label">Delivery Radius (km)</label>
+            <input type="number" class="form-control" id="delivery_radius_km" name="delivery_radius_km" min="0.1" step="0.1" value="<?= esc($restaurant['delivery_radius_km'] ?? '') ?>">
+            <div class="form-text">Used to define how far this restaurant can deliver. You can update it anytime.</div>
+          </div>
+
+          <div class="card border-0 bg-light mb-4">
+            <div class="card-body">
+              <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-3">
+                <div>
+                  <h5 class="card-title mb-1"><i class="bi bi-geo-alt"></i> Restaurant Location</h5>
+                  <div class="text-muted small">Use Edit to adjust the pin, Save to store it, or the current location button to auto-fill it.</div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                  <button type="button" class="btn btn-outline-secondary" id="editLocationBtn">
+                    <i class="bi bi-pencil-square"></i> Edit Location
+                  </button>
+                  <button type="button" class="btn btn-outline-primary" id="useCurrentLocationBtn">
+                    <i class="bi bi-crosshair"></i> Use My Current Location
+                  </button>
+                  <button type="button" class="btn btn-primary" id="saveLocationBtn">
+                    <i class="bi bi-check-circle"></i> Save Location
+                  </button>
+                </div>
+              </div>
+
+              <div
+                id="restaurant-location-map"
+                data-initial-lat="<?= esc($restaurant['restaurant_latitude'] ?? '') ?>"
+                data-initial-lng="<?= esc($restaurant['restaurant_longitude'] ?? '') ?>"
+                data-initial-address="<?= esc($restaurant['restaurant_address'] ?? $restaurant['address'] ?? '') ?>"
+              ></div>
+
+              <input type="hidden" id="restaurant_latitude" name="restaurant_latitude" value="<?= esc($restaurant['restaurant_latitude'] ?? '') ?>">
+              <input type="hidden" id="restaurant_longitude" name="restaurant_longitude" value="<?= esc($restaurant['restaurant_longitude'] ?? '') ?>">
+
+              <div id="locationStatus" class="form-text mt-2">Set the pin first, then save to store the location for future web and mobile use.</div>
+            </div>
           </div>
 
 
@@ -219,13 +285,14 @@
   const originalData = {
     name: document.getElementById('restaurant_name').value,
     address: document.getElementById('restaurant_address').value,
+    latitude: document.getElementById('restaurant_latitude').value,
+    longitude: document.getElementById('restaurant_longitude').value,
+    delivery_radius_km: document.getElementById('delivery_radius_km').value,
     opening_hours: document.getElementById('opening_hours').value,
     is_open: document.getElementById('is_open').value
   };
   let restaurantCsrfName = '<?= csrf_token() ?>';
   let restaurantCsrfHash = '<?= csrf_hash() ?>';
-
-
 
   function applyStoreOpenState(isOpen) {
     const hidden = document.getElementById('is_open');
@@ -245,6 +312,46 @@
     helper.textContent = isOpen
       ? 'Visible as open to customers'
       : 'Temporarily not accepting new orders';
+  }
+
+  function refreshLocationWidget(latitude, longitude, address) {
+    document.getElementById('restaurant_latitude').value = latitude || '';
+    document.getElementById('restaurant_longitude').value = longitude || '';
+
+    if (typeof address === 'string') {
+      document.getElementById('restaurant_address').value = address;
+    }
+
+    if (window.FoodDashRestaurantLocationMap && typeof window.FoodDashRestaurantLocationMap.setLocation === 'function') {
+      window.FoodDashRestaurantLocationMap.setLocation(latitude, longitude, address, { skipReverseGeocode: true });
+    }
+  }
+
+  function setMapEditing(enabled) {
+    if (!window.FoodDashRestaurantLocationMap || typeof window.FoodDashRestaurantLocationMap.setEditingEnabled !== 'function') {
+      return;
+    }
+
+    window.FoodDashRestaurantLocationMap.setEditingEnabled(enabled);
+
+    const editBtn = document.getElementById('editLocationBtn');
+    const saveBtn = document.getElementById('saveLocationBtn');
+
+    if (editBtn) {
+      editBtn.innerHTML = enabled
+        ? '<i class="bi bi-lock"></i> Lock Location'
+        : '<i class="bi bi-pencil-square"></i> Edit Location';
+    }
+  }
+
+  function submitRestaurantSettings(formData) {
+    return fetch('<?= site_url('settings/update') ?>', {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: formData
+    }).then(response => response.json());
   }
 
   function to24Hour(timeText) {
@@ -417,9 +524,16 @@
   function resetForm() {
     document.getElementById('restaurant_name').value = originalData.name;
     document.getElementById('restaurant_address').value = originalData.address;
+    document.getElementById('restaurant_latitude').value = originalData.latitude;
+    document.getElementById('restaurant_longitude').value = originalData.longitude;
+    document.getElementById('delivery_radius_km').value = originalData.delivery_radius_km;
     applyScheduleToUI(parseOpeningHours(originalData.opening_hours));
     refreshOpeningHoursField();
     applyStoreOpenState(originalData.is_open === '1');
+    if (window.FoodDashRestaurantLocationMap && typeof window.FoodDashRestaurantLocationMap.reset === 'function') {
+      window.FoodDashRestaurantLocationMap.reset(originalData.latitude, originalData.longitude, originalData.address);
+    }
+    setMapEditing(false);
     document.getElementById('restaurant_logo').value = '';
     document.getElementById('logoPreview').style.display = 'none';
     clearMessages();
@@ -458,19 +572,15 @@
 
     formData.append('name', document.getElementById('restaurant_name').value);
     formData.append('address', document.getElementById('restaurant_address').value);
+    formData.append('restaurant_latitude', document.getElementById('restaurant_latitude').value);
+    formData.append('restaurant_longitude', document.getElementById('restaurant_longitude').value);
+    formData.append('delivery_radius_km', document.getElementById('delivery_radius_km').value);
     formData.append('opening_hours', document.getElementById('opening_hours').value);
     formData.append('is_open', document.getElementById('is_open').value);
 
     toggle.disabled = true;
 
-    return fetch('<?= site_url('settings/update') ?>', {
-      method: 'POST',
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: formData
-    })
-    .then(response => response.json())
+    return submitRestaurantSettings(formData)
     .then(data => {
       if (data.success) {
         originalData.is_open = formData.get('is_open');
@@ -510,23 +620,28 @@
 
     const formData = new FormData(this);
 
-    fetch('<?= site_url('settings/update') ?>', {
-      method: 'POST',
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: formData
-    })
-    .then(response => response.json())
+    submitRestaurantSettings(formData)
     .then(data => {
       if (data.success) {
         showMessage(data.message, 'success');
         
         // Update original data
         originalData.name = formData.get('name');
-        originalData.address = formData.get('address');
+        originalData.address = data.address || formData.get('address');
+        originalData.latitude = data.latitude !== null && data.latitude !== undefined
+          ? String(data.latitude)
+          : formData.get('restaurant_latitude');
+        originalData.longitude = data.longitude !== null && data.longitude !== undefined
+          ? String(data.longitude)
+          : formData.get('restaurant_longitude');
+        originalData.delivery_radius_km = data.delivery_radius_km !== null && data.delivery_radius_km !== undefined
+          ? String(data.delivery_radius_km)
+          : formData.get('delivery_radius_km');
         originalData.opening_hours = formData.get('opening_hours');
         originalData.is_open = formData.get('is_open');
+
+        refreshLocationWidget(originalData.latitude, originalData.longitude, originalData.address);
+  setMapEditing(false);
         
         // Update logo preview if new logo was uploaded
         if (data.logo) {
@@ -563,11 +678,94 @@
     });
   });
 
+  document.getElementById('editLocationBtn').addEventListener('click', function() {
+    if (!window.FoodDashRestaurantLocationMap || typeof window.FoodDashRestaurantLocationMap.setEditingEnabled !== 'function') {
+      return;
+    }
+
+    const nextState = !window.FoodDashRestaurantLocationMap.isEditingEnabled();
+    setMapEditing(nextState);
+
+    const status = document.getElementById('locationStatus');
+    if (status) {
+      status.textContent = nextState
+        ? 'Editing enabled. Drag the marker to adjust the restaurant location, then click Save Location.'
+        : 'Location editing locked. Click Edit Location to make changes again.';
+    }
+  });
+
+  document.getElementById('saveLocationBtn').addEventListener('click', function() {
+    clearMessages();
+
+    const formData = new FormData();
+    formData.append('name', document.getElementById('restaurant_name').value);
+    formData.append('address', document.getElementById('restaurant_address').value);
+    formData.append('restaurant_latitude', document.getElementById('restaurant_latitude').value);
+    formData.append('restaurant_longitude', document.getElementById('restaurant_longitude').value);
+    formData.append('delivery_radius_km', document.getElementById('delivery_radius_km').value);
+    formData.append('opening_hours', document.getElementById('opening_hours').value);
+    formData.append('is_open', document.getElementById('is_open').value);
+
+    const saveBtn = this;
+    const originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+
+    submitRestaurantSettings(formData)
+      .then(data => {
+        if (data.success) {
+          showMessage('Restaurant location updated successfully.', 'success');
+          originalData.address = data.address || formData.get('address');
+          originalData.latitude = data.latitude !== null && data.latitude !== undefined
+            ? String(data.latitude)
+            : formData.get('restaurant_latitude');
+          originalData.longitude = data.longitude !== null && data.longitude !== undefined
+            ? String(data.longitude)
+            : formData.get('restaurant_longitude');
+          originalData.delivery_radius_km = data.delivery_radius_km !== null && data.delivery_radius_km !== undefined
+            ? String(data.delivery_radius_km)
+            : formData.get('delivery_radius_km');
+
+          refreshLocationWidget(originalData.latitude, originalData.longitude, originalData.address);
+          setMapEditing(false);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+        }
+
+        const errorMsg = typeof data.error === 'object'
+          ? Object.values(data.error).join(', ')
+          : data.error;
+        showMessage(errorMsg, 'error');
+      })
+      .catch(error => {
+        showMessage('An error occurred while saving the location. Please try again.', 'error');
+        console.error('Error:', error);
+      })
+      .finally(() => {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
+      });
+  });
+
   document.getElementById('is_open_toggle').addEventListener('change', function() {
     applyStoreOpenState(this.checked);
     saveStoreAvailabilityState();
   });
 
   applyStoreOpenState(document.getElementById('is_open').value === '1');
+  setMapEditing(false);
 </script>
+<script>
+  window.FoodDashRestaurantLocationMapConfig = {
+    mapElementId: 'restaurant-location-map',
+    latitudeInputId: 'restaurant_latitude',
+    longitudeInputId: 'restaurant_longitude',
+    addressInputId: 'restaurant_address',
+    useCurrentLocationButtonId: 'useCurrentLocationBtn',
+    statusElementId: 'locationStatus',
+    editableByDefault: false
+  };
+</script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="<?= base_url('js/restaurant-location-map.js') ?>"></script>
 <?= $this->endSection() ?>

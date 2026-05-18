@@ -2,15 +2,14 @@
 
 namespace App\Database\Seeds;
 
+use CodeIgniter\CLI\CLI;
 use CodeIgniter\Database\Seeder;
 
 /**
  * One-time seeder to prune permissions that have no corresponding dashboard page
  * and re-sync the two built-in system roles to only the permissions that exist.
- *
- * Run: php spark db:seed PrunePhantomPermissions
  */
-class PrunePhantomPermissions extends Seeder
+class PrunePhantomPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
@@ -67,7 +66,7 @@ class PrunePhantomPermissions extends Seeder
         // ------------------------------------------------------------------ //
         $systemRoles = [
             'admin'      => ['access_admin_dashboard', 'manage_roles', 'manage_staff_accounts', 'manage_restaurant_information', 'manage_drivers', 'view_orders'],
-            'restaurant' => ['manage_menu_items', 'accept_reject_orders', 'prepare_orders', 'update_order_status', 'view_orders'],
+            'restaurant' => ['manage_menu_items', 'accept_reject_orders', 'prepare_orders', 'update_order_status', 'view_orders', 'manage_restaurant_information'],
         ];
 
         foreach ($systemRoles as $slug => $permKeys) {
@@ -100,14 +99,5 @@ class PrunePhantomPermissions extends Seeder
         }
 
         CLI::write(PHP_EOL . 'Permission pruning complete.', 'white');
-    }
-}
-
-// Stub CLI if running outside spark (should not normally happen)
-if (! class_exists('CLI')) {
-    class CLI {
-        public static function write(string $text, string $color = ''): void {
-            echo $text . PHP_EOL;
-        }
     }
 }

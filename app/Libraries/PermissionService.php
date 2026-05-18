@@ -302,7 +302,7 @@ class PermissionService
             ],
             'restaurant' => [
                 'manage_menu_items', 'accept_reject_orders', 'prepare_orders',
-                'update_order_status', 'view_orders',
+                'update_order_status', 'view_orders', 'manage_restaurant_information',
             ],
             'driver' => ['view_orders', 'update_order_status'],
             'customer' => ['view_orders'],

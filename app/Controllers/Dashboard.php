@@ -837,9 +837,21 @@ class Dashboard extends BaseController
         }
 
         $restaurantId = (int) $session->get('restaurant_id');
-        $restaurant = (new RestaurantModel())
-            ->select('id, name, address, latitude, longitude')
-            ->find($restaurantId);
+        $query = (new RestaurantModel())->select('id, name, address, latitude, longitude');
+
+        if (db_connect()->fieldExists('restaurant_address', 'restaurants')) {
+            $query->select('restaurant_address');
+        }
+
+        if (db_connect()->fieldExists('restaurant_latitude', 'restaurants')) {
+            $query->select('restaurant_latitude');
+        }
+
+        if (db_connect()->fieldExists('restaurant_longitude', 'restaurants')) {
+            $query->select('restaurant_longitude');
+        }
+
+        $restaurant = $query->find($restaurantId);
 
         if (! $restaurant) {
             return $this->response->setStatusCode(404)->setJSON(['error' => 'Restaurant not found']);
@@ -848,9 +860,13 @@ class Dashboard extends BaseController
         return $this->response->setJSON([
             'id' => (int) $restaurant['id'],
             'name' => (string) ($restaurant['name'] ?? ''),
-            'address' => (string) ($restaurant['address'] ?? ''),
-            'latitude' => $restaurant['latitude'] !== null ? (float) $restaurant['latitude'] : null,
-            'longitude' => $restaurant['longitude'] !== null ? (float) $restaurant['longitude'] : null,
+            'address' => (string) ($restaurant['restaurant_address'] ?? $restaurant['address'] ?? ''),
+            'latitude' => array_key_exists('restaurant_latitude', $restaurant) && $restaurant['restaurant_latitude'] !== null
+                ? (float) $restaurant['restaurant_latitude']
+                : ($restaurant['latitude'] !== null ? (float) $restaurant['latitude'] : null),
+            'longitude' => array_key_exists('restaurant_longitude', $restaurant) && $restaurant['restaurant_longitude'] !== null
+                ? (float) $restaurant['restaurant_longitude']
+                : ($restaurant['longitude'] !== null ? (float) $restaurant['longitude'] : null),
         ]);
     }
 
@@ -875,8 +891,20 @@ class Dashboard extends BaseController
             'longitude' => (float) $lng,
         ];
 
+        if (db_connect()->fieldExists('restaurant_latitude', 'restaurants')) {
+            $updateData['restaurant_latitude'] = (float) $lat;
+        }
+
+        if (db_connect()->fieldExists('restaurant_longitude', 'restaurants')) {
+            $updateData['restaurant_longitude'] = (float) $lng;
+        }
+
         if ($address !== '') {
             $updateData['address'] = mb_substr($address, 0, 255);
+
+            if (db_connect()->fieldExists('restaurant_address', 'restaurants')) {
+                $updateData['restaurant_address'] = mb_substr($address, 0, 1000);
+            }
         }
 
         $ok = (new RestaurantModel())->update($restaurantId, $updateData);
@@ -900,19 +928,32 @@ class Dashboard extends BaseController
             return $this->response->setStatusCode(403)->setJSON(['error' => 'Access denied']);
         }
 
-        $rows = (new RestaurantModel())
+        $query = (new RestaurantModel())
             ->select('id, name, address, latitude, longitude')
             ->where('latitude IS NOT NULL', null, false)
-            ->where('longitude IS NOT NULL', null, false)
-            ->findAll();
+            ->where('longitude IS NOT NULL', null, false);
+
+        if (db_connect()->fieldExists('restaurant_address', 'restaurants')) {
+            $query->select('restaurant_address');
+        }
+
+        if (db_connect()->fieldExists('restaurant_latitude', 'restaurants')) {
+            $query->select('restaurant_latitude');
+        }
+
+        if (db_connect()->fieldExists('restaurant_longitude', 'restaurants')) {
+            $query->select('restaurant_longitude');
+        }
+
+        $rows = $query->findAll();
 
         $restaurants = array_map(static function (array $row): array {
             return [
                 'id' => (int) $row['id'],
                 'name' => (string) ($row['name'] ?? ''),
-                'address' => (string) ($row['address'] ?? ''),
-                'latitude' => (float) $row['latitude'],
-                'longitude' => (float) $row['longitude'],
+                'address' => (string) ($row['restaurant_address'] ?? $row['address'] ?? ''),
+                'latitude' => array_key_exists('restaurant_latitude', $row) && $row['restaurant_latitude'] !== null ? (float) $row['restaurant_latitude'] : (float) $row['latitude'],
+                'longitude' => array_key_exists('restaurant_longitude', $row) && $row['restaurant_longitude'] !== null ? (float) $row['restaurant_longitude'] : (float) $row['longitude'],
             ];
         }, $rows);
 
