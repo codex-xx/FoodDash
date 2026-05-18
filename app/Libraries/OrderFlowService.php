@@ -6,6 +6,7 @@ use App\Models\DeliveryTypeModel;
 use App\Models\DriverModel;
 use App\Models\OrderModel;
 use App\Models\OrderStatusLogModel;
+use App\Models\RestaurantModel;
 
 class OrderFlowService
 {
@@ -94,6 +95,157 @@ class OrderFlowService
             ->first();
 
         return $row ? (int) $row['id'] : null;
+    }
+
+    public function calculateDistanceKm(?float $latitudeOne, ?float $longitudeOne, ?float $latitudeTwo, ?float $longitudeTwo): ?float
+    {
+        if ($latitudeOne === null || $longitudeOne === null || $latitudeTwo === null || $longitudeTwo === null) {
+            return null;
+        }
+
+        $earthRadius = 6371;
+        $latDelta = deg2rad($latitudeTwo - $latitudeOne);
+        $lngDelta = deg2rad($longitudeTwo - $longitudeOne);
+
+        $a = sin($latDelta / 2) ** 2
+            + cos(deg2rad($latitudeOne)) * cos(deg2rad($latitudeTwo)) * sin($lngDelta / 2) ** 2;
+
+        return 2 * $earthRadius * atan2(sqrt($a), sqrt(1 - $a));
+    }
+
+    public function getRestaurantDeliveryRadius(array $restaurant): ?float
+    {
+        $radius = $restaurant['delivery_radius_km'] ?? null;
+
+        if (! is_numeric($radius)) {
+            return null;
+        }
+
+        $radius = (float) $radius;
+
+        return $radius > 0 ? $radius : null;
+    }
+
+    public function resolveRestaurantLocation(array $restaurant): array
+    {
+        $latitude = $restaurant['restaurant_latitude'] ?? $restaurant['latitude'] ?? null;
+        $longitude = $restaurant['restaurant_longitude'] ?? $restaurant['longitude'] ?? null;
+
+        return [
+            'latitude' => is_numeric($latitude) ? (float) $latitude : null,
+            'longitude' => is_numeric($longitude) ? (float) $longitude : null,
+        ];
+    }
+
+    public function resolveDriverLocation(array $driver): array
+    {
+        $latitude = $driver['latitude'] ?? $driver['current_latitude'] ?? null;
+        $longitude = $driver['longitude'] ?? $driver['current_longitude'] ?? null;
+
+        return [
+            'latitude' => is_numeric($latitude) ? (float) $latitude : null,
+            'longitude' => is_numeric($longitude) ? (float) $longitude : null,
+        ];
+    }
+
+    public function canDriverAcceptRestaurantOrder(array $driver, array $restaurant): array
+    {
+        $radius = $this->getRestaurantDeliveryRadius($restaurant);
+        $restaurantLocation = $this->resolveRestaurantLocation($restaurant);
+        $driverLocation = $this->resolveDriverLocation($driver);
+
+        $hasLocationData = $radius !== null
+            && $restaurantLocation['latitude'] !== null
+            && $restaurantLocation['longitude'] !== null
+            && $driverLocation['latitude'] !== null
+            && $driverLocation['longitude'] !== null;
+
+        if (! $hasLocationData) {
+            return [
+                'allowed' => true,
+                'location_ready' => false,
+                'distance_km' => null,
+                'radius_km' => $radius,
+                'reason' => null,
+            ];
+        }
+
+        $distance = $this->calculateDistanceKm(
+            $driverLocation['latitude'],
+            $driverLocation['longitude'],
+            $restaurantLocation['latitude'],
+            $restaurantLocation['longitude']
+        );
+
+        return [
+            'allowed' => $distance !== null && $distance <= $radius,
+            'location_ready' => true,
+            'distance_km' => $distance,
+            'radius_km' => $radius,
+            'reason' => $distance !== null && $distance > $radius
+                ? 'Driver is outside the restaurant delivery radius.'
+                : null,
+        ];
+    }
+
+    public function getNearbyEligibleDriversForRestaurant(int $restaurantId, ?int $limit = 20): array
+    {
+        $restaurant = (new RestaurantModel())->find($restaurantId);
+        if (! $restaurant) {
+            return ['ok' => false, 'message' => 'Restaurant not found', 'code' => 404];
+        }
+
+        $radius = $this->getRestaurantDeliveryRadius($restaurant);
+        $restaurantLocation = $this->resolveRestaurantLocation($restaurant);
+
+        if ($radius === null || $restaurantLocation['latitude'] === null || $restaurantLocation['longitude'] === null) {
+            return [
+                'ok' => false,
+                'message' => 'Restaurant location and delivery radius are required before fetching nearby riders.',
+                'code' => 422,
+            ];
+        }
+
+        $drivers = $this->driverModel
+            ->select('id, user_id, name, phone, address, latitude, longitude, status, is_active, vehicle_type, license_number, updated_at')
+            ->where('status', 'approved')
+            ->where('is_active', 1)
+            ->findAll();
+
+        $eligibleDrivers = [];
+        foreach ($drivers as $driver) {
+            $eligibility = $this->canDriverAcceptRestaurantOrder($driver, $restaurant);
+            if (! ($eligibility['location_ready'] ?? false) || ! ($eligibility['allowed'] ?? false)) {
+                continue;
+            }
+
+            $eligibleDrivers[] = [
+                'id' => (int) $driver['id'],
+                'name' => $driver['name'] ?? '',
+                'phone' => $driver['phone'] ?? null,
+                'address' => $driver['address'] ?? null,
+                'latitude' => isset($driver['latitude']) && is_numeric($driver['latitude']) ? (float) $driver['latitude'] : null,
+                'longitude' => isset($driver['longitude']) && is_numeric($driver['longitude']) ? (float) $driver['longitude'] : null,
+                'vehicle_type' => $driver['vehicle_type'] ?? null,
+                'license_number' => $driver['license_number'] ?? null,
+                'distance_km' => isset($eligibility['distance_km']) ? round((float) $eligibility['distance_km'], 2) : null,
+            ];
+        }
+
+        usort($eligibleDrivers, static function (array $left, array $right): int {
+            return ($left['distance_km'] ?? PHP_FLOAT_MAX) <=> ($right['distance_km'] ?? PHP_FLOAT_MAX);
+        });
+
+        if ($limit !== null && $limit > 0) {
+            $eligibleDrivers = array_slice($eligibleDrivers, 0, $limit);
+        }
+
+        return [
+            'ok' => true,
+            'restaurant' => $restaurant,
+            'delivery_radius_km' => $radius,
+            'nearby_riders' => $eligibleDrivers,
+        ];
     }
 
     public function updateStatus(int $orderId, string $toStatus, string $actorRole, ?int $actorId = null, ?string $notes = null): array
@@ -224,6 +376,18 @@ class OrderFlowService
             return ['ok' => false, 'message' => 'Driver is unavailable', 'code' => 422];
         }
 
+        $restaurant = (new RestaurantModel())->find((int) ($order['restaurant_id'] ?? 0));
+        if ($restaurant) {
+            $eligibility = $this->canDriverAcceptRestaurantOrder($driver, $restaurant);
+            if (($eligibility['location_ready'] ?? false) && ! ($eligibility['allowed'] ?? false)) {
+                return [
+                    'ok' => false,
+                    'message' => $eligibility['reason'] ?? 'Driver is outside the restaurant delivery radius.',
+                    'code' => 422,
+                ];
+            }
+        }
+
         $this->orderModel->update($orderId, [
             'driver_id' => $driverId,
             'status' => self::STATUS_PICKED_UP,
@@ -260,6 +424,20 @@ class OrderFlowService
         $currentDriverId = (int) ($order['driver_id'] ?? 0);
         if ($currentDriverId > 0 && $currentDriverId !== $driverId) {
             return ['ok' => false, 'message' => 'Order already assigned to another driver', 'code' => 409];
+        }
+
+        $driver = $this->driverModel->find($driverId);
+        $restaurant = (new RestaurantModel())->find((int) ($order['restaurant_id'] ?? 0));
+
+        if ($driver && $restaurant) {
+            $eligibility = $this->canDriverAcceptRestaurantOrder($driver, $restaurant);
+            if (($eligibility['location_ready'] ?? false) && ! ($eligibility['allowed'] ?? false)) {
+                return [
+                    'ok' => false,
+                    'message' => $eligibility['reason'] ?? 'Driver is outside the restaurant delivery radius.',
+                    'code' => 422,
+                ];
+            }
         }
 
         if ($currentDriverId === 0) {

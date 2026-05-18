@@ -503,10 +503,26 @@ class OrderController extends ResourceController
             $ordersById[(int) $order['id']] = $order;
         }
 
-        $orders = array_values($ordersById);
+        $orders = [];
+        $driver = $this->request->driver ?? null;
 
-        foreach ($orders as &$order) {
+        foreach (array_values($ordersById) as $order) {
             $order = $this->enrichOrderForDriver($order);
+
+            if (empty($order['driver_id']) && $driver) {
+                $eligibility = $this->orderFlow->canDriverAcceptRestaurantOrder($driver, $order['restaurant'] ?? []);
+
+                if (($eligibility['location_ready'] ?? false) && ! ($eligibility['allowed'] ?? false)) {
+                    continue;
+                }
+
+                if (isset($eligibility['distance_km']) && $eligibility['distance_km'] !== null) {
+                    $order['distance_to_restaurant_km'] = round((float) $eligibility['distance_km'], 2);
+                    $order['delivery_radius_km'] = $eligibility['radius_km'] ?? null;
+                }
+            }
+
+            $orders[] = $order;
         }
 
         return $this->respond([
@@ -574,6 +590,74 @@ class OrderController extends ResourceController
             'success' => true,
             'message' => 'Order accepted',
             'data'    => $this->enrichOrderForDriver($result['order'])
+        ]);
+    }
+
+    /**
+     * Fetch nearby eligible riders for a restaurant or order.
+     * GET /api/restaurants/:id/nearby-riders
+     * GET /api/orders/:id/nearby-riders
+     */
+    public function nearbyRiders($id = null, string $source = 'restaurant')
+    {
+        $actor = $this->resolveActor();
+
+        if (! in_array($actor['role'], ['restaurant', 'admin'], true)) {
+            return $this->respond([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        $restaurantId = (int) $id;
+        if ($source === 'order') {
+            $order = $this->orderModel->find($restaurantId);
+            if (! $order) {
+                return $this->respond([
+                    'success' => false,
+                    'message' => 'Order not found'
+                ], 404);
+            }
+
+            if ($actor['role'] === 'restaurant' && (int) ($order['restaurant_id'] ?? 0) !== (int) ($actor['restaurant_id'] ?? 0)) {
+                return $this->respond([
+                    'success' => false,
+                    'message' => 'You are not allowed to access this order'
+                ], 403);
+            }
+
+            $restaurantId = (int) ($order['restaurant_id'] ?? 0);
+        } elseif ($actor['role'] === 'restaurant' && $restaurantId !== (int) ($actor['restaurant_id'] ?? 0)) {
+            return $this->respond([
+                'success' => false,
+                'message' => 'You are not allowed to access this restaurant'
+            ], 403);
+        }
+
+        if ($restaurantId <= 0) {
+            return $this->respond([
+                'success' => false,
+                'message' => 'restaurant_id is required'
+            ], 422);
+        }
+
+        $limit = (int) ($this->request->getGet('limit') ?? 20);
+        $result = $this->orderFlow->getNearbyEligibleDriversForRestaurant($restaurantId, $limit > 0 ? $limit : 20);
+
+        if (! ($result['ok'] ?? false)) {
+            return $this->respond([
+                'success' => false,
+                'message' => $result['message'] ?? 'Unable to fetch nearby riders'
+            ], (int) ($result['code'] ?? 400));
+        }
+
+        return $this->respond([
+            'success' => true,
+            'data' => [
+                'restaurant' => $result['restaurant'],
+                'delivery_radius_km' => $result['delivery_radius_km'],
+                'nearby_riders' => $result['nearby_riders'],
+            ],
         ]);
     }
 

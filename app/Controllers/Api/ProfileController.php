@@ -56,21 +56,21 @@ class ProfileController extends ResourceController
         $customer = $this->request->customer ?? null;
 
         if ($customer) {
+            $json = $this->getPayload();
             $data = [];
-            
-            $json = $this->request->getJSON(true);
-            if (!$json) {
-                $json = $this->request->getPost();
+
+            foreach (['name', 'phone', 'address'] as $field) {
+                if (array_key_exists($field, $json)) {
+                    $data[$field] = $json[$field];
+                }
             }
 
-            if (isset($json['name'])) {
-                $data['name'] = $json['name'];
+            if (array_key_exists('latitude', $json) && is_numeric($json['latitude'])) {
+                $data['latitude'] = (float) $json['latitude'];
             }
-            if (isset($json['phone'])) {
-                $data['phone'] = $json['phone'];
-            }
-            if (isset($json['address'])) {
-                $data['address'] = $json['address'];
+
+            if (array_key_exists('longitude', $json) && is_numeric($json['longitude'])) {
+                $data['longitude'] = (float) $json['longitude'];
             }
 
             if (!empty($data)) {
@@ -102,21 +102,21 @@ class ProfileController extends ResourceController
         $driver = $this->request->driver ?? null;
 
         if ($driver) {
+            $json = $this->getPayload();
             $data = [];
-            
-            $json = $this->request->getJSON(true);
-            if (!$json) {
-                $json = $this->request->getPost();
+
+            foreach (['name', 'phone', 'vehicle_type', 'address'] as $field) {
+                if (array_key_exists($field, $json)) {
+                    $data[$field] = $json[$field];
+                }
             }
 
-            if (isset($json['name'])) {
-                $data['name'] = $json['name'];
+            if (array_key_exists('latitude', $json) && is_numeric($json['latitude'])) {
+                $data['latitude'] = (float) $json['latitude'];
             }
-            if (isset($json['phone'])) {
-                $data['phone'] = $json['phone'];
-            }
-            if (isset($json['vehicle_type'])) {
-                $data['vehicle_type'] = $json['vehicle_type'];
+
+            if (array_key_exists('longitude', $json) && is_numeric($json['longitude'])) {
+                $data['longitude'] = (float) $json['longitude'];
             }
 
             if (!empty($data)) {
@@ -136,7 +136,6 @@ class ProfileController extends ResourceController
 
             $updatedDriver = $driverModel->find($driver['id']);
             unset($updatedDriver['password']);
-            unset($updatedDriver['current_latitude'], $updatedDriver['current_longitude']);
 
             return $this->respond([
                 'success' => true,
@@ -166,9 +165,76 @@ class ProfileController extends ResourceController
             ], 403);
         }
 
+        $payload = $this->getPayload();
+        $location = $this->normalizeLocationPayload($payload);
+
+        if (! empty($location['errors'])) {
+            return $this->respond([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $location['errors'],
+            ], 400);
+        }
+
+        $driverModel = new DriverModel();
+        $driverModel->update($driver['id'], [
+            'address' => $location['address'],
+            'latitude' => $location['latitude'],
+            'longitude' => $location['longitude'],
+        ]);
+
         return $this->respond([
             'success' => true,
-            'message' => 'Location tracking is disabled'
+            'message' => 'Location saved successfully',
+            'data' => [
+                'address' => $location['address'],
+                'latitude' => $location['latitude'],
+                'longitude' => $location['longitude'],
+            ],
+        ]);
+    }
+
+    /**
+     * Update customer location
+     * POST /api/customer/location
+     */
+    public function updateCustomerLocation()
+    {
+        $customer = $this->request->customer ?? null;
+
+        if (!$customer) {
+            return $this->respond([
+                'success' => false,
+                'message' => 'Only customers can update location'
+            ], 403);
+        }
+
+        $payload = $this->getPayload();
+        $location = $this->normalizeLocationPayload($payload);
+
+        if (! empty($location['errors'])) {
+            return $this->respond([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $location['errors'],
+            ], 400);
+        }
+
+        $customerModel = new CustomerModel();
+        $customerModel->update($customer['id'], [
+            'address' => $location['address'],
+            'latitude' => $location['latitude'],
+            'longitude' => $location['longitude'],
+        ]);
+
+        return $this->respond([
+            'success' => true,
+            'message' => 'Location saved successfully',
+            'data' => [
+                'address' => $location['address'],
+                'latitude' => $location['latitude'],
+                'longitude' => $location['longitude'],
+            ],
         ]);
     }
 
@@ -236,5 +302,47 @@ class ProfileController extends ResourceController
             'success' => false,
             'message' => 'Unauthorized'
         ], 401);
+    }
+
+    private function getPayload(): array
+    {
+        $json = $this->request->getJSON(true);
+        if (is_array($json) && ! empty($json)) {
+            return $json;
+        }
+
+        $post = $this->request->getPost();
+        return is_array($post) ? $post : [];
+    }
+
+    private function normalizeLocationPayload(array $payload): array
+    {
+        $address = trim((string) ($payload['address'] ?? $payload['full_address'] ?? $payload['location'] ?? ''));
+        $latitudeValue = $payload['latitude'] ?? $payload['lat'] ?? null;
+        $longitudeValue = $payload['longitude'] ?? $payload['lng'] ?? null;
+
+        $latitude = is_numeric($latitudeValue) ? (float) $latitudeValue : null;
+        $longitude = is_numeric($longitudeValue) ? (float) $longitudeValue : null;
+
+        $errors = [];
+
+        if ($address === '') {
+            $errors['address'] = 'Address is required.';
+        }
+
+        if ($latitude === null) {
+            $errors['latitude'] = 'Latitude is required and must be numeric.';
+        }
+
+        if ($longitude === null) {
+            $errors['longitude'] = 'Longitude is required and must be numeric.';
+        }
+
+        return [
+            'address' => $address,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'errors' => $errors,
+        ];
     }
 }

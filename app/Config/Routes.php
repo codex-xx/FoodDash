@@ -167,6 +167,9 @@ $routes->put('api/profile', 'Api\ProfileController::update');
 $routes->post('api/profile', 'Api\ProfileController::update');
 $routes->post('api/fcm-token', 'Api\ProfileController::updateFcmToken');
 $routes->post('api/driver/location', 'Api\ProfileController::updateLocation');
+$routes->post('api/customer/location', 'Api\ProfileController::updateCustomerLocation');
+$routes->post('api/customer/location.php', 'Api\ProfileController::updateCustomerLocation');
+$routes->post('api/driver/location.php', 'Api\ProfileController::updateLocation');
 
 // Notifications (Authenticated - Customer)
 $routes->get('api/notifications', 'Api\NotificationsController::index');
@@ -182,6 +185,8 @@ $routes->post('api/orders', 'Api\OrderController::create');
 $routes->post('api/place_order', 'Api\OrderController::create');
 $routes->post('api/place_order.php', 'Api\OrderController::create');
 $routes->get('api/orders/available', 'Api\OrderController::available');
+$routes->get('api/restaurants/(:num)/nearby-riders', 'Api\OrderController::nearbyRiders/$1/restaurant');
+$routes->get('api/orders/(:num)/nearby-riders', 'Api\OrderController::nearbyRiders/$1/order');
 $routes->get('api/orders/(:num)', 'Api\OrderController::show/$1');
 $routes->put('api/orders/(:num)/status', 'Api\OrderController::updateStatus/$1');
 $routes->post('api/orders/(:num)/status', 'Api\OrderController::updateStatus/$1');

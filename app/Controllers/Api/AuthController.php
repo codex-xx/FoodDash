@@ -42,6 +42,38 @@ class AuthController extends ResourceController
         return (string) ($this->getFirstInput(['address', 'full_address', 'location'], '') ?? '');
     }
 
+    protected function resolveRegistrationLocationInputs(): array
+    {
+        $address = trim((string) $this->resolveAddressInput());
+
+        $latitudeValue = $this->getFirstInput(['latitude', 'lat', 'location_latitude']);
+        $longitudeValue = $this->getFirstInput(['longitude', 'lng', 'location_longitude']);
+
+        $latitude = is_numeric($latitudeValue) ? (float) $latitudeValue : null;
+        $longitude = is_numeric($longitudeValue) ? (float) $longitudeValue : null;
+
+        $errors = [];
+
+        if ($address === '') {
+            $errors['address'] = 'Address is required.';
+        }
+
+        if ($latitude === null) {
+            $errors['latitude'] = 'Latitude is required and must be numeric.';
+        }
+
+        if ($longitude === null) {
+            $errors['longitude'] = 'Longitude is required and must be numeric.';
+        }
+
+        return [
+            'address' => $address,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'errors' => $errors,
+        ];
+    }
+
     protected function stripDriverLocationFields(array $driver): array
     {
         unset($driver['current_latitude'], $driver['current_longitude']);
@@ -672,7 +704,7 @@ class AuthController extends ResourceController
                 'email'    => 'required|valid_email|is_unique[customers.email]',
                 'password' => 'required|min_length[6]',
                 'phone'    => 'permit_empty|max_length[20]',
-                'address'  => 'permit_empty|max_length[500]',
+                'address'  => 'permit_empty|max_length[1000]',
             ];
 
             if (!$this->validate($rules)) {
@@ -693,6 +725,15 @@ class AuthController extends ResourceController
                 ], 400);
             }
 
+            $location = $this->resolveRegistrationLocationInputs();
+            if (! empty($location['errors'])) {
+                return $this->respond([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $location['errors'],
+                ], 400);
+            }
+
             $customerModel = new CustomerModel();
 
             $data = [
@@ -700,7 +741,9 @@ class AuthController extends ResourceController
                 'email'     => $email,
                 'password'  => $this->getInput('password'),
                 'phone'     => $this->resolvePhoneInput(),
-                'address'   => $this->resolveAddressInput(),
+                'address'   => $location['address'],
+                'latitude'  => $location['latitude'],
+                'longitude' => $location['longitude'],
                 'is_active' => 1,
             ];
 
@@ -877,6 +920,15 @@ class AuthController extends ResourceController
                 ], 400);
             }
 
+            $location = $this->resolveRegistrationLocationInputs();
+            if (! empty($location['errors'])) {
+                return $this->respond([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $location['errors'],
+                ], 400);
+            }
+
             $driverModel = new DriverModel();
 
             $data = [
@@ -884,6 +936,9 @@ class AuthController extends ResourceController
                 'email'          => $email,
                 'password'       => (string) $this->getInput('password'),
                 'phone'          => $this->resolvePhoneInput(),
+                'address'        => $location['address'],
+                'latitude'       => $location['latitude'],
+                'longitude'      => $location['longitude'],
                 'vehicle_type'   => $this->getInput('vehicle_type') ?? '',
                 'license_number' => $this->getInput('license_number') ?? '',
                 'status'         => 'pending', // Needs admin approval

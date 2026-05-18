@@ -24,6 +24,8 @@ class CustomerModel extends Model
         'email_encrypted',
         'email_hash',
         'address',
+        'latitude',
+        'longitude',
         'profile_image',
         'api_token',
         'fcm_token',
