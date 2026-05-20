@@ -25,6 +25,19 @@ framework are exposed.
 
 **Please** read the user guide for a better explanation of how CI4 works!
 
+## Render Deployment
+
+This project now includes a Render blueprint in [render.yaml](render.yaml). Use the following runtime settings on Render:
+
+- Docker image: see [Dockerfile](Dockerfile)
+- Render service type: Docker
+- Environment: set `CI_ENVIRONMENT=production`
+- Database: set `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, and `DB_PORT`, or provide a `DATABASE_URL`
+- App URL: set `APP_BASE_URL` if you want to override the auto-detected Render URL
+- Mail: set `EMAIL_FROM`, `EMAIL_SMTP_HOST`, `EMAIL_SMTP_PORT`, `EMAIL_SMTP_USER`, `EMAIL_SMTP_PASS`, and optionally `EMAIL_SMTP_CRYPTO`
+
+For local container testing, you can build and run the image with Docker and expose port `10000`.
+
 ## Repository Management
 
 We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.

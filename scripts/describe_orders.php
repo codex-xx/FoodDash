@@ -1,9 +1,9 @@
 <?php
-$m = new mysqli('localhost','root','','fooddash_db');
-if (!$m) {
-    echo "connect failed\n";
-    exit(1);
-}
+
+require_once dirname(__DIR__) . '/deployment_env.php';
+
+$m = fooddash_db_connection();
+
 $res = $m->query('DESCRIBE orders');
 if (! $res) {
     echo "DESCRIBE failed: " . $m->error . "\n";

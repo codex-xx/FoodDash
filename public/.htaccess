@@ -1,56 +1,32 @@
 # Disable directory browsing
 Options -Indexes
 
-# ----------------------------------------------------------------------
-# Rewrite engine
-# ----------------------------------------------------------------------
-
-# Turning on the rewrite engine is necessary for the following rules and features.
-# FollowSymLinks must be enabled for this to work.
 <IfModule mod_rewrite.c>
 	Options +FollowSymlinks
 	RewriteEngine On
-
-	# Set the base for rewrite rules
-	RewriteBase /FoodDash/
+	RewriteBase /
 
 	# Don't rewrite requests for index.php
 	RewriteCond %{REQUEST_URI} ^index\.php
 	RewriteRule ^ - [L]
 
-	# Redirect Trailing Slashes...
+	# Redirect trailing slashes for real directories only
 	RewriteCond %{REQUEST_FILENAME} !-d
 	RewriteCond %{REQUEST_URI} (.+)/$
 	RewriteRule ^ %1 [L,R=301]
 
-	# Checks to see if the user is attempting to access a valid file,
-	# such as an image or css document, if this isn't true it sends the
-	# request to the front controller, index.php
+	# Send everything else to the front controller
 	RewriteCond %{REQUEST_FILENAME} !-f
 	RewriteCond %{REQUEST_FILENAME} !-d
 	RewriteRule ^(.*)$ index.php?/$1 [L,QSA]
 
-	# Ensure Authorization header is passed along
+	# Preserve authorization headers
 	RewriteCond %{HTTP:Authorization} .
 	RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 </IfModule>
 
 <IfModule !mod_rewrite.c>
-	# If we don't have mod_rewrite installed, all 404's
-	# can be sent to index.php, and everything works as normal.
 	ErrorDocument 404 index.php
 </IfModule>
 
-# Disable server signature start
 ServerSignature Off
-# Disable server signature end
-
-<IfModule !mod_rewrite.c>
-	# If we don't have mod_rewrite installed, all 404's
-	# can be sent to index.php, and everything works as normal.
-	ErrorDocument 404 index.php
-</IfModule>
-
-# Disable server signature start
-ServerSignature Off
-# Disable server signature end

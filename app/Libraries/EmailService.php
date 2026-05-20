@@ -6,6 +6,7 @@ require_once ROOTPATH . 'PHPMailer/PHPMailer.php';
 require_once ROOTPATH . 'PHPMailer/SMTP.php';
 require_once ROOTPATH . 'PHPMailer/Exception.php';
 
+use Config\Email as EmailConfig;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
@@ -19,15 +20,30 @@ use PHPMailer\PHPMailer\Exception;
 class EmailService
 {
     protected $mailer;
-    protected $fromEmail = 'benzmenguito123@gmail.com';
+    protected $fromEmail = '';
     protected $fromName = 'FoodDash';
     protected $smtpHost = 'smtp.gmail.com';
     protected $smtpPort = 587;
-    protected $smtpUsername = 'benzmenguito123@gmail.com';
-    protected $smtpPassword = 'jdlf djeh pggj aavu';
+    protected $smtpUsername = '';
+    protected $smtpPassword = '';
+    protected $smtpCrypto = PHPMailer::ENCRYPTION_STARTTLS;
 
     public function __construct()
     {
+        $emailConfig = config(EmailConfig::class);
+
+        if ($emailConfig instanceof EmailConfig) {
+            $this->fromEmail = $emailConfig->fromEmail;
+            $this->fromName = $emailConfig->fromName;
+            $this->smtpHost = $emailConfig->SMTPHost;
+            $this->smtpPort = $emailConfig->SMTPPort;
+            $this->smtpUsername = $emailConfig->SMTPUser;
+            $this->smtpPassword = $emailConfig->SMTPPass;
+            $this->smtpCrypto = $emailConfig->SMTPCrypto === 'ssl'
+                ? PHPMailer::ENCRYPTION_SMTPS
+                : PHPMailer::ENCRYPTION_STARTTLS;
+        }
+
         $this->mailer = new PHPMailer(true);
         $this->configure();
     }
@@ -41,10 +57,10 @@ class EmailService
             // Server settings
             $this->mailer->isSMTP();
             $this->mailer->Host       = $this->smtpHost;
-            $this->mailer->SMTPAuth   = true;
+            $this->mailer->SMTPAuth   = $this->smtpUsername !== '' || $this->smtpPassword !== '';
             $this->mailer->Username   = $this->smtpUsername;
             $this->mailer->Password   = $this->smtpPassword;
-            $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $this->mailer->SMTPSecure = $this->smtpCrypto;
             $this->mailer->Port       = $this->smtpPort;
 
             // Set default sender

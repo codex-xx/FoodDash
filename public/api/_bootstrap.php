@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__, 2) . '/deployment_env.php';
+
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
@@ -19,7 +21,16 @@ if (session_status() === PHP_SESSION_NONE) {
 
 function db_conn(): mysqli
 {
-    $conn = new mysqli('localhost', 'root', '', 'fooddash_db', 3306);
+    try {
+        $conn = fooddash_db_connection();
+    } catch (RuntimeException $exception) {
+        http_response_code(500);
+        echo json_encode([
+            'status' => 'error',
+            'message' => 'Database connection failed',
+        ]);
+        exit;
+    }
 
     if ($conn->connect_errno) {
         http_response_code(500);
@@ -29,8 +40,6 @@ function db_conn(): mysqli
         ]);
         exit;
     }
-
-    $conn->set_charset('utf8mb4');
 
     return $conn;
 }

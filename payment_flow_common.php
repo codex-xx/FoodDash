@@ -2,17 +2,11 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/deployment_env.php';
+
 function payment_db_conn(): mysqli
 {
-    $conn = new mysqli('localhost', 'root', '', 'fooddash_db', 3306);
-
-    if ($conn->connect_errno) {
-        throw new RuntimeException('Database connection failed: ' . $conn->connect_error);
-    }
-
-    $conn->set_charset('utf8mb4');
-
-    return $conn;
+    return fooddash_db_connection();
 }
 
 function normalize_payment_method(string $method): ?string

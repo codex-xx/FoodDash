@@ -1,0 +1,12 @@
+.git
+.env
+writable/cache
+writable/debugbar
+writable/logs
+writable/session
+writable/uploads
+node_modules
+npm-debug.log
+yarn-error.log
+composer.phar
+*.log

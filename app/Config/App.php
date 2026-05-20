@@ -199,4 +199,46 @@ class App extends BaseConfig
      * @see http://www.w3.org/TR/CSP/
      */
     public bool $CSPEnabled = false;
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        $this->baseURL = $this->resolveBaseURL();
+    }
+
+    private function resolveBaseURL(): string
+    {
+        $configuredBaseURL = $this->firstEnvValue(['app.baseURL', 'APP_BASE_URL']);
+        if ($configuredBaseURL !== null) {
+            return rtrim($configuredBaseURL, '/') . '/';
+        }
+
+        $renderUrl = getenv('RENDER_EXTERNAL_URL');
+        if ($renderUrl !== false && $renderUrl !== '') {
+            return rtrim($renderUrl, '/') . '/';
+        }
+
+        return 'http://localhost/FoodDash/';
+    }
+
+    /**
+     * @param list<string> $keys
+     */
+    private function firstEnvValue(array $keys): ?string
+    {
+        foreach ($keys as $key) {
+            $value = env($key);
+            if (is_string($value) && $value !== '') {
+                return $value;
+            }
+
+            $serverValue = getenv($key);
+            if ($serverValue !== false && $serverValue !== '') {
+                return $serverValue;
+            }
+        }
+
+        return null;
+    }
 }

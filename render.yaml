@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: fooddash
+    env: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: CI_ENVIRONMENT
+        value: production
