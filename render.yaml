@@ -36,3 +36,27 @@ services:
         value: ""
       - key: AIVEN_CA_CERT
         value: ""
+
+jobs:
+  - name: migrate
+    type: run
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    command: php spark migrate --all
+    envVars:
+      - key: CI_ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        value: ""
+      - key: DB_HOST
+        value: ""
+      - key: DB_PORT
+        value: ""
+      - key: DB_USER
+        value: ""
+      - key: DB_PASSWORD
+        value: ""
+      - key: DB_NAME
+        value: ""
+      - key: AIVEN_CA_CERT
+        value: ""

@@ -7,6 +7,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         git \
         unzip \
+        ca-certificates \
         libicu-dev \
         libonig-dev \
         libzip-dev \
@@ -25,7 +26,10 @@ COPY . .
 
 RUN mkdir -p writable/cache writable/debugbar writable/logs writable/session writable/uploads \
     && chown -R www-data:www-data writable
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 10000
 
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["sh", "-c", "php -S 0.0.0.0:${PORT:-10000} -t public system/rewrite.php"]
